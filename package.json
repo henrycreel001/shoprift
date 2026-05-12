@@ -1,0 +1,24 @@
+{
+  "name": "shoprift",
+  "version": "1.0.0",
+  "description": "dm2buy store migration engine. Powers the import feature of [App Name].",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/kiwiishop.test.js",
+    "lint": "node --check src/*.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "axios": "^1.0.0",
+    "dotenv": "^16.0.0",
+    "playwright": "^1.40.0",
+    "zod": "^3.0.0"
+  },
+  "private": true,
+  "license": "UNLICENSED"
+}
