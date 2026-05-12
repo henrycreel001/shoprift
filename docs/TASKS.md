@@ -331,7 +331,7 @@ Never start a new phase until all tasks in the current phase pass.
   - Launch browser
   - Run Phase 1: Recon → log summary to terminal
   - Prompt: "Continue with import? (y/n)"
-  - Run Phase 2: Verification
+  - Run Phase 2: ~~Verification~~ → **Skipped in V1.** Print "ℹ️  Verification skipped (V1 concierge mode — ownership confirmed via DM)"
   - Run Phase 3: Extraction
   - Run Phase 4: Download + Format + Validate
   - Log completion summary to terminal
