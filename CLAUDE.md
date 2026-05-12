@@ -3,15 +3,56 @@
 > This is the primary instruction file for Claude Code.
 > Read this file first before touching any other file.
 > Every decision, every module, every output must align with what is written here.
-> Cross-reference: ARCHITECTURE.md → TASKS.md → SCHEMA.md → ERRORS.md
+> Cross-reference: ARCHITECTURE.md → TASKS.md → SCHEMA.md → ERRORS.md → PIVOT_NOTE.md
 
 ---
 
 ## WHAT IS SHOPRIFT
 
-Shoprift is a backend migration engine. It scrapes a dm2buy storefront, verifies the requester owns that store, extracts all product and store data, downloads all images, and produces a perfectly structured import package ready to load into the [App Name] platform database.
+Shoprift is a dm2buy store migration tool. It scrapes a dm2buy storefront, verifies the requester owns that store, extracts all product and store data, downloads all images, and produces a structured import package (JSON + CSV + images) ready to load into any other platform.
 
-Shoprift is never user-facing. Users interact with [App Name]. Shoprift runs silently in the background. Nobody outside the engineering context needs to know Shoprift exists.
+**Shoprift is now a standalone product**, not an internal tool buried inside another app. It is positioned to rescue the 15,000+ small businesses displaced by dm2buy's shutdown. Later, it will also power the import feature of the [App Name] platform — but standalone comes first.
+
+---
+
+## THE PIVOT — READ THIS BEFORE ANYTHING ELSE
+
+The original plan was: build Shoprift as an internal CLI tool, embed it inside [App Name] later.
+
+The new plan is: launch Shoprift as a standalone product first, [App Name] absorbs it later.
+
+This change does NOT affect the engine build. Phase 0–10 in TASKS.md is unchanged. What changes is what gets built *after* the engine is proven.
+
+Full pivot context: `docs/PIVOT_NOTE.md`
+
+---
+
+## TWO GO-TO-MARKET MODES
+
+Shoprift will reach sellers through two motions, in this order:
+
+### Mode 1 — Concierge (launches first)
+
+The founder personally runs Shoprift for individual sellers as a paid service:
+- Founder DMs warm contacts who lost dm2buy stores
+- Quotes a custom price based on the seller's catalog size and complexity
+- Runs the CLI engine manually
+- Delivers a CSV + images zip via WhatsApp or email
+- Collects payment via UPI or Razorpay payment link
+
+This validates demand, pricing, and edge cases without building any web infrastructure.
+
+Full concierge workflow: `docs/CONCIERGE.md`
+
+### Mode 2 — Self-serve web app (launches second)
+
+Once concierge mode has proven demand and surfaced edge cases:
+- Public web app at the Shoprift domain
+- Seller pastes URL, uploads a sample CSV format, pays, downloads
+- Fully automated end-to-end
+- Tiered pricing based on product count
+
+Full web app spec: `docs/WEB_APP.md`
 
 ---
 
@@ -26,12 +67,15 @@ You are the sole builder of this project. You will:
 5. Follow ARCHITECTURE.md for every technical decision
 6. Write clean, modular, well-commented code
 7. Test every module against `kiwiishop.dm2buy.com` before marking it done
+8. **Build the engine first (Phase 0–10). Do not start web app work until the engine is proven against kiwiishop.**
 
 If anything is unclear — stop and flag it. Do not guess. Do not improvise structure.
 
 ---
 
 ## TECH STACK
+
+### Engine (Phase 0–10) — unchanged
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
@@ -41,9 +85,29 @@ If anything is unclear — stop and flag it. Do not guess. Do not improvise stru
 | Image downloading | Axios + fs streams | — |
 | Data validation | Zod | Latest |
 | Output formatting | fs + JSON.stringify | Built-in |
-| Job tracking | Supabase (fresh project) | Latest JS client |
+| Job tracking | Supabase | Latest JS client |
 | Environment | dotenv | Latest |
 | CLI runner | Native Node.js | — |
+
+### CSV mapper layer (Phase 11) — new
+
+| Layer | Technology |
+|-------|-----------|
+| CSV parsing | papaparse |
+| CSV writing | papaparse |
+| Column mapping config | JSON in repo, with Shopify preset built in |
+
+### Web app (Phase 12+) — new, builds later
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15 (App Router) |
+| Styling | Tailwind CSS + shadcn/ui |
+| Frontend host | Vercel |
+| Engine host | Railway.app (Playwright needs persistent server) |
+| Auth | Supabase Auth (later — concierge mode skips this) |
+| Payments | Razorpay (UPI-first) |
+| File delivery | Supabase Storage (signed URLs, 7-day expiry) |
 
 No unnecessary dependencies. Every package must earn its place.
 
@@ -54,132 +118,119 @@ No unnecessary dependencies. Every package must earn its place.
 ```
 shoprift/
 │
-├── CLAUDE.md                  ← You are here. Read first.
-├── README.md                  ← Setup and usage guide
-├── CHANGELOG.md               ← Version history
+├── CLAUDE.md                       ← You are here. Read first.
+├── README.md                       ← Internal setup guide (NOT public yet)
+├── CHANGELOG.md                    ← Version history
 │
 ├── docs/
-│   ├── ARCHITECTURE.md        ← Technical decisions and data flow
-│   ├── SCHEMA.md              ← Every data structure defined
-│   ├── TASKS.md               ← Build checklist (follow in order)
-│   ├── ROADMAP.md             ← V1 → V2 → V3 vision
-│   └── ERRORS.md              ← Every failure mode and handler
+│   ├── ARCHITECTURE.md             ← Engine technical decisions and data flow (frozen)
+│   ├── SCHEMA.md                   ← Every engine data structure defined (frozen)
+│   ├── TASKS.md                    ← Build checklist — engine (Phase 0–10) + web app (Phase 11+)
+│   ├── ROADMAP.md                  ← V1 (concierge) → V2 (web app) → V3 ([App Name])
+│   ├── ERRORS.md                   ← Failure modes — engine + payment + CSV
+│   ├── PIVOT_NOTE.md               ← The standalone-product pivot explained
+│   ├── CONCIERGE.md                ← Manual delivery workflow
+│   ├── PRICING.md                  ← Concierge tiers + self-serve tiers + refund policy
+│   ├── CSV_MAPPER.md               ← CSV format mapping spec + Shopify preset
+│   ├── WEB_APP.md                  ← Self-serve web app spec (build after engine)
+│   └── PAYMENTS.md                 ← Razorpay + UPI integration spec
 │
-├── src/
-│   ├── index.js               ← CLI entry point
-│   ├── browser.js             ← Playwright browser lifecycle
-│   ├── recon.js               ← Phase 1: fast store scan
-│   ├── extractor.js           ← Phase 2: full product extraction
-│   ├── verifier.js            ← Ownership verification logic
-│   ├── downloader.js          ← Image downloading and saving
-│   ├── formatter.js           ← Structures raw data to schema
-│   ├── validator.js           ← Zod schema validation
-│   ├── job.js                 ← Supabase job status tracking
-│   └── utils.js               ← Shared helpers
+├── src/                            ← The engine (Phase 0–11)
+│   ├── index.js                    ← CLI entry point
+│   ├── browser.js                  ← Playwright browser lifecycle
+│   ├── recon.js                    ← Phase 1: fast store scan
+│   ├── extractor.js                ← Phase 2: full product extraction
+│   ├── verifier.js                 ← Ownership verification logic (V2)
+│   ├── downloader.js               ← Image downloading and saving
+│   ├── formatter.js                ← Structures raw data to schema
+│   ├── validator.js                ← Zod schema validation
+│   ├── job.js                      ← Supabase job status tracking
+│   ├── csv-mapper.js               ← Phase 11: maps schema to CSV in any format
+│   ├── csv-synonyms.js             ← Phase 11: fuzzy-match synonym dictionary
+│   ├── ledger.js                   ← Phase 11: append-only job ledger
+│   ├── zipper.js                   ← Phase 11: delivery zip packaging
+│   ├── prompt.js                   ← Phase 11: shared readline singleton
+│   └── utils.js                    ← Shared helpers
 │
 ├── schemas/
-│   └── store.schema.json      ← Canonical import schema
+│   └── store.schema.json           ← Canonical import schema (frozen contract)
 │
-├── output/                    ← gitignored — all generated files land here
-│   ├── store_data.json
-│   ├── migration_report.md
-│   └── images/
+├── presets/                        ← Phase 11 — built-in CSV format configs
+│   ├── shopify.json                ← Shopify product import (one-row-per-variant)
+│   └── generic.json                ← Generic export (one-row-per-product)
+│
+├── clients/                        ← gitignored — client template files live here
+│   └── (e.g. handbloom-template.csv + handbloom-template.matching.json)
+│
+├── web/                            ← Phase 12+, separate Next.js project
+│   └── (built later — do not start yet)
+│
+├── output/                         ← gitignored — all generated files land here
+│   ├── _ledger.csv                 ← Append-only job log, opens in Excel
+│   ├── _archive/                   ← Reserved for archived job folders
+│   └── kiwiishop_2026-05-12_1815/ ← Per-job folder: {client}_{date}_{HHMM}
+│       ├── store_data.json
+│       ├── store_data.csv
+│       ├── migration_report.md
+│       ├── job_metadata.json
+│       ├── {store}_shoprift_delivery.zip  ← --zip flag
+│       └── images/
 │
 ├── tests/
-│   └── kiwiishop.test.js      ← Primary test against known store
+│   └── kiwiishop.test.js           ← Primary test against known store
 │
-├── .env.example               ← Required environment variables
+├── .env.example                    ← Required environment variables
 ├── .gitignore
 └── package.json
 ```
 
 ---
 
-## BUILD PHASES
+## BUILD PHASES — OVERVIEW
 
-Shoprift operates in four sequential phases. Build and test each phase fully before moving to the next. Never merge phases.
+Shoprift V1 ships in 4 build groups. Build each group fully before moving on.
+
+### Group A — Engine (TASKS.md Phase 0–10)
+
+The CLI extraction engine. Unchanged from original plan. This is the core.
+
+When this group is done, the founder can run concierge jobs manually using the CLI. **This unblocks revenue.** Do not move to Group B until kiwiishop test passes end-to-end.
+
+### Group B — CSV mapper (TASKS.md Phase 11) ✅ COMPLETE
+
+Adds the ability to output a CSV file in a format the seller requests. Reads a sample CSV the user uploads, maps Shoprift's internal fields to the user's column names, writes the output CSV. Also adds a Shopify preset out of the box.
+
+Concierge mode is now fully operational — the founder can deliver in whatever format the seller's destination platform needs.
+
+### Group C — Web app (TASKS.md Phase 12–14)
+
+Builds the public Next.js web app. Frontend, API, Razorpay integration, file delivery. Hosted on Vercel + Railway.
+
+Do not start this until concierge mode has been run on real paying customers at least 5 times. The web app must be informed by what concierge taught you.
+
+### Group D — Launch (TASKS.md Phase 15)
+
+Production deploy, payment go-live, soft launch to warm audience.
+
+---
+
+## ENGINE BUILD PHASES (Group A, unchanged)
+
+The four runtime phases of the engine are unchanged from the original plan:
 
 ### PHASE 1 — RECON
-**File:** `src/recon.js`
-**Time:** ~15 seconds per store
-**Purpose:** Fast scan to count products, collections, images. Powers the pre-import summary card shown to users before they confirm import.
-
-Must return:
-```json
-{
-  "store_name": "",
-  "store_url": "",
-  "instagram_handle": "",
-  "product_count": 0,
-  "collection_count": 0,
-  "image_count": 0,
-  "estimated_import_seconds": 0,
-  "recon_timestamp": ""
-}
-```
+~15 seconds. Counts products, collections, images. Powers the pre-import summary.
 
 ### PHASE 2 — VERIFICATION
-**File:** `src/verifier.js`
-**Purpose:** Confirm the requesting user owns the dm2buy store before any full extraction runs.
-
-Two methods in priority order:
-
-**Method A — Instagram Story (Primary)**
-1. Generate a unique session-locked code: `SHR-{accountId}-{random4}-{timestamp}`
-2. Generate a downloadable story image template with the code and `[App Name]` branding
-3. Poll the store's Instagram page every 30 seconds for up to 10 minutes
-4. Search page source / visible text for the exact code
-5. Found → verified. Not found after 10 min → timeout, prompt fallback
-
-**Method B — dm2buy Product Injection (Fallback)**
-1. Use same session-locked code format
-2. Instruct user to add a ₹1 product to their dm2buy store named exactly with the code
-3. After user confirms, run Playwright on the store URL
-4. Search all product names for the exact code
-5. Found → verified. Not found → error with clear message
-
-Security rules:
-- Code is always tied to: accountId + storeUrl + timestamp
-- Code expires after 10 minutes
-- A code verified for store A cannot unlock store B
-- Store all verification attempts in Supabase with timestamp
+Ownership proof. Method A (Instagram story) primary, Method B (dm2buy product injection) fallback. Code is session-locked, expires in 10 minutes, stored in Supabase.
 
 ### PHASE 3 — EXTRACTION
-**File:** `src/extractor.js`
-**Purpose:** Full product and store data extraction after verification passes.
+Full Playwright extraction of every product page. 800ms delay between navigations. Flags missing descriptions.
 
-Extraction targets (based on confirmed kiwiishop audit):
-- Store meta: name, description, instagram, shipping, policies, payment methods
-- All products: name, price, original_price, discount_pct, category, variants, stock_status, all image URLs, product URL, tags
-- All collections: name, URL, product count
-- Navigation structure
-- URL patterns
+### PHASE 4 — DOWNLOAD + FORMAT + VALIDATE
+Downloads all images via Axios. Formats raw data to store.schema.json structure. Runs Zod validation before writing any output.
 
-dm2buy-specific knowledge:
-- Framework: Next.js static export
-- Image CDN: `dm2buy-drop-resized-gga4c6azekgcgngp.z02.azurefd.net`
-- Product URL pattern: `/product/<32-char-hex-id>`
-- Collection filter pattern: `/?collection=<Name>`
-- Content is client-side hydrated — always wait for full render before extracting
-- Use `page.waitForSelector()` for product grid before scraping
-- Add 800ms delay between page navigations — never hammer the server
-- If a product has no description beyond shipping text — flag it as `needs_description: true`
-
-### PHASE 4 — DOWNLOAD + OUTPUT
-**File:** `src/downloader.js` + `src/formatter.js`
-**Purpose:** Download all images locally. Format everything to schema. Write output files.
-
-Image downloading rules:
-- Download every image URL found during extraction
-- Save to `/output/images/{productId}/{filename}.jpg`
-- Verify each download completed (check file size > 0)
-- If an image 404s — log it in `migration_report.md` under "Failed Images"
-- Never skip a failed image silently
-
-Output files to generate:
-1. `/output/store_data.json` — full structured data matching store.schema.json
-2. `/output/migration_report.md` — human readable summary
-3. `/output/images/` — all downloaded product images
+dm2buy-specific knowledge, ownership verification rules, and Playwright settings: see ARCHITECTURE.md.
 
 ---
 
@@ -227,6 +278,11 @@ created_at    timestamp
 updated_at    timestamp
 ```
 
+Additional tables added later for web app mode:
+- `verification_attempts` — already in Phase 0.7 SQL
+- `payments` — added in Phase 13 (web app)
+- `downloads` — added in Phase 13 (signed URL tracking)
+
 Rules:
 - One active job per account at a time — enforce at insert time
 - Update `status` and `progress` after every meaningful step
@@ -256,21 +312,53 @@ Rules:
 
 ---
 
-## DEFINITION OF DONE
+## DEFINITION OF DONE — V1 (CONCIERGE-READY)
 
-Shoprift V1 is complete when:
+Shoprift V1 is ready for concierge launch when:
 
 - [ ] `node src/index.js https://kiwiishop.dm2buy.com` runs without errors
-- [ ] Recon returns correct product/collection/image count
+- [ ] Recon returns correct product/collection/image count (4/2/18)
 - [ ] Verification flow works (both methods)
 - [ ] All 4 products extracted with correct data
 - [ ] All 18 images downloaded to `/output/images/`
 - [ ] `store_data.json` validates against `store.schema.json` with zero errors
+- [x] `store_data.csv` exports in Shopify preset format (Phase 11) ✅
 - [ ] `migration_report.md` is human readable and complete
 - [ ] Supabase job tracked from start to finish
 - [ ] All errors handled gracefully — no crashes on bad input
 - [ ] Test file passes
 
+After this, concierge mode is live. Web app is V2.
+
 ---
 
-*Cross-reference: See ARCHITECTURE.md for data flow diagrams. See TASKS.md for step-by-step build order. See ERRORS.md for all failure handlers. See SCHEMA.md for exact data structures.*
+## DEFINITION OF DONE — V2 (WEB APP)
+
+- [ ] Next.js web app deployed to Vercel
+- [ ] Engine deployed to Railway
+- [ ] Razorpay payment integration live
+- [ ] User can: paste URL → see recon → verify → upload sample CSV → pay → download
+- [ ] Payment ledger in Supabase
+- [ ] Signed download URLs with 7-day expiry
+- [ ] Tested end-to-end with one real paid transaction
+
+---
+
+## CRITICAL RULES — NEVER VIOLATE
+
+1. Never extract data without ownership verification passing
+2. Never produce partial output that looks complete
+3. Never leave Playwright browser open — always close in finally block
+4. Never hardcode values — everything via .env
+5. Never swallow errors silently — every failure logged + Supabase updated
+6. Never write store_data.json if Zod validation fails
+7. Never start a new phase until current phase fully works
+8. Always test against kiwiishop before marking any phase done
+9. One active job per account at a time — enforce at insert
+10. `process.exit()` only in `src/index.js` — never in modules
+11. Never start web app work until engine passes the kiwiishop test
+12. Never take a payment for an extraction that hasn't completed (refund first, deliver second)
+
+---
+
+*Cross-reference: PIVOT_NOTE.md for the standalone pivot story. CONCIERGE.md for manual delivery workflow. PRICING.md for tiers. CSV_MAPPER.md for the format mapping spec. WEB_APP.md and PAYMENTS.md for V2 specs. ARCHITECTURE.md for engine data flow. TASKS.md for step-by-step build order. ERRORS.md for failure handlers. SCHEMA.md for exact data structures.*

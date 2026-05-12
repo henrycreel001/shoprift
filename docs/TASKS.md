@@ -400,6 +400,43 @@ Never start a new phase until all tasks in the current phase pass.
 
 ---
 
+## PHASE 11 — CSV MAPPER + CLIENT FOLDERS + DELIVERY ZIP ✅ COMPLETE
+
+> Built 2026-05-12. All E1–E9 integration tests pass.
+
+- [x] **11.1** Install `papaparse` and `archiver` dependencies
+- [x] **11.2** Create `src/csv-synonyms.js` — fuzzy-match synonym dictionary + `NO_SOURCE_DATA_FIELDS`
+- [x] **11.3** Create `src/csv-mapper.js` — template loading, fuzzy matching, interactive approval (y/e/c), edit mode, unmatched resolution, mapping cache with MD5 hash invalidation, `--auto-approve` support, row strategies, transforms
+- [x] **11.4** Create `presets/shopify.json` — Shopify product import (one-row-per-variant, 24 columns)
+- [x] **11.5** Create `presets/generic.json` — generic export (one-row-per-product, 12 columns)
+- [x] **11.6** Create `src/ledger.js` — append-only `_ledger.csv` at `output/` root, papaparse read/write, pending fallback when file locked
+- [x] **11.7** Create `src/zipper.js` — delivery zip with `store_data.csv`, `migration_report.md`, `images/`, `README.txt`
+- [x] **11.8** Create `src/prompt.js` — singleton readline with line buffer (fixes piped stdin drain across multiple prompts)
+- [x] **11.9** Update `src/index.js` — per-job `{client}_{date}_{HHMM}` folders, collision-safe suffix, `--client`, `--format`, `--zip`, `--auto-approve` flags, `ensureRootStructure()`, `job_metadata.json` write, ledger append, Phase 4c/4d/4e ordering
+- [x] **11.10** Update `src/downloader.js` — accept explicit `imageDir` param
+- [x] **11.11** Update `src/formatter.js` — accept `outputDir` and `csvInfo` params; unmapped-columns section in migration report
+- [x] **11.12** Add `clients/` to `.gitignore`
+
+### CLI flags added
+
+```bash
+node src/index.js <url> [--client <slug>] [--format shopify|generic|./path.csv] [--zip] [--auto-approve]
+```
+
+### Row count for kiwiishop (Shopify preset)
+
+| Product | Variants | Images | Total rows |
+|---------|----------|--------|------------|
+| Gingham Scrunchies | 5 colors | 6 | 10 |
+| Tomato mini Charm | — | 2 | 2 |
+| Pudding Crochet Charm | — | 4 | 4 |
+| The Forever Flowers | 2 colors | 6 | 7 |
+| **Total** | | | **23** |
+
+Formula per product: `1 (full row) + (variants − 1) + (images − 1)`
+
+---
+
 ## DEFINITION OF DONE
 
 All tasks above checked. Plus:

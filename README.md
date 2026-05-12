@@ -10,14 +10,15 @@ Shoprift scrapes a dm2buy storefront, verifies store ownership, extracts all pro
 
 ```
 Input:  https://yourstore.dm2buy.com
-Output: store_data.json + migration_report.md + /images folder
+Output: store_data.csv + migration_report.md + images/ + delivery.zip
 ```
 
 1. **Recon** — scans the store in ~15 seconds, counts products, collections, images
-2. **Verify** — confirms you own the store before touching any data
-3. **Extract** — pulls every product, variant, price, image URL, and store policy
-4. **Download** — saves all product images locally
-5. **Format** — structures everything to a clean schema ready for import
+2. **Extract** — pulls every product, variant, price, image URL, and store policy
+3. **Download** — saves all product images locally
+4. **Format** — structures everything to a clean schema
+5. **CSV export** — outputs in Shopify format, generic format, or any custom template
+6. **Zip** — packages everything into a delivery-ready zip
 
 ---
 
@@ -56,29 +57,51 @@ Run the SQL in `docs/TASKS.md` Phase 0, step 0.7 in your Supabase SQL editor.
 
 **5. Verify setup**
 ```bash
-node src/index.js --test
-# Should log: ✅ Setup verified. Shoprift is ready.
+node tests/kiwiishop.test.js
+# Should log: 23 passed, 0 failed
 ```
 
 ---
 
+## COMMON COMMANDS
+
+```bash
+# Default — Shopify format, full delivery zip
+node src/index.js https://store.dm2buy.com --format shopify --zip
+
+# Generic format
+node src/index.js https://store.dm2buy.com --format generic --zip
+
+# Custom client template (first time — triggers interactive approval)
+node src/index.js https://store.dm2buy.com --format ./clients/client-template.csv --zip
+
+# Same template, silent re-run after first approval
+node src/index.js https://store.dm2buy.com --format ./clients/client-template.csv --auto-approve --zip
+
+# Override auto-detected client slug
+node src/index.js https://store.dm2buy.com --client beautiful-things --format shopify --zip
+```
+
 ## USAGE
 
 ```bash
-node src/index.js <dm2buy-store-url> [account-id]
+node src/index.js <dm2buy-store-url> [options]
 ```
 
-**Example:**
-```bash
-node src/index.js https://kiwiishop.dm2buy.com user_123
-```
+**Options:**
+| Flag | Description |
+|------|-------------|
+| `--client <slug>` | Override auto-derived client slug (default: subdomain) |
+| `--format <name>` | `shopify` \| `generic` \| `./path/to/template.csv` \| `./path/to/preset.json` (default: `shopify`) |
+| `--zip` | Create `{store}_shoprift_delivery.zip` after extraction |
+| `--auto-approve` | Use cached `.matching.json` without prompting (requires prior approval run) |
 
 **What happens:**
 1. Shoprift scans the store and shows a summary
 2. You confirm you want to continue
-3. Shoprift walks you through ownership verification
-4. Extraction and download run automatically
-5. Output lands in `/output/`
+3. Extraction and download run automatically
+4. CSV is exported in the requested format (interactive approval on first run with a custom template)
+5. Output lands in `output/{client}_{date}_{HHMM}/`
 
 ---
 
@@ -86,27 +109,31 @@ node src/index.js https://kiwiishop.dm2buy.com user_123
 
 ```
 output/
-├── store_data.json        ← Structured store data (import this into [App Name])
-├── migration_report.md    ← Human readable summary + action items
-└── images/
-    ├── 1/                 ← Product 1 images
-    │   ├── 0.jpg
-    │   └── 1.jpg
-    ├── 2/
-    └── ...
+├── _ledger.csv                           ← All jobs — open in Excel
+├── _archive/                             ← Reserved for archived jobs
+└── kiwiishop_2026-05-12_1815/           ← {client}_{date}_{HHMM}
+    ├── store_data.json                   ← Full structured data
+    ├── store_data.csv                    ← Import-ready CSV
+    ├── migration_report.md               ← Action items before going live
+    ├── job_metadata.json                 ← Job record (edit price/notes by hand)
+    ├── the-kiwii-shop_shoprift_delivery.zip  ← --zip flag
+    └── images/
+        ├── 1/                            ← Product 1 images
+        │   ├── 0.jpg
+        │   └── 1.jpg
+        ├── 2/
+        └── ...
 ```
 
 ---
 
-## OWNERSHIP VERIFICATION
+## OWNERSHIP VERIFICATION (V2)
 
-Shoprift will not extract any store data until you prove you own it.
+V1 concierge mode skips verification — ownership is confirmed via DM before the founder runs the CLI.
 
-**Method A — Instagram Story (Primary)**
-Post a generated story template to your Instagram. Shoprift checks for your unique code automatically. The story is your store's announcement that it is moving to [App Name] — subtle, aesthetic, and gets you free visibility.
-
-**Method B — dm2buy Product (Fallback)**
-If Method A is not possible, add a ₹1 product to your dm2buy store with a specific name Shoprift generates. Shoprift scans for it and verifies you. You can delete the product after.
+V2 (web app) will add:
+- **Method A** — Instagram story with unique code (primary)
+- **Method B** — dm2buy product injection (fallback)
 
 ---
 

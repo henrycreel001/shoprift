@@ -1,0 +1,19 @@
+{
+  "name": "Generic Product Export",
+  "version": "1.0",
+  "row_strategy": "one_row_per_product",
+  "columns": [
+    { "header": "Product Name",         "field": "name" },
+    { "header": "Description",          "field": "description",         "fallback": "" },
+    { "header": "Price (INR)",          "field": "price" },
+    { "header": "Original Price (INR)", "field": "original_price",      "fallback": "" },
+    { "header": "Discount %",           "field": "discount_percentage", "fallback": "" },
+    { "header": "Category",             "field": "category",            "fallback": "Uncategorized" },
+    { "header": "Colors",               "field": "variants.colors",     "transform": "join_comma" },
+    { "header": "Sizes",                "field": "variants.sizes",      "transform": "join_comma" },
+    { "header": "Stock Status",         "field": "stock_status" },
+    { "header": "Image URLs",           "field": "images_cdn",          "transform": "join_semicolon" },
+    { "header": "Local Image Paths",    "field": "images_local",        "transform": "join_semicolon" },
+    { "header": "Source URL",           "field": "product_url" }
+  ]
+}
