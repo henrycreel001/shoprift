@@ -201,15 +201,22 @@ export function applyMapping(storeData, mappingConfig) {
 
 /**
  * Loads a built-in preset config by name.
- * @param {string} name — "shopify" | "generic"
+ * Note: "shopify" is handled by a dedicated emitter — this is used for "generic" and custom presets.
+ * @param {string} name — "generic" | path-based preset name
  * @returns {object} preset config
  */
 export function loadPreset(name) {
-  const presetPath = path.join(PRESETS_DIR, `${name}.json`);
-  if (!fs.existsSync(presetPath)) {
+  // Try new folder-based preset first (presets/<name>/preset.json)
+  const folderPresetPath = path.join(PRESETS_DIR, name, 'preset.json');
+  if (fs.existsSync(folderPresetPath)) {
+    return JSON.parse(fs.readFileSync(folderPresetPath, 'utf8'));
+  }
+  // Fall back to flat file (presets/<name>.json) for legacy/generic
+  const flatPresetPath = path.join(PRESETS_DIR, `${name}.json`);
+  if (!fs.existsSync(flatPresetPath)) {
     throw new Error(`Unknown preset: "${name}"\nAvailable formats:\n  - shopify (built-in)\n  - generic (built-in)\n  - path to .json preset file\n  - path to .csv template file`);
   }
-  return JSON.parse(fs.readFileSync(presetPath, 'utf8'));
+  return JSON.parse(fs.readFileSync(flatPresetPath, 'utf8'));
 }
 
 // ─── Template loading ─────────────────────────────────────────────────────────
@@ -543,7 +550,14 @@ export async function mapToCsv(storeData, formatArg, options = {}) {
   let config;
   let unmappedColumns = [];
 
-  if (formatArg === 'shopify' || formatArg === 'generic') {
+  if (formatArg === 'shopify') {
+    // Shopify uses a dedicated emitter (presets/shopify/emitter.js) for correct multi-row output
+    const { emitShopifyCsv } = await import('../presets/shopify/emitter.js');
+    const csv = emitShopifyCsv(storeData);
+    const rowCount = csv.split('\n').filter(l => l.trim()).length - 1;
+    return { csv, unmappedColumns: [], noSourceColumns: [], formatName: 'Shopify Product Import', rowCount };
+
+  } else if (formatArg === 'generic') {
     config = loadPreset(formatArg);
 
   } else if (!formatArg.endsWith('.csv') && !formatArg.endsWith('.json')) {

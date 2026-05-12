@@ -6,7 +6,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { ZipArchive } from 'archiver';
+import archiver from 'archiver';
 import { slugify } from './utils.js';
 
 /**
@@ -26,16 +26,58 @@ function formatDisplayName(csvFormat) {
 /**
  * Builds the README.txt content from job metadata.
  * @param {object} jobMetadata
+ * @param {object} [formattedData] — optional, used to list category names for Shopify delivery
  * @returns {string}
  */
-function buildReadme(jobMetadata) {
+function buildReadme(jobMetadata, formattedData) {
   const { store_name, store_url, run_started_at, products_count, images_count, csv_format } = jobMetadata;
   const runDate = (run_started_at ?? '').slice(0, 10);
   const runTime = (run_started_at ?? '').slice(11, 16);
   const formatName = formatDisplayName(csv_format ?? '');
+  const isShopify = csv_format === 'shopify';
 
-  return `Your Store Data — Powered by Shoprift
-=======================================
+  const categories = formattedData?.categories ?? [];
+  const collectionList = categories.length > 0
+    ? categories.map(c => `- ${c.name}`).join('\n')
+    : '(No collections to recreate — your store had no collections on dm2buy.)';
+
+  const hasVariantProducts = (formattedData?.products ?? []).some(
+    p => (p.variants?.colors?.length ?? 0) > 0 || (p.variants?.sizes?.length ?? 0) > 0
+  );
+
+  const shopifySection = isShopify ? `
+AFTER IMPORT — 4 SMALL STEPS
+----------------------------
+1. RESTORE COLLECTIONS — Your dm2buy collections are preserved as tags.
+   Create Smart Collections in Shopify that match by tag.
+
+2. SET INVENTORY — All products imported with quantity = 1.
+   Update real stock via Shopify bulk editor.
+${hasVariantProducts ? `
+3. ASSIGN VARIANT IMAGES — Images are uploaded; link each variant
+   (color/size) to its matching image in Shopify admin.
+` : `
+3. VARIANT IMAGES — Not needed (your store has no variant products).
+`}
+4. ADD SKUs (optional) — dm2buy didn't have SKUs.
+   Shopify auto-generates IDs, or add SKUs via bulk editor.
+
+YOUR COLLECTIONS TO RECREATE
+----------------------------
+${collectionList}
+
+For detailed step-by-step instructions, open migration_report.md.
+` : `
+To use:
+1. Open migration_report.md first — it lists items to fix before publishing
+2. Import store_data.csv into your new platform
+3. Upload images from the /images folder
+`;
+
+  return `Shoprift Delivery
+=================
+
+Hi! Here's everything you need to migrate to ${isShopify ? 'Shopify' : 'your new platform'}.
 
 Store: ${store_name}
 Source: ${store_url}
@@ -44,17 +86,15 @@ Products: ${products_count}
 Images: ${images_count}
 Format: ${formatName}
 
-What's in this folder:
-- store_data.csv      → Your products in ${formatName} format. Import this to your new platform.
-- migration_report.md → Summary + list of items needing attention before going live.
-- images/             → All your product images, organized by product number.
+WHAT'S IN THIS ZIP
+------------------
+- store_data.csv      → Upload this to ${isShopify ? 'Shopify (Products → Import)' : 'your new platform'}.
+- migration_report.md → Detailed summary of what was extracted.
+- images/             → Reference copies of your product images${isShopify ? ' (Shopify pulls these from URLs in the CSV)' : ''}.
+${shopifySection}
+Questions? Reply on WhatsApp.
 
-To use:
-1. Open migration_report.md first — it lists items to fix before publishing
-2. Import store_data.csv into your new platform
-3. Upload images from the /images folder
-
-Questions? Reply to the message that delivered this file.
+— Shoprift
 `;
 }
 
@@ -62,18 +102,19 @@ Questions? Reply to the message that delivered this file.
  * Creates the delivery zip at {folderPath}/{store_name_slug}_shoprift_delivery.zip.
  * @param {string} folderPath — absolute path to the job output folder
  * @param {object} jobMetadata — contents of job_metadata.json
+ * @param {object} [formattedData] — optional validated store data (used for per-seller README content)
  * @returns {Promise<{ zipPath: string, zipName: string, sizeMb: string }>}
  */
-export async function createDeliveryZip(folderPath, jobMetadata) {
+export async function createDeliveryZip(folderPath, jobMetadata, formattedData) {
   const { store_name, job_id } = jobMetadata;
   const zipName = `${slugify(store_name)}_shoprift_delivery.zip`;
   const zipPath = path.join(folderPath, zipName);
 
-  const readme = buildReadme(jobMetadata);
+  const readme = buildReadme(jobMetadata, formattedData);
 
   await new Promise((resolve, reject) => {
     const output  = fs.createWriteStream(zipPath);
-    const archive = new ZipArchive({ zlib: { level: 6 } });
+    const archive = archiver('zip', { zlib: { level: 6 } });
 
     output.on('close', resolve);
     archive.on('error', reject);

@@ -335,7 +335,7 @@ async function main() {
     // --- Phase 4e: Delivery zip (optional) ---
     if (zip) {
       try {
-        const { zipName, sizeMb } = await createDeliveryZip(folderPath, jobMetadata);
+        const { zipName, sizeMb } = await createDeliveryZip(folderPath, jobMetadata, validated);
         console.log(`   Zip:    output/${folderName}/${zipName} (${sizeMb} MB)`);
       } catch (err) {
         console.warn(`⚠️  Delivery zip failed: ${err.message}`);

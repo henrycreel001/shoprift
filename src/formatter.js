@@ -178,13 +178,53 @@ export function writeStoreData(formattedData, outputDir = process.env.OUTPUT_DIR
 }
 
 /**
+ * Builds the "Completing Your Migration" section for Shopify imports.
+ * Personalizes collection list and skips variant-image step when no variants exist.
+ */
+function buildShopifyNextSteps(products, categories) {
+  const hasVariants = products.some(
+    p => (p.variants?.colors?.length ?? 0) > 0 || (p.variants?.sizes?.length ?? 0) > 0
+  );
+
+  const collectionStep = categories.length > 0
+    ? `1. **Restore your collections** — Your dm2buy collections are preserved as tags on each product.\n   Create a Smart Collection in Shopify admin for each collection below.\n   Set condition: Product tag → is equal to → [collection name].\n   Collections to recreate:\n${categories.map(c => `   - ${c.name}`).join('\n')}`
+    : '1. **Collections** — Your store had no collections on dm2buy, so no collections to recreate.';
+
+  const variantImageStep = hasVariants
+    ? '3. **Assign variant images** — Images are uploaded. In Shopify admin, open each variant product and link each color/size variant to its matching image.'
+    : '3. **Variant images** — Not needed (your products have no color/size variants).';
+
+  return [
+    '## Completing Your Migration',
+    '',
+    'After importing store_data.csv into Shopify, complete these four steps:',
+    '',
+    collectionStep,
+    '',
+    '2. **Set inventory quantities** — All products are imported with quantity = 1.',
+    '   Go to Products → select all → Edit products → update the Available column.',
+    '',
+    variantImageStep,
+    '',
+    '4. **Add SKUs (optional)** — dm2buy had no SKUs. Shopify auto-generates internal IDs.',
+    '   Use the bulk editor or a Shopify app to add real SKUs if needed.',
+    '',
+    '---',
+    '',
+    '**Other items to configure:** product descriptions (dm2buy had none), shipping zones,',
+    'tax settings, payment methods, and store contact info.',
+  ].join('\n');
+}
+
+/**
  * Generates a human-readable migration report in Markdown.
  * @param {object} formattedData
  * @param {string} outputDir — job folder path
  */
 export function generateMigrationReport(formattedData, outputDir = process.env.OUTPUT_DIR || './output', csvInfo = {}) {
   const { store_meta, products, categories, migration_flags, scrape_meta } = formattedData;
-  const { unmappedColumns = [], noSourceColumns = [] } = csvInfo;
+  const { unmappedColumns = [], noSourceColumns = [], formatName = '' } = csvInfo;
+  const isShopify = formatName === 'Shopify Product Import';
 
   const warnings = migration_flags.filter(f => f.severity === 'warning');
   const infos = migration_flags.filter(f => f.severity === 'info');
@@ -204,14 +244,16 @@ export function generateMigrationReport(formattedData, outputDir = process.env.O
         ...infos.map(f => `- ℹ️ **${f.type}** (${f.product_id != null ? 'Product #' + f.product_id : 'Store'}): ${f.message}\n  → ${f.action_required}`)
       ].join('\n');
 
-  const nextSteps = [
-    '1. Review all ⚠️ warnings above and complete missing descriptions',
-    '2. Upload product images to your new store (CDN URLs will expire)',
-    '3. Configure shipping, taxes, and payment methods',
-    '4. Assign uncategorized products to collections',
-    '5. Set up contact info and store policies',
-    '6. Do a test checkout before going live'
-  ].join('\n');
+  const nextSteps = isShopify
+    ? buildShopifyNextSteps(products, categories)
+    : [
+        '1. Review all ⚠️ warnings above and complete missing descriptions',
+        '2. Upload product images to your new store (CDN URLs will expire)',
+        '3. Configure shipping, taxes, and payment methods',
+        '4. Assign uncategorized products to collections',
+        '5. Set up contact info and store policies',
+        '6. Do a test checkout before going live'
+      ].join('\n');
 
   const hasUnmappedSection = unmappedColumns.length > 0 || noSourceColumns.length > 0;
   const unmappedSection = hasUnmappedSection ? `
@@ -260,9 +302,7 @@ ${flagSection}
 ${unmappedSection ? '\n' + unmappedSection + '\n' : ''}
 ---
 
-## Next Steps
-
-${nextSteps}
+${isShopify ? nextSteps : `## Next Steps\n\n${nextSteps}`}
 
 ---
 

@@ -164,3 +164,9 @@ See `CHANGELOG.md` for history.
 - One import job per account at a time
 - Images on dm2buy's Azure CDN may expire — run Shoprift sooner rather than later
 - See `docs/ROADMAP.md` for multi-platform support plans
+
+---
+
+## FOR SELLERS
+
+If you've received a Shoprift delivery and need help importing into Shopify, see [Shopify Post-Import Guide](docs/SHOPIFY_POST_IMPORT.md).

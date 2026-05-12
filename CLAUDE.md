@@ -73,6 +73,46 @@ If anything is unclear — stop and flag it. Do not guess. Do not improvise stru
 
 ---
 
+## PLATFORM KNOWLEDGE PROTOCOL
+
+Shoprift supports multiple target platforms (currently: Shopify; future: WooCommerce, Instamojo, others). Each platform has a knowledge folder under `presets/<platform>/` containing:
+
+- `<PLATFORM>.md` — knowledge file (lessons, gotchas, decisions, silent failures)
+- `preset.json` — machine-readable format spec
+- `emitter.js` — code that produces platform-specific output
+- `fixtures/` — verified working examples
+
+### MANDATORY RULES
+
+**Before any platform-related work:**
+- Read `presets/<platform>/<PLATFORM>.md` in full
+- Read the relevant fixture under `presets/<platform>/fixtures/` if applicable
+
+**After any platform-related work:**
+- Update `<PLATFORM>.md` with anything learned:
+  - New silent failure discovered → add to Silent Failures table
+  - Non-obvious decision made → add to Decision Log
+  - Platform spec changed → add to Platform Changelog + update Status
+  - Re-verified the fixture against a real platform import → update Status "Last verified" date
+- If nothing was learned, state this explicitly in the commit message:
+  `docs(<platform>): no new platform knowledge (verified existing behavior holds)`
+
+**The knowledge file is the single source of truth.** Code, tests, and seller-facing docs must align with what the knowledge file says. If they diverge, the knowledge file wins — update the code, tests, and docs to match.
+
+**A stale knowledge file is worse than no knowledge file.** Treat updates as non-optional. If you complete a phase without touching the knowledge file, you must explicitly confirm in your report: "No new platform knowledge to record."
+
+### CONVENTION: Collections preserved as tags
+
+dm2buy collections do not have a direct equivalent in many target platforms. To preserve them, Shoprift writes `product.category` to the Tags column on the anchor row of the output CSV. Sellers create platform-native "Smart Collections" (or equivalent) matching by tag to automatically restore their collection structure.
+
+Format: `"Collection Name, tag1, tag2"` (collection name first, comma-separated with existing product tags).
+
+Products with `is_uncategorized: true` have no collection tag.
+
+Do not change this convention without updating: (a) all platform emitters, (b) all platform knowledge files, (c) seller-facing post-import documentation.
+
+---
+
 ## TECH STACK
 
 ### Engine (Phase 0–10) — unchanged
