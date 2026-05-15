@@ -402,3 +402,14 @@ After this, concierge mode is live. Web app is V2.
 ---
 
 *Cross-reference: PIVOT_NOTE.md for the standalone pivot story. CONCIERGE.md for manual delivery workflow. PRICING.md for tiers. CSV_MAPPER.md for the format mapping spec. WEB_APP.md and PAYMENTS.md for V2 specs. ARCHITECTURE.md for engine data flow. TASKS.md for step-by-step build order. ERRORS.md for failure handlers. SCHEMA.md for exact data structures.*
+
+---
+
+## Project skills
+
+Project-specific skills live in `.claude/skills/`. Invoke with `/skill-name` or describe the task — Claude picks the right one.
+
+- `/shoprift-accountant` — invoicing, GST, TDS, expenses, pricing, books, cash flow. MALIQ ENTERPRISES / sole prop / Delhi 07.
+- `/shoprift-legal` — ToS, Privacy Policy, DPA, migration consent, competitor ToS review. India-first (DPDP, IT Act), GDPR/CCPA layered on.
+- `/shoprift-pm` — specs, user stories, tickets, prioritisation, scope calls, roadmap decisions. No code — pure PM.
+- `/shoprift-content` — Instagram carousels, posts, Reels scripts, YouTube, Reddit, DM replies. Brand-canon HTML output to `./output/content/`.
