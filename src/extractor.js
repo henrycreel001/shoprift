@@ -5,7 +5,8 @@
  */
 
 import axios from 'axios';
-import { computeDiscount, computeSlug, sleep } from './utils.js';
+import { computeDiscount, computeSlug, sleep, withRetry } from './utils.js';
+import { httpsAgent, fetchAllProducts } from './api.js';
 import * as job from './job.js';
 
 const DM2BUY_API = 'https://api.dm2buy.com';
@@ -85,11 +86,12 @@ function mapProduct(apiProduct, detailData, id, subdomain) {
   const price = apiProduct.price;
   const originalPrice = apiProduct.mrp || null;
   const description = detailData.description || null;
-  const images = [
+  const images = [...new Set([
     ...(apiProduct.productPhotos || []),
     ...(apiProduct.otherPhotos || [])
-  ];
+  ])];
   const category = apiProduct.collectionV2?.[0]?.name || null;
+  const all_categories = (apiProduct.collectionV2 || []).map(c => c.name);
   const variants = classifyVariants(apiProduct.variantOptions || []);
   const stock = apiProduct.availableStock;
 
@@ -103,6 +105,7 @@ function mapProduct(apiProduct, detailData, id, subdomain) {
     discount_percentage: computeDiscount(price, originalPrice),
     currency: 'INR',
     category,
+    all_categories,
     is_uncategorized: !category,
     variants,
     stock_status: stock > 0 ? 'in_stock' : stock === 0 ? 'out_of_stock' : 'unknown',
@@ -156,35 +159,12 @@ export function extractStoreMeta(storeData) {
  * @returns {Promise<object>}
  */
 async function fetchStoreMeta(subdomain) {
-  const res = await axios.get(
-    `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
-    { params: { select: 'internationalPayment,proplan,legalInfo' } }
+  return withRetry(() =>
+    axios.get(
+      `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
+      { params: { select: 'internationalPayment,proplan,legalInfo' }, httpsAgent }
+    ).then(res => res.data.data)
   );
-  return res.data.data;
-}
-
-/**
- * Fetches all products from the listing API (handles pagination).
- * @param {string} storeId
- * @returns {Promise<object[]>}
- */
-async function fetchAllProducts(storeId) {
-  const products = [];
-  let page = 1;
-  const limit = 50;
-
-  while (true) {
-    const res = await axios.get(
-      `${DM2BUY_API}/v3/product/store/${storeId}/collectionv2`,
-      { params: { page, limit, source: 'web' } }
-    );
-    const docs = res.data?.data?.docs || [];
-    products.push(...docs);
-    if (docs.length < limit) break;
-    page++;
-  }
-
-  return products;
 }
 
 /**
@@ -193,8 +173,10 @@ async function fetchAllProducts(storeId) {
  * @returns {Promise<object[]>}
  */
 async function fetchCollections(storeId) {
-  const res = await axios.get(`${DM2BUY_API}/v3/collection/store/${storeId}`);
-  return res.data?.collections || [];
+  return withRetry(() =>
+    axios.get(`${DM2BUY_API}/v3/collection/store/${storeId}`, { httpsAgent })
+      .then(res => res.data?.collections || [])
+  );
 }
 
 /**
@@ -203,8 +185,10 @@ async function fetchCollections(storeId) {
  * @returns {Promise<object>}
  */
 async function fetchProductDetail(productId) {
-  const res = await axios.get(`${DM2BUY_API}/v3/product/${productId}`);
-  return res.data?.data || {};
+  return withRetry(() =>
+    axios.get(`${DM2BUY_API}/v3/product/${productId}`, { httpsAgent })
+      .then(res => res.data?.data || {})
+  );
 }
 
 /**
@@ -247,7 +231,7 @@ export async function extract(storeUrl, storeId, jobId) {
     try {
       detailData = await fetchProductDetail(apiProduct.id);
     } catch (err) {
-      console.warn(`⚠️  Could not fetch detail for product ${apiProduct.id}: ${err.message}`);
+      console.warn(`⚠️  Could not fetch detail for product ${apiProduct.id} after retries: ${err.message}`);
     }
 
     const mapped = mapProduct(apiProduct, detailData, current, subdomain);

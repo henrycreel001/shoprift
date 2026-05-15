@@ -5,7 +5,8 @@
  */
 
 import axios from 'axios';
-import { estimateTime } from './utils.js';
+import { estimateTime, withRetry } from './utils.js';
+import { httpsAgent, fetchAllProducts } from './api.js';
 
 const DM2BUY_API = 'https://api.dm2buy.com';
 
@@ -21,39 +22,15 @@ function extractSubdomain(storeUrl) {
 }
 
 /**
- * Fetches all products across paginated API responses.
- * @param {string} storeId
- * @returns {Promise<object[]>}
- */
-async function fetchAllProducts(storeId) {
-  const products = [];
-  let page = 1;
-  const limit = 50;
-
-  while (true) {
-    const res = await axios.get(
-      `${DM2BUY_API}/v3/product/store/${storeId}/collectionv2`,
-      { params: { page, limit, source: 'web' } }
-    );
-
-    const docs = res.data?.data?.docs || [];
-    products.push(...docs);
-
-    if (docs.length < limit) break;
-    page++;
-  }
-
-  return products;
-}
-
-/**
  * Fetches all collections for a store.
  * @param {string} storeId
  * @returns {Promise<object[]>}
  */
 async function fetchCollections(storeId) {
-  const res = await axios.get(`${DM2BUY_API}/v3/collection/store/${storeId}`);
-  return res.data?.collections || [];
+  return withRetry(() =>
+    axios.get(`${DM2BUY_API}/v3/collection/store/${storeId}`, { httpsAgent })
+      .then(res => res.data?.collections || [])
+  );
 }
 
 /**
@@ -62,14 +39,16 @@ async function fetchCollections(storeId) {
  * @returns {Promise<object>}
  */
 async function fetchStoreMeta(subdomain) {
-  const res = await axios.get(
-    `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
-    { params: { select: 'internationalPayment,proplan,legalInfo' } }
+  const data = await withRetry(() =>
+    axios.get(
+      `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
+      { params: { select: 'internationalPayment,proplan,legalInfo' }, httpsAgent }
+    ).then(res => {
+      if (!res.data?.success) throw new Error(`[recon] Store not found for subdomain: ${subdomain}`);
+      return res.data.data;
+    })
   );
-  if (!res.data?.success) {
-    throw new Error(`[recon] Store not found for subdomain: ${subdomain}`);
-  }
-  return res.data.data;
+  return data;
 }
 
 /**

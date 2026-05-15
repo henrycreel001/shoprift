@@ -27,6 +27,27 @@ export function sleep(ms) {
 }
 
 /**
+ * Retries an async function with exponential backoff and a per-attempt timeout.
+ * @param {() => Promise<any>} fn
+ * @param {{ attempts?: number, baseDelayMs?: number, timeoutMs?: number }} [options]
+ * @returns {Promise<any>}
+ */
+export async function withRetry(fn, { attempts = 3, baseDelayMs = 1000, timeoutMs = 15000 } = {}) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await Promise.race([
+        fn(),
+        sleep(timeoutMs).then(() => { throw new Error(`[withRetry] Timed out after ${timeoutMs}ms`); })
+      ]);
+    } catch (err) {
+      if (i === attempts || err.permanent) throw err;
+      console.warn(`⚠️  Attempt ${i}/${attempts} failed: ${err.message}. Retrying in ${baseDelayMs * i}ms...`);
+      await sleep(baseDelayMs * i);
+    }
+  }
+}
+
+/**
  * Converts a string to a filesystem-safe filename.
  * Strips special chars, collapses spaces to hyphens.
  * @param {string} str

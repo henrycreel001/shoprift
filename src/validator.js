@@ -29,6 +29,7 @@ const ProductSchema = z.object({
   images_local: z.array(z.string()),
   images_failed: z.array(z.string()),
   product_url: z.string().url(),
+  all_categories: z.array(z.string()).optional().default([]),
   tags: z.array(z.string()),
   selected_for_import: z.boolean()
 });

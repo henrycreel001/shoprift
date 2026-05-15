@@ -6,7 +6,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { slugify } from './utils.js';
 
 /**
@@ -114,7 +114,7 @@ export async function createDeliveryZip(folderPath, jobMetadata, formattedData) 
 
   await new Promise((resolve, reject) => {
     const output  = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 6 } });
+    const archive = new ZipArchive({ zlib: { level: 6 } });
 
     output.on('close', resolve);
     archive.on('error', reject);
