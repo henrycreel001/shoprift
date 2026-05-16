@@ -1,16 +1,24 @@
 /**
  * src/extractor.js — Phase 3: Full store extraction via dm2buy API.
- * No DOM scraping — all data comes from dm2buy's REST API.
- * 800ms delay between product detail fetches to avoid rate limiting.
+ * API calls route through Chromium's TLS stack (pageGet) when a page is
+ * provided, falling back to Axios. Delays are randomized to mimic human
+ * browsing. DOM scraping fallback activates if the API returns empty/blocked.
  */
 
 import axios from 'axios';
 import { computeDiscount, computeSlug, sleep, withRetry } from './utils.js';
-import { httpsAgent, fetchAllProducts } from './api.js';
+import { httpsAgent, fetchAllProducts, pageGet } from './api.js';
+import { visitStorefront } from './browser.js';
 import * as job from './job.js';
 
 const DM2BUY_API = 'https://api.dm2buy.com';
-const NAV_DELAY_MS = parseInt(process.env.NAV_DELAY_MS || '800', 10);
+
+/** Returns a randomized delay mimicking human reading pace. */
+function randomDelay() {
+  // 20% chance of a long pause (3–5s) simulating human reading time
+  if (Math.random() < 0.20) return 3000 + Math.floor(Math.random() * 2000);
+  return 600 + Math.floor(Math.random() * 1500); // 600–2100ms normal range
+}
 
 /**
  * Boilerplate phrases commonly found in Indian sm-store descriptions.
@@ -156,13 +164,21 @@ export function extractStoreMeta(storeData) {
 /**
  * Fetches store metadata from dm2buy API.
  * @param {string} subdomain
+ * @param {import('playwright').Page|null} page
  * @returns {Promise<object>}
  */
-async function fetchStoreMeta(subdomain) {
+async function fetchStoreMeta(subdomain, page) {
+  const params = { select: 'internationalPayment,proplan,legalInfo' };
+  if (page) {
+    return withRetry(async () => {
+      const data = await pageGet(page, `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`, params);
+      return data?.data;
+    });
+  }
   return withRetry(() =>
     axios.get(
       `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
-      { params: { select: 'internationalPayment,proplan,legalInfo' }, httpsAgent }
+      { params, httpsAgent }
     ).then(res => res.data.data)
   );
 }
@@ -170,9 +186,16 @@ async function fetchStoreMeta(subdomain) {
 /**
  * Fetches all collections from dm2buy API.
  * @param {string} storeId
+ * @param {import('playwright').Page|null} page
  * @returns {Promise<object[]>}
  */
-async function fetchCollections(storeId) {
+async function fetchCollections(storeId, page) {
+  if (page) {
+    return withRetry(async () => {
+      const data = await pageGet(page, `${DM2BUY_API}/v3/collection/store/${storeId}`);
+      return data?.collections || [];
+    });
+  }
   return withRetry(() =>
     axios.get(`${DM2BUY_API}/v3/collection/store/${storeId}`, { httpsAgent })
       .then(res => res.data?.collections || [])
@@ -182,13 +205,46 @@ async function fetchCollections(storeId) {
 /**
  * Fetches detail for a single product (description, etc.).
  * @param {string} productId
+ * @param {import('playwright').Page|null} page
  * @returns {Promise<object>}
  */
-async function fetchProductDetail(productId) {
+async function fetchProductDetail(productId, page) {
+  if (page) {
+    return withRetry(async () => {
+      const data = await pageGet(page, `${DM2BUY_API}/v3/product/${productId}`);
+      return data?.data || {};
+    });
+  }
   return withRetry(() =>
     axios.get(`${DM2BUY_API}/v3/product/${productId}`, { httpsAgent })
       .then(res => res.data?.data || {})
   );
+}
+
+/**
+ * DOM fallback: extracts basic product list from the store's rendered HTML.
+ * Used when the API returns 0 results or is blocked (401/403).
+ * Slower and fragile — insurance policy only.
+ * @param {import('playwright').Page} page
+ * @param {string} storeUrl
+ * @returns {Promise<object[]>} minimal product stubs (name, price, images)
+ */
+async function extractProductsFromDOM(page, storeUrl) {
+  console.warn('⚠️  API returned no products — attempting DOM fallback extraction');
+  await page.goto(storeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
+
+  return page.evaluate(() => {
+    const cards = document.querySelectorAll('[data-testid="product-card"], .product-card, article');
+    return Array.from(cards).map((card, i) => {
+      const name = card.querySelector('h2, h3, [data-testid="product-name"], .product-name')?.textContent?.trim() || `Product ${i + 1}`;
+      const priceText = card.querySelector('[data-testid="product-price"], .price, .product-price')?.textContent?.trim() || '0';
+      const price = parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
+      const imgs = Array.from(card.querySelectorAll('img')).map(img => img.src).filter(Boolean);
+      const link = card.querySelector('a')?.href || '';
+      return { name, price, imgs, link, _source: 'dom' };
+    });
+  });
 }
 
 /**
@@ -197,47 +253,80 @@ async function fetchProductDetail(productId) {
  * @param {string} storeUrl
  * @param {string} storeId — from recon_data
  * @param {string} jobId — Supabase job id (or null if tracking unavailable)
+ * @param {import('playwright').Page|null} [page] — Playwright page (optional)
  * @returns {Promise<object>} raw_store_data
  */
-export async function extract(storeUrl, storeId, jobId) {
+export async function extract(storeUrl, storeId, jobId, page = null) {
   const subdomain = new URL(storeUrl).hostname.split('.')[0];
+
+  // Visit storefront first if using browser (builds real session)
+  if (page) await visitStorefront(page, storeUrl);
 
   // Fetch store meta, product listing, and collections in parallel
   const [storeData, listProducts, collections] = await Promise.all([
-    fetchStoreMeta(subdomain),
-    fetchAllProducts(storeId),
-    fetchCollections(storeId)
+    fetchStoreMeta(subdomain, page),
+    page
+      ? withRetry(async () => {
+          const data = await pageGet(page, `${DM2BUY_API}/v3/product/store/${storeId}/collectionv2`, { page: 1, limit: 50, source: 'web' });
+          return data?.data?.docs || [];
+        })
+      : fetchAllProducts(storeId),
+    fetchCollections(storeId, page)
   ]);
+
+  // DOM fallback: if API returned 0 products, try scraping the rendered HTML
+  let effectiveProducts = listProducts;
+  if (listProducts.length === 0 && page) {
+    const domProducts = await extractProductsFromDOM(page, storeUrl);
+    if (domProducts.length > 0) {
+      console.warn(`⚠️  DOM fallback found ${domProducts.length} products (data quality may be lower)`);
+      // Convert DOM stubs to minimal API-compatible shape
+      effectiveProducts = domProducts.map((p, i) => ({
+        id: `dom_${i}`,
+        name: p.name,
+        price: p.price,
+        mrp: null,
+        productPhotos: p.imgs,
+        otherPhotos: [],
+        variantOptions: [],
+        collectionV2: [],
+        availableStock: -1,
+        _dom_extracted: true
+      }));
+    }
+  }
 
   const store_meta = extractStoreMeta(storeData);
 
-  // Fetch product details sequentially with 800ms delay
+  // Fetch product details sequentially with randomized human-like delays
   const products = [];
-  for (let i = 0; i < listProducts.length; i++) {
-    const apiProduct = listProducts[i];
+  for (let i = 0; i < effectiveProducts.length; i++) {
+    const apiProduct = effectiveProducts[i];
     const current = i + 1;
 
-    console.log(`⏳ Extracting products... (${current}/${listProducts.length})`);
+    console.log(`⏳ Extracting products... (${current}/${effectiveProducts.length})`);
 
     if (jobId) {
       await job.updateProgress(
-        jobId, current, listProducts.length,
+        jobId, current, effectiveProducts.length,
         'extraction',
-        `Extracting products (${current}/${listProducts.length})`
+        `Extracting products (${current}/${effectiveProducts.length})`
       ).catch(() => {});
     }
 
     let detailData = {};
-    try {
-      detailData = await fetchProductDetail(apiProduct.id);
-    } catch (err) {
-      console.warn(`⚠️  Could not fetch detail for product ${apiProduct.id} after retries: ${err.message}`);
+    if (!apiProduct._dom_extracted) {
+      try {
+        detailData = await fetchProductDetail(apiProduct.id, page);
+      } catch (err) {
+        console.warn(`⚠️  Could not fetch detail for product ${apiProduct.id} after retries: ${err.message}`);
+      }
     }
 
     const mapped = mapProduct(apiProduct, detailData, current, subdomain);
     products.push(mapped);
 
-    if (i < listProducts.length - 1) await sleep(NAV_DELAY_MS);
+    if (i < effectiveProducts.length - 1) await sleep(randomDelay());
   }
 
   // Build categories array per SCHEMA.md

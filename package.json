@@ -16,7 +16,9 @@
     "@supabase/supabase-js": "^2.0.0",
     "archiver": "^8.0.0",
     "axios": "^1.0.0",
+    "bullmq": "^5.76.9",
     "dotenv": "^16.0.0",
+    "ioredis": "^5.10.1",
     "papaparse": "^5.5.3",
     "playwright": "^1.40.0",
     "zod": "^3.0.0"

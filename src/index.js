@@ -21,6 +21,7 @@ import {
 import * as job from './job.js';
 import { recon } from './recon.js';
 import { extract } from './extractor.js';
+import { launchBrowser, getPage, closeBrowser } from './browser.js';
 import { downloadAllImages } from './downloader.js';
 import { format, writeStoreData, generateMigrationReport } from './formatter.js';
 import { validate } from './validator.js';
@@ -137,9 +138,11 @@ function writeJobMetadata(folderPath, metadata) {
   console.log(`✅ job_metadata.json written → ${metaPath}`);
 }
 
+let browser = null;
+
 async function main() {
   const args = parseArgs(process.argv);
-  const { storeUrl, accountId, format: formatArg, zip, autoApprove } = args;
+  const { storeUrl, format: formatArg, zip, autoApprove } = args;
   const startTime = new Date();
 
   ensureRootStructure();
@@ -152,6 +155,7 @@ async function main() {
   }
 
   const clientSlug = args.client ? slugify(args.client) : deriveClientSlug(storeUrl);
+  const accountId = clientSlug; // per-store lock — different stores run in parallel
 
   // --- Check for active job ---
   const activeJob = await job.getActiveJob(accountId).catch(() => null);
@@ -169,13 +173,22 @@ async function main() {
   console.log(`   Client: ${clientSlug}`);
   console.log(`   Format: ${formatArg}`);
 
+  // --- Launch browser (TLS fingerprint hiding via Chromium fetch) ---
+  let page = null;
+  try {
+    browser = await launchBrowser();
+    page = await getPage(browser);
+  } catch (err) {
+    console.warn(`⚠️  Browser launch failed — falling back to Axios: ${err.message}`);
+  }
+
   // --- Phase 1: Recon ---
   let jobId = null;
   let reconData;
 
   try {
     jobId = await job.createJob(accountId, storeUrl).catch(() => null);
-    reconData = await recon(storeUrl);
+    reconData = await recon(storeUrl, page);
 
     if (jobId) await job.updateReconData(jobId, reconData).catch(() => {});
 
@@ -213,7 +226,7 @@ async function main() {
   try {
     if (jobId) await job.updateStatus(jobId, 'extracting').catch(() => {});
     console.log('');
-    rawData = await extract(storeUrl, reconData.store_id, jobId);
+    rawData = await extract(storeUrl, reconData.store_id, jobId, page);
     console.log('✅ Extraction complete');
   } catch (err) {
     console.error(`❌ Extraction failed: ${err.message}`);
@@ -292,7 +305,7 @@ async function main() {
     const jobMetadata = {
       job_id: folderName,
       client_slug: clientSlug,
-      client_display_name: null,
+      client_display_name: args.client || clientSlug,
       store_url: storeUrl,
       store_name: validated.store_meta.name,
       instagram_handle: validated.store_meta.instagram,
@@ -350,8 +363,9 @@ async function main() {
 }
 
 main()
-  .then(() => closePrompt())
+  .then(() => { if (browser) closeBrowser(browser); closePrompt(); })
   .catch(err => {
+    if (browser) closeBrowser(browser).catch(() => {});
     closePrompt();
     console.error('❌ Unexpected error during import:');
     console.error(`   ${err.message}`);

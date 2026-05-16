@@ -1,12 +1,14 @@
 /**
  * src/recon.js — Phase 1: Fast store scan.
- * Uses dm2buy REST API directly via Axios — no DOM scraping needed for recon.
- * Returns recon_data per SCHEMA.md in ~2-3 seconds.
+ * When a Playwright page is provided, API calls route through Chromium's TLS
+ * stack (pageGet) after a storefront pre-visit. Falls back to Axios if no page.
+ * Returns recon_data per SCHEMA.md in ~3-5 seconds.
  */
 
 import axios from 'axios';
 import { estimateTime, withRetry } from './utils.js';
-import { httpsAgent, fetchAllProducts } from './api.js';
+import { httpsAgent, fetchAllProducts, pageGet } from './api.js';
+import { visitStorefront } from './browser.js';
 
 const DM2BUY_API = 'https://api.dm2buy.com';
 
@@ -24,9 +26,16 @@ function extractSubdomain(storeUrl) {
 /**
  * Fetches all collections for a store.
  * @param {string} storeId
+ * @param {import('playwright').Page|null} page
  * @returns {Promise<object[]>}
  */
-async function fetchCollections(storeId) {
+async function fetchCollections(storeId, page) {
+  if (page) {
+    return withRetry(async () => {
+      const data = await pageGet(page, `${DM2BUY_API}/v3/collection/store/${storeId}`);
+      return data?.collections || [];
+    });
+  }
   return withRetry(() =>
     axios.get(`${DM2BUY_API}/v3/collection/store/${storeId}`, { httpsAgent })
       .then(res => res.data?.collections || [])
@@ -36,19 +45,27 @@ async function fetchCollections(storeId) {
 /**
  * Fetches store metadata (name, instagram, shipping, etc.).
  * @param {string} subdomain
+ * @param {import('playwright').Page|null} page
  * @returns {Promise<object>}
  */
-async function fetchStoreMeta(subdomain) {
-  const data = await withRetry(() =>
+async function fetchStoreMeta(subdomain, page) {
+  const params = { select: 'internationalPayment,proplan,legalInfo' };
+  if (page) {
+    return withRetry(async () => {
+      const data = await pageGet(page, `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`, params);
+      if (!data?.success) throw new Error(`[recon] Store not found for subdomain: ${subdomain}`);
+      return data.data;
+    });
+  }
+  return withRetry(() =>
     axios.get(
       `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
-      { params: { select: 'internationalPayment,proplan,legalInfo' }, httpsAgent }
+      { params, httpsAgent }
     ).then(res => {
       if (!res.data?.success) throw new Error(`[recon] Store not found for subdomain: ${subdomain}`);
       return res.data.data;
     })
   );
-  return data;
 }
 
 /**
@@ -67,18 +84,29 @@ function countImages(products) {
 
 /**
  * Runs Phase 1 recon against a dm2buy store.
- * Returns recon_data per SCHEMA.md. Fast — no browser required.
+ * When page is provided: visits storefront first (builds real session) then
+ * routes API calls through Chromium fetch for TLS fingerprint hiding.
  * @param {string} storeUrl — full dm2buy store URL
+ * @param {import('playwright').Page|null} [page] — Playwright page (optional)
  * @returns {Promise<object>} recon_data
  */
-export async function recon(storeUrl) {
+export async function recon(storeUrl, page = null) {
   const subdomain = extractSubdomain(storeUrl);
-  const storeMeta = await fetchStoreMeta(subdomain);
+
+  // Visit storefront first to build real session cookies + referrer history
+  if (page) await visitStorefront(page, storeUrl);
+
+  const storeMeta = await fetchStoreMeta(subdomain, page);
   const storeId = storeMeta.id;
 
   const [products, collections] = await Promise.all([
-    fetchAllProducts(storeId),
-    fetchCollections(storeId)
+    page
+      ? withRetry(async () => {
+          const data = await pageGet(page, `https://api.dm2buy.com/v3/product/store/${storeId}/collectionv2`, { page: 1, limit: 50, source: 'web' });
+          return data?.data?.docs || [];
+        })
+      : fetchAllProducts(storeId),
+    fetchCollections(storeId, page)
   ]);
 
   const imageCount = countImages(products);
