@@ -35,8 +35,11 @@ const supabase = createClient(
  * @returns {IORedis}
  */
 export function createRedisConnection() {
-  return new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-    maxRetriesPerRequest: null
+  const url = process.env.REDIS_URL || 'redis://localhost:6379';
+  const tlsOptions = url.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
+  return new IORedis(url, {
+    maxRetriesPerRequest: null,
+    ...tlsOptions
   });
 }
 
