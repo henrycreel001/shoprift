@@ -11,7 +11,7 @@ import { generateCode, sleep } from './utils.js';
 import { launchBrowser, getPage, closeBrowser } from './browser.js';
 import 'dotenv/config';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const DM2BUY_API = 'https://api.dm2buy.com';
 const EXPIRY_MINUTES = parseInt(process.env.VERIFICATION_EXPIRY_MINUTES || '10', 10);
 const POLL_INTERVAL_MS = 30_000;
