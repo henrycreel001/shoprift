@@ -7,6 +7,34 @@
 
 ---
 
+## 2026-05-26 20:30 IST — T4 Client-side extraction module
+
+**Trigger:** T4.1-T4.5 from LAUNCH_PLAN.md — browser TypeScript port of recon.js + extractor.js.
+
+**Files changed:**
+
+### `web/src/lib/dm2buy/types.ts` (new)
+- TypeScript types matching SCHEMA.md exactly: ReconData, StoreMeta, Product, Category, StoreData, ProgressEvent, ProgressCallback.
+
+### `web/src/lib/dm2buy/recon.ts` (new)
+- Browser port of src/recon.js — pure fetch(), no Axios/Playwright/Node APIs.
+- Inline withRetry (3 attempts, 800ms base) with permanent flag support.
+- apiFetch marks 404/401/403 as permanent to skip retries.
+- T4.5 verified: kiwiishop → 25 products, 5 collections, 63 images (matches CLI).
+
+### `web/src/lib/dm2buy/extractor.ts` (new)
+- Browser port of src/extractor.js — pure fetch(), no Playwright/Axios/DOM fallback.
+- No random delays (seller's browser, own IP — not needed).
+- ProgressCallback pattern: fires after each product with { phase, current, total, message }.
+- Detail fetch failures silently degrade (use listing data only).
+- TypeScript: 0 errors.
+
+**Key decisions:**
+- DOM fallback removed — Playwright-only, not possible in browser.
+- No delays between product detail fetches — dm2buy API is open, seller's IP.
+
+---
+
 ## 2026-05-26 19:45 IST — T3.7 OAuth install flow tested + shopify.app.toml
 
 **Trigger:** T3.7 from LAUNCH_PLAN.md — end-to-end OAuth install test on dev store.
