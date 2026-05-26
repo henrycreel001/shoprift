@@ -305,13 +305,15 @@ function MigrateWizard() {
       const allData = await extract(reconData.store_url, reconData.store_id, (ev) => {
         setExtractProgress(ev)
       })
-      const trialProducts = allData.products.slice(0, 5)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const realProducts = verifyCode ? allData.products.filter((p: any) => !(p.name ?? '').includes(verifyCode)) : allData.products
+      const trialProducts = realProducts.slice(0, 5)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const trialUrls = trialProducts.map((p: any) => p.product_url as string)
       const trialStoreData = { ...allData, products: trialProducts }
 
       setTrialProductUrls(trialUrls)
-      setRemainingCount(Math.max(0, reconData.product_count - 5))
+      setRemainingCount(Math.max(0, realProducts.length - 5))
 
       const res = await fetch('/api/import/start', {
         method: 'POST',
@@ -375,7 +377,9 @@ function MigrateWizard() {
       const allData = await extract(reconData.store_url, reconData.store_id, (ev) => {
         setExtractProgress(ev)
       })
-      setStoreData(allData)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const filtered = verifyCode ? { ...allData, products: allData.products.filter((p: any) => !(p.name ?? '').includes(verifyCode)) } : allData
+      setStoreData(filtered)
       setStep('results')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Extraction failed. Please try again.')
