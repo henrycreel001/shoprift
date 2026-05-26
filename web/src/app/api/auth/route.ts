@@ -22,12 +22,10 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const shopify = getShopify();
 
-  // Returns a redirect Response to Shopify's OAuth consent screen.
-  // shopify-api handles state generation and CSRF cookie automatically.
   return shopify.auth.begin({
     shop,
     callbackPath: '/api/auth/callback',
-    isOnline: false, // offline token — persists after merchant closes tab
+    isOnline: false,
     rawRequest: request,
   });
 }

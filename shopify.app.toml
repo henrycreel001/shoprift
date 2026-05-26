@@ -1,0 +1,18 @@
+name = "Shoprift"
+client_id = "09b414e0b4717bf7de0c61d5e7a90984"
+application_url = "https://case-sloppily-snowflake.ngrok-free.dev"
+embedded = true
+
+[auth]
+redirect_urls = [
+  "https://case-sloppily-snowflake.ngrok-free.dev/api/auth/callback"
+]
+
+[access_scopes]
+scopes = "write_products,read_products,write_product_listings"
+
+[webhooks]
+api_version = "2026-04"
+
+[pos]
+embedded = false

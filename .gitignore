@@ -2,6 +2,8 @@ node_modules/
 output/
 clients/
 .env
+.env.local
+web/.env.local
 .DS_Store
 web/.next/
 writing_outputs/

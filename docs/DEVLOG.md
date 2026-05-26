@@ -7,6 +7,34 @@
 
 ---
 
+## 2026-05-26 19:45 IST — T3.7 OAuth install flow tested + shopify.app.toml
+
+**Trigger:** T3.7 from LAUNCH_PLAN.md — end-to-end OAuth install test on dev store.
+
+**Outcome:** PASS. Session row confirmed in Supabase `shopify_sessions`.
+
+**Files changed:**
+
+### `shopify.app.toml` (new)
+- Created for new Shopify Dev Dashboard (dev.shopify.com) — URLs managed via CLI, not UI.
+- `application_url` initially set to `/api/auth` (wrong — caused embedded iframe re-auth loop).
+- Fixed to root URL `https://case-sloppily-snowflake.ngrok-free.dev` (shoprift-3 deployed).
+- `client_id` = SHOPIFY_API_KEY. Deployed via `shopify app deploy`.
+
+### `.gitignore`
+- Added `.env.local` and `web/.env.local` — were missing, credentials would have leaked.
+
+### `web/src/app/api/auth/route.ts`
+- Temporary debug logging added and removed during T3.7 troubleshooting.
+
+**Key learnings:**
+- OAuth state cookie expires in 5 minutes — entire install flow must complete in one shot.
+- New dev.shopify.com manages app URLs via `shopify.app.toml` + CLI, not Partner dashboard UI.
+- `application_url` must point to app root, not `/api/auth` — Shopify admin loads it in an iframe.
+- Third-party cookies blocked in iframe context — OAuth must happen as top-level navigation.
+
+---
+
 ## 2026-05-26 19:45 IST — T3.4-T3.6 Shopify OAuth + session storage + uninstall webhook
 
 **Trigger:** T3 from LAUNCH_PLAN.md — Shopify App Infrastructure (code portion; T3.1-T3.3 are manual Partner dashboard steps).
