@@ -9,10 +9,12 @@
 
 import express from 'express';
 import { randomUUID } from 'node:crypto';
+import axios from 'axios';
 import { recon } from './recon.js';
 import { launchBrowser, getPage, closeBrowser } from './browser.js';
 import * as job from './job.js';
 import { importStore } from './shopify-importer.js';
+import { httpsAgent } from './api.js';
 // queue.js imported dynamically inside POST /enqueue — avoids Redis connection at startup
 
 const PORT = process.env.PORT || 3001;
@@ -137,20 +139,29 @@ app.post('/verify/check', async (req, res) => {
   }
   try {
     const subdomain = new URL(storeUrl).hostname.split('.')[0];
-    const storeRes = await fetch(
-      `https://api.dm2buy.com/v4/store/get-by-subdomain/${subdomain}?select=internationalPayment`,
-    );
-    const storeData = await storeRes.json();
-    const storeId = storeData?.data?.id;
+    const storeMeta = await axios.get(
+      `https://api.dm2buy.com/v4/store/get-by-subdomain/${subdomain}`,
+      { params: { select: 'internationalPayment' }, httpsAgent },
+    ).then(r => r.data);
+    const storeId = storeMeta?.data?.id;
     if (!storeId) return res.status(404).json({ error: 'Store not found.', verified: false });
 
-    const productsRes = await fetch(
-      `https://api.dm2buy.com/v3/product/store/${storeId}/collectionv2?page=1&limit=50&source=web`,
-    );
-    const productsData = await productsRes.json();
-    const products = productsData?.data?.docs ?? [];
-    const found = products.some((p) => (p.name ?? '').includes(code));
-    return res.json({ verified: found });
+    // Paginate all products — dm2buy cert is expired so axios+httpsAgent required
+    let pageNum = 1;
+    const limit = 50;
+    while (true) {
+      const docs = await axios.get(
+        `https://api.dm2buy.com/v3/product/store/${storeId}/collectionv2`,
+        { params: { page: pageNum, limit, source: 'web' }, httpsAgent },
+      ).then(r => r.data?.data?.docs ?? []);
+
+      if (docs.some((p) => (p.name ?? '').includes(code))) {
+        return res.json({ verified: true });
+      }
+      if (docs.length < limit) break;
+      pageNum++;
+    }
+    return res.json({ verified: false });
   } catch (err) {
     return res.status(502).json({ error: err.message, verified: false });
   }
