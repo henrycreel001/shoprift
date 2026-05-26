@@ -14,7 +14,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   let session;
   try {
-    const callbackResult = await shopify.auth.callback({ rawRequest: request });
+    const callbackResult = await shopify.auth.callback({ rawRequest: request, expiring: true });
     session = callbackResult.session;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
