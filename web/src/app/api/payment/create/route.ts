@@ -4,10 +4,12 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 
-const rzp = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+function getRzp() {
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID!,
+    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Job not found.' }, { status: 404 })
     }
 
+    const rzp = getRzp()
     const order = await rzp.orders.create({
       amount: amountPaise,
       currency: 'INR',

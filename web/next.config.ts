@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
 
   // Suppress React 19 hydration noise in dev
   reactStrictMode: true,
+  outputFileTracingRoot: require("path").join(__dirname, ".."),
 
   // Image domains — add Railway worker host once known
   images: {

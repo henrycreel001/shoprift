@@ -3,3 +3,6 @@ output/
 clients/
 .env
 .DS_Store
+web/.next/
+writing_outputs/
+.agents/
