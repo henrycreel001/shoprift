@@ -7,7 +7,7 @@
 
 import axios from 'axios';
 import { estimateTime, withRetry } from './utils.js';
-import { httpsAgent, fetchAllProducts, pageGet } from './api.js';
+import { httpsAgent, fetchAllProducts, fetchAllProductsViaPage, pageGet } from './api.js';
 import { visitStorefront } from './browser.js';
 
 const DM2BUY_API = 'https://api.dm2buy.com';
@@ -98,14 +98,10 @@ export async function recon(storeUrl, page = null) {
 
   const storeMeta = await fetchStoreMeta(subdomain, page);
   const storeId = storeMeta.id;
+  if (!storeId) throw new Error(`[recon] Store API returned no id for subdomain: ${subdomain}`);
 
   const [products, collections] = await Promise.all([
-    page
-      ? withRetry(async () => {
-          const data = await pageGet(page, `https://api.dm2buy.com/v3/product/store/${storeId}/collectionv2`, { page: 1, limit: 50, source: 'web' });
-          return data?.data?.docs || [];
-        })
-      : fetchAllProducts(storeId),
+    page ? fetchAllProductsViaPage(page, storeId) : fetchAllProducts(storeId),
     fetchCollections(storeId, page)
   ]);
 

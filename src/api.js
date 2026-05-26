@@ -77,3 +77,29 @@ export async function fetchAllProducts(storeId) {
 
   return products;
 }
+
+/**
+ * Fetches all products via Playwright page (Chromium TLS stack), paginated.
+ * Mirrors fetchAllProducts but routes through pageGet for anti-detection.
+ * @param {import('playwright').Page} page
+ * @param {string} storeId
+ * @returns {Promise<object[]>}
+ */
+export async function fetchAllProductsViaPage(page, storeId) {
+  const products = [];
+  let pageNum = 1;
+  const limit = 50;
+
+  while (true) {
+    const docs = await withRetry(async () => {
+      const data = await pageGet(page, `${DM2BUY_API}/v3/product/store/${storeId}/collectionv2`, { page: pageNum, limit, source: 'web' });
+      return data?.data?.docs || [];
+    });
+
+    products.push(...docs);
+    if (docs.length < limit) break;
+    pageNum++;
+  }
+
+  return products;
+}

@@ -71,7 +71,7 @@ function computeMigrationFlags(storeMeta, products, failed) {
     });
   }
 
-  if (!storeMeta.shipping.shipping_charges) {
+  if (storeMeta.shipping.shipping_charges == null) {
     flags.push({
       type: 'no_shipping_charges',
       severity: 'info',
@@ -130,7 +130,7 @@ export function format(rawData, manifest, reconData, jobMeta) {
   const totalSelected = products.filter(p => p.selected_for_import).length;
 
   const productScore = products.length > 0
-    ? Math.round((products.filter(p => p.name && p.price).length / products.length) * 100)
+    ? Math.round((products.filter(p => p.name && p.price != null).length / products.length) * 100)
     : 0;
   const categoryScore = categories.length > 0 ? 90 : 50;
   const storeMetaScore = store_meta.name ? 80 : 20;
@@ -233,7 +233,7 @@ export function generateMigrationReport(formattedData, outputDir = process.env.O
     '| # | Name | Price | Original | Discount | Category | Images | Needs Description |',
     '|---|------|-------|----------|----------|----------|--------|-------------------|',
     ...products.map(p =>
-      `| ${p.id} | ${p.name} | ₹${p.price} | ${p.original_price ? '₹'+p.original_price : '—'} | ${p.discount_percentage ? p.discount_percentage+'%' : '—'} | ${p.category || '_Uncategorized_'} | ${p.images_cdn.length} | ${p.needs_description ? '⚠️ Yes' : 'No'} |`
+      `| ${p.id} | ${p.name.replace(/\|/g, '\\|')} | ₹${p.price} | ${p.original_price ? '₹'+p.original_price : '—'} | ${p.discount_percentage ? p.discount_percentage+'%' : '—'} | ${p.category || '_Uncategorized_'} | ${p.images_cdn.length} | ${p.needs_description ? '⚠️ Yes' : 'No'} |`
     )
   ].join('\n');
 

@@ -7,7 +7,7 @@
 
 import axios from 'axios';
 import { computeDiscount, computeSlug, sleep, withRetry } from './utils.js';
-import { httpsAgent, fetchAllProducts, pageGet } from './api.js';
+import { httpsAgent, fetchAllProducts, fetchAllProductsViaPage, pageGet } from './api.js';
 import { visitStorefront } from './browser.js';
 import * as job from './job.js';
 
@@ -90,7 +90,7 @@ function classifyVariants(variantOptions) {
  * @returns {object} product per SCHEMA.md
  */
 function mapProduct(apiProduct, detailData, id, subdomain) {
-  const name = apiProduct.name || detailData.name;
+  const name = apiProduct.name || detailData.name || 'Untitled Product';
   const price = apiProduct.price;
   const originalPrice = apiProduct.mrp || null;
   const description = detailData.description || null;
@@ -172,14 +172,18 @@ async function fetchStoreMeta(subdomain, page) {
   if (page) {
     return withRetry(async () => {
       const data = await pageGet(page, `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`, params);
-      return data?.data;
+      if (!data?.success) throw new Error(`[extractor] Store not found for subdomain: ${subdomain}`);
+      return data.data;
     });
   }
   return withRetry(() =>
     axios.get(
       `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
       { params, httpsAgent }
-    ).then(res => res.data.data)
+    ).then(res => {
+      if (!res.data?.success) throw new Error(`[extractor] Store not found for subdomain: ${subdomain}`);
+      return res.data.data;
+    })
   );
 }
 
@@ -265,12 +269,7 @@ export async function extract(storeUrl, storeId, jobId, page = null) {
   // Fetch store meta, product listing, and collections in parallel
   const [storeData, listProducts, collections] = await Promise.all([
     fetchStoreMeta(subdomain, page),
-    page
-      ? withRetry(async () => {
-          const data = await pageGet(page, `${DM2BUY_API}/v3/product/store/${storeId}/collectionv2`, { page: 1, limit: 50, source: 'web' });
-          return data?.data?.docs || [];
-        })
-      : fetchAllProducts(storeId),
+    page ? fetchAllProductsViaPage(page, storeId) : fetchAllProducts(storeId),
     fetchCollections(storeId, page)
   ]);
 
@@ -333,7 +332,7 @@ export async function extract(storeUrl, storeId, jobId, page = null) {
   const categories = collections.map(col => ({
     name: col.name,
     url: `https://${subdomain}.dm2buy.com/?collection=${encodeURIComponent(col.name)}`,
-    product_count: products.filter(p => p.category === col.name).length,
+    product_count: products.filter(p => p.all_categories.includes(col.name)).length,
     slug: computeSlug(col.name)
   }));
 
