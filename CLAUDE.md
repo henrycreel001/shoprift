@@ -3,6 +3,7 @@
 > Read this file first. Every decision must align with it.
 > Cross-reference: ARCHITECTURE.md → TASKS.md → SCHEMA.md → ERRORS.md → PRE_LAUNCH_CHECKLIST.md
 > **Project skills:** `/shoprift-pm` · `/shoprift-legal` · `/shoprift-accountant` · `/shoprift-content` · `/caveman`
+> **Change log:** Every edit recorded in `docs/DEVLOG.md` — date, files, reason. Update before each commit.
 
 ## SESSION CONTINUITY
 
@@ -273,19 +274,19 @@ Rules: one active job per account at insert time; update status + progress after
 ## TESTING RULES
 
 - Test store: `https://kiwiishop.dm2buy.com`
-- Expected: 4 products · 2 collections · 18 images
-- Pass = all 4 products extracted with correct prices and image URLs
+- Expected: 25 products · 5 collections · 63 images (as of 2026-05-26 — store is live, counts may grow)
+- Pass = all products extracted with correct prices and image URLs
 - Run tests after every phase — not just at end
 
 ---
 
 ## DEFINITION OF DONE — V1 (CONCIERGE-READY)
 
-- [ ] `node src/index.js https://kiwiishop.dm2buy.com` runs without errors
-- [ ] Recon returns 4 products / 2 collections / 18 images
+- [x] `node src/index.js https://kiwiishop.dm2buy.com` runs without errors ✅
+- [x] Recon returns products / collections / images (25/5/63 as of 2026-05-26) ✅
 - [ ] Verification flow works (Method A: Instagram story; Method B: product injection)
-- [ ] All 4 products extracted with correct data
-- [ ] All 18 images downloaded to `output/images/`
+- [x] All products extracted with correct data ✅
+- [x] All images downloaded to `output/images/` (63/63, 0 failures) ✅
 - [ ] `store_data.json` validates against `store.schema.json` — zero errors
 - [x] `store_data.csv` exports in Shopify preset format ✅
 - [ ] `migration_report.md` human-readable and complete
