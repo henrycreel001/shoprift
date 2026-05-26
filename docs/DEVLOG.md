@@ -7,6 +7,35 @@
 
 ---
 
+## 2026-05-27 — End-to-end migration confirmed + verification fixes
+
+**Milestone:** First complete migration end-to-end: URL → Verify → Preview → Extract → Review → Import → Done. 9 products + 3 collections live in Shopify from mmshop.
+
+**Root cause fixed:** `RAILWAY_WORKER_URL=http://localhost:3001` was set in Vercel production env. Vercel was calling localhost (itself), not Railway. Worker never received `/verify/check` requests. Updated to `https://shoprift-production.up.railway.app`.
+
+**Railway domain established:** `https://shoprift-production.up.railway.app` (via `railway domain`).
+
+### Files changed this session
+
+#### `web/.env.local` (local only — gitignored)
+- `RAILWAY_WORKER_URL` updated from `http://localhost:3001` to `https://shoprift-production.up.railway.app`
+- Same change applied manually in Vercel production env vars
+
+#### `docs/CONTEXT.md`
+- Full rewrite to reflect milestone completion
+- Next task: T7 Shopify Billing API
+
+**Previously committed this session:**
+
+#### `web/src/app/api/verify/start/route.ts` (commit `f49337c`)
+- Added `method: 'dm2buy_product'` explicitly to INSERT — avoids null constraint if DB default missing
+
+#### `src/server.js` (commit `c5ffaee`)
+- Replaced native `fetch` with `axios + httpsAgent` in `/verify/check` — dm2buy TLS cert expired, native fetch throws SSL error
+- Added full pagination loop — previously only checked first page of products
+
+---
+
 ## 2026-05-27 — Trial lock + ownership verification
 
 **Trigger:** 3 production bugs (trial not enforced, progress label wrong, job ID visible) + missing ownership verification gate.

@@ -16,9 +16,9 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-05-26
-- **Session topic:** T5.9 integration test pass, T6 Polaris wizard built, Internal Server Error debugged, trial import feature planned
-- **Branch:** main
+- **Date:** 2026-05-27
+- **Session topic:** End-to-end migration confirmed working. Verification fixed. Full flow live.
+- **Branch:** main (up to date with remote, commit `c5ffaee`)
 
 ---
 
@@ -26,20 +26,21 @@
 
 | Group | Phase | Status | Notes |
 |-------|-------|--------|-------|
-| A — Engine | 0–10 | ✅ Passing | kiwiishop: 25 products, 5 collections ✅ |
+| A — Engine | 0–10 | ✅ Passing | kiwiishop: 25 products, 5 collections, 63 images ✅ |
 | B — CSV mapper | 11 | ✅ Complete | Shopify + generic preset shipped |
-| C — Web app | T5 ✅ T6 ✅ | 🟡 In progress | Shopify import working; T7 billing + trial import next |
-| D — Launch | 15 | ❌ Not started | Blocked on C |
+| C — Web app | T1–T6 | ✅ Complete | Full flow: URL → Verify → Preview → Extract → Review → Import → Done. 9 products + 3 collections confirmed live in Shopify. |
+| C — Web app | T7 | ❌ Not started | Shopify Billing API — payment not wired. Users currently get free migrations. |
+| D — Launch | 15 | ❌ Not started | Blocked on T7 + PRE_LAUNCH_CHECKLIST |
 
 ---
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **T6 complete** — Polaris 6-step migration wizard built at `/migrate`. AppProvider, Suspense, client-side extraction, progress bars, billing gate (bypassed), import polling. Build clean. Loads inside Shopify admin.
-2. **T5.9 passed** — kiwiishop integration test: 25/25 products, 0 failures, 5 collections via Shopify Admin API. CSV export confirmed correct (variant mapping, CDN images, collections via collects API).
-3. **Debugged Internal Server Error** — stale Next.js process on port 3000 (PID 39421). Kill + restart fixed it. Fresh server works. Added `allowedDevOrigins` to next.config.ts for ngrok cross-origin warning.
-4. **Shopify app confirmed loading** — ngrok URL + Shopify admin both load. Session params (hmac, id_token, shop) confirmed arriving at root page.
-5. **Trial import plan written** — see plan file at `/Users/mayankmalik/.claude/plans/virtual-herding-perlis.md`
+1. **End-to-end migration confirmed** — Full wizard tested: URL → Verify → Preview → Extract → Review → Import → Done. 9 products + 3 collections imported to `shoprift-dev.myshopify.com` from mmshop. Trial skip (5 already imported) worked correctly.
+2. **Root cause found: wrong Railway URL** — `RAILWAY_WORKER_URL=http://localhost:3001` in Vercel. Worker never received verify/check calls. Fixed: updated to `https://shoprift-production.up.railway.app` in Vercel dashboard + `.env.local`.
+3. **Verification confirmed working on Railway** — Direct curl to `POST /verify/check` returned `{ verified: true }`. The axios+httpsAgent fix (commit `c5ffaee`) was correct; only the URL was wrong.
+4. **Two verification bugs fixed and committed** — (a) `method` column null violation fixed by passing it explicitly in INSERT (`f49337c`); (b) `/verify/check` on Railway replaced native fetch with axios+httpsAgent to bypass dm2buy expired TLS cert + added full pagination (`c5ffaee`).
+5. **Railway worker deployed** — `railway up --detach` at commit `c5ffaee`. Worker online at `https://shoprift-production.up.railway.app`.
 
 ---
 
@@ -47,59 +48,49 @@
 
 | Blocker | Blocks | Notes |
 |---------|--------|-------|
-| Shop param lost on CTA click | Full import working | page.tsx "Migrate my store" link has no ?shop=xxx — fix is in the plan |
-| T7 Billing API not implemented | Paid import | Billing step currently bypasses payment — calls import/start directly |
-| Trial import not built | Trust-building UX | Full plan written, not yet implemented |
+| T7 Billing API not implemented | Revenue | "Pay ₹599" calls `/api/import/start` directly — no charge. Shopify `AppPurchaseOneTime` not wired. **This is the next task.** |
+| Verification product gets imported | UX | The dummy dm2buy product added for verification (e.g. "SHR-DDM2-TFNVNY" at ₹12) is extracted and imported to Shopify alongside real products. User should delete it from dm2buy after verification. Not blocking launch but should be fixed. |
 
 ---
 
-## UNCOMMITTED CHANGES (as of last update)
+## UNCOMMITTED CHANGES
 
-- `CLAUDE.md` — modified
-- `package.json` / `package-lock.json` — modified (Polaris, shopify-api added)
-- `web/next.config.ts` — modified (transpilePackages, allowedDevOrigins, CSP)
-- `web/src/app/layout.tsx` — modified (Polaris CSS import)
-- `web/src/app/migrate/page.tsx` — complete rewrite (T6 Polaris wizard)
-- `web/src/app/api/payment/create/route.ts` — modified
-- `worker.js` — modified
-- `src/server.js` — new, untracked
-- `src/shopify-importer.js` — new, untracked (Shopify Admin API import engine)
-- `.claude/settings.json` — new, untracked
-- `tests/shopify-import.test.js` — new (T5.9 integration test)
-- `docs/LAUNCH_PLAN.md` — new
+None. All code changes pushed. `.env.local` updated locally (gitignored).
+
+**One manual step still needed:** `RAILWAY_WORKER_URL` in Vercel production set to `https://shoprift-production.up.railway.app` — user confirmed done.
 
 ---
 
 ## NEXT TASKS (in priority order)
 
-Next session: implement the plan at `/Users/mayankmalik/.claude/plans/virtual-herding-perlis.md` in full.
+1. **T7 — Shopify Billing API** — Wire `AppPurchaseOneTime` before real users get access. Currently the "Pay ₹599" button imports for free. This is the revenue gate.
 
-1. **Content update** — Remove "shutting down" urgency copy from `page.tsx` + `layout.tsx`. New headline: "Move your dm2buy store to Shopify"
-2. **Fix shop param bug** — `page.tsx`: add `searchParams` prop, pass `?shop=xxx` to CTA link
-3. **Trial import** — 5 products free, one-time per store. Full plan in plan file.
-4. **Merge landing context** — compact hero above URL input on step 1 of wizard
-5. **T7** — Shopify Billing API (`AppPurchaseOneTime`) — gates paid import behind confirmed Shopify charge
+2. **Fix verification product import** — After verification passes, the dummy product is still in the seller's dm2buy store and gets extracted. Options:
+   - Tell user to delete it before extraction (current: UI says this but no enforcement)
+   - Filter out products whose name starts with `SHR-` during extraction (risky — seller might have real products with that name)
+   - Smarter: after verification, store the code and filter it in the extractor
+
+3. **PRE_LAUNCH_CHECKLIST** — Read `docs/PRE_LAUNCH_CHECKLIST.md` before any external users are onboarded.
 
 ---
 
 ## KNOWN DECISIONS / CONTEXT
 
-- Verification skipped in V1 (concierge mode) — `verifier.js` kept for V2.
-- Collections → Tags column in Shopify CSV. Do not change without updating all emitters.
-- **Extraction architecture: client-side** — seller's browser runs extraction JS against dm2buy API (CORS open). Server handles Shopify Admin API import only. No proxy needed.
-- **Shopify app embedded** — loads inside Shopify admin iframe. CSP `frame-ancestors` set. Session params (hmac, host, id_token, shop) arrive via URL query string.
-- **T6.5 billing bypassed** — the "Pay and import" button in the wizard calls `/api/import/start` directly without Shopify billing. T7 wires real `AppPurchaseOneTime`.
-- **Trial import plan**: 5 free products, one-time per shop+store_url. Stored in `import_jobs.recon_data` with `is_trial: true` and `trial_product_urls: []`. Full import filters those URLs out to avoid duplicates.
-- **Railway worker running** — `RAILWAY_WORKER_URL` in `.env.local` points to `http://localhost:3001` for local dev. Worker serves POST /import via `src/server.js`.
-- **Razorpay scaffolded but unused** — `/api/payment/create` exists but Shopify Billing API is the payment path for the embedded app.
-- **dm2buy is NOT shutting down** — remove all urgency/fear copy. New positioning: scale your business by migrating from dm2buy to Shopify.
+- **Extraction: client-side** — seller's browser runs extraction against dm2buy API (CORS open). Server only handles Shopify Admin API import.
+- **Shopify app embedded** — loads inside Shopify admin iframe. `shop` param arrives via URL query string (`?shop=shoprift-dev.myshopify.com`). CSP `frame-ancestors` set.
+- **Trial detection architecture** — `is_trial` and `trial_product_urls` are top-level DB columns set at job INSERT time, never written by the Railway worker. Worker only writes `recon_data` (import results), `progress`, `status`, `error`.
+- **Verification method** — Method B: dm2buy product injection. User adds a product named `SHR-XXXX-XXXXXX` to their dm2buy store. Railway worker checks via dm2buy public API (paginated, axios+httpsAgent for expired TLS cert bypass). One verified record per (shop, store_url) pair — stays verified permanently.
+- **RAILWAY_WORKER_URL** — `https://shoprift-production.up.railway.app` (production + local .env.local). Must be set in Vercel env vars.
+- **Railway domain** — `https://shoprift-production.up.railway.app` (generated 2026-05-27).
+- **T7 billing bypassed intentionally** — "Pay ₹599" → `/api/import/start` directly. No charge. T7 is the next revenue-critical task.
+- **Razorpay scaffolded but unused** — `/api/payment/create` exists. Shopify Billing API (`AppPurchaseOneTime`) is the actual payment path for the embedded app.
+- **dm2buy TLS cert expired** — All server-side API calls to `api.dm2buy.com` MUST use `axios + httpsAgent` with `rejectUnauthorized: false`. Pattern lives in `src/api.js`. Never use native `fetch` for dm2buy API calls from Node.js.
 
 ---
 
 ## SESSION NOTES
 
-> T5.9 kiwiishop test: 25/25 products, 0 failures, 5 collections. CSV export verified.
-> T6 Polaris wizard fully working inside Shopify admin. Build clean, TypeScript 0 errors.
-> Bug found: page.tsx "Migrate my store" loses ?shop param → "Invalid shop" error on import.
-> Full plan for next session: trial import + content update + shop param fix → plan file above.
-> Dev setup: `cd web && npm run dev` (port 3000) + ngrok forwarding to 3000 + Railway worker on 3001.
+> Dev setup: `cd web && npm run dev` (port 3000) + ngrok forwarding to 3000 + Railway worker on port 3001 (`node worker.js`).
+> Test store: `https://kiwiishop.dm2buy.com` — 25 products, 5 collections, 63 images.
+> Test Shopify store: `shoprift-dev.myshopify.com`.
+> mmshop (`https://mmshop.dm2buy.com`) is Mayank's test dm2buy store — 13 real products + verification artifacts.
