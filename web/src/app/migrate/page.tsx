@@ -155,6 +155,8 @@ function StepBar({ current }: { current: Step }) {
 function MigrateWizard() {
   const searchParams = useSearchParams()
   const shop = searchParams.get('shop') ?? ''
+  const billingJobId = searchParams.get('billing_job_id')
+  const billingError = searchParams.get('billing_error')
 
   const [step, setStep] = useState<Step>('url')
   const [storeUrl, setStoreUrl] = useState('')
@@ -174,12 +176,49 @@ function MigrateWizard() {
   const [verifyAttemptId, setVerifyAttemptId] = useState<string | null>(null)
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const [verifyLoading, setVerifyLoading] = useState(false)
+  const [billingLoading, setBillingLoading] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const clearPoll = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
   }, [])
   useEffect(() => () => clearPoll(), [clearPoll])
+
+  // ── Return from Shopify billing page ──────────────────────────────────────
+  useEffect(() => {
+    if (billingError) {
+      setError(`Payment issue: ${billingError.replace(/_/g, ' ')}. Try again or contact support.`)
+    }
+    if (!billingJobId) return
+    const id = billingJobId
+    setJobId(id)
+    setStep('importing')
+    const poll = async () => {
+      try {
+        const r = await fetch(`/api/import/status/${id}`)
+        const d = await r.json() as {
+          status: string
+          progress?: { current: number; total: number; message: string }
+          error?: string
+          result?: ImportResult
+        }
+        const prog = d.progress ?? { current: 0, total: 0, message: '' }
+        setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+        if (d.status === 'complete') {
+          clearPoll()
+          setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+          setStep('done')
+        } else if (d.status === 'failed') {
+          clearPoll()
+          setError(d.error ?? 'Import failed. Contact support.')
+        }
+      } catch {
+        // network blip — keep polling
+      }
+    }
+    poll()
+    pollRef.current = setInterval(poll, 3000)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Step 1: Recon + verification gate ─────────────────────────────────────
 
@@ -387,57 +426,86 @@ function MigrateWizard() {
     }
   }
 
-  // ── Import (billing bypassed — T7 implements Shopify Billing API) ──────────
+  // ── Import ─────────────────────────────────────────────────────────────────
 
   async function handleImport() {
-    if (!storeData || !reconData) return
-    setStep('importing')
+    if (!storeData || !reconData || !tier) return
     setError(null)
+
+    if (tier.isFree) {
+      // Free tier — direct import, no billing
+      setStep('importing')
+      try {
+        const res = await fetch('/api/import/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop,
+            storeUrl: reconData.store_url,
+            storeData,
+            ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}),
+          }),
+        })
+        const data = await res.json() as { jobId?: string; error?: string }
+        if (!res.ok) throw new Error(data.error ?? 'Import failed to start.')
+        const id = data.jobId!
+        setJobId(id)
+
+        const poll = async () => {
+          try {
+            const r = await fetch(`/api/import/status/${id}`)
+            const d = await r.json() as {
+              status: string
+              progress?: { current: number; total: number; message: string }
+              error?: string
+              result?: ImportResult
+            }
+            const prog = d.progress ?? { current: 0, total: 0, message: '' }
+            setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+            if (d.status === 'complete') {
+              clearPoll()
+              setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+              setStep('done')
+            } else if (d.status === 'failed') {
+              clearPoll()
+              setError(d.error ?? 'Import failed. Contact support.')
+            }
+          } catch {
+            // network blip — keep polling
+          }
+        }
+        poll()
+        pollRef.current = setInterval(poll, 3000)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to start import.')
+        setStep('results')
+      }
+      return
+    }
+
+    // Paid tier — Shopify Billing API
+    setBillingLoading(true)
     try {
-      const res = await fetch('/api/import/start', {
+      const amount = parseInt(tier.price.replace(/[₹,]/g, ''), 10)
+      const res = await fetch('/api/payment/billing/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shop,
           storeUrl: reconData.store_url,
           storeData,
-          ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}),
+          skipUrls: trialProductUrls.length > 0 ? trialProductUrls : undefined,
+          amount,
+          planName: `Shoprift ${tier.plan}`,
         }),
       })
-      const data = await res.json() as { jobId?: string; error?: string }
-      if (!res.ok) throw new Error(data.error ?? 'Import failed to start.')
-      const id = data.jobId!
-      setJobId(id)
-
-      const poll = async () => {
-        try {
-          const r = await fetch(`/api/import/status/${id}`)
-          const d = await r.json() as {
-            status: string
-            progress?: { current: number; total: number; message: string }
-            error?: string
-            result?: ImportResult
-          }
-          const prog = d.progress ?? { current: 0, total: 0, message: '' }
-          setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
-          if (d.status === 'complete') {
-            clearPoll()
-            setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
-            setStep('done')
-          } else if (d.status === 'failed') {
-            clearPoll()
-            setError(d.error ?? 'Import failed. Contact support.')
-          }
-        } catch {
-          // network blip — keep polling
-        }
-      }
-
-      poll()
-      pollRef.current = setInterval(poll, 3000)
+      const d = await res.json() as { confirmationUrl?: string; error?: string }
+      if (!res.ok) throw new Error(d.error ?? 'Failed to create payment.')
+      // Escape iframe — navigate top frame to Shopify payment page
+      window.top!.location.href = d.confirmationUrl!
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start import.')
-      setStep('results')
+      setError(err instanceof Error ? err.message : 'Payment setup failed. Try again.')
+      setBillingLoading(false)
     }
   }
 
@@ -882,9 +950,17 @@ function MigrateWizard() {
                 </BlockStack>
               </InlineStack>
 
-              <Button variant="primary" size="large" onClick={handleImport}>
+              <Button
+                variant="primary"
+                size="large"
+                onClick={handleImport}
+                loading={billingLoading}
+                disabled={billingLoading}
+              >
                 {tier.isFree
                   ? 'Import to Shopify (free)'
+                  : billingLoading
+                  ? 'Redirecting to payment...'
                   : `Pay ${tier.price} and import to Shopify`}
               </Button>
 

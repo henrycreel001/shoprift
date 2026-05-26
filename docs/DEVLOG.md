@@ -7,6 +7,47 @@
 
 ---
 
+## 2026-05-27 — T7 Shopify Billing API (AppPurchaseOneTime)
+
+**Trigger:** T7 task — wire payment before external users get access. "Pay ₹599" was calling `/api/import/start` directly with no charge.
+
+**Flow implemented:**
+1. Client clicks "Pay ₹599 and import" → `POST /api/payment/billing/create` with `storeData` + `amount`
+2. Server creates job (`pending_payment`) storing `store_data` + `skip_urls` in new JSONB columns
+3. Server calls Shopify GraphQL `appPurchaseOneTimeCreate` → returns `confirmationUrl`
+4. Client: `window.top.location.href = confirmationUrl` (escapes iframe)
+5. Merchant approves on Shopify → redirects to `GET /api/payment/billing/callback?jobId=XXX&charge_id=YYY&shop=ZZZ`
+6. Callback verifies charge via REST (`application_charges/{id}.json`), triggers Railway `/import`, redirects to Shopify admin with `?billing_job_id=XXX`
+7. Migrate page detects `billing_job_id` on mount, jumps to `importing` step, polls job status
+
+**Free tier (0–3 products) unchanged** — goes straight to `/api/import/start`, no billing.
+
+### Files changed
+
+#### `supabase/migrations/003_billing_columns.sql` (new)
+- `store_data JSONB` — stores extracted product/collection data between billing and import
+- `skip_urls JSONB DEFAULT '[]'` — stores trial product URLs to skip on full import
+
+#### `web/src/app/api/payment/billing/create/route.ts` (new)
+- Creates `pending_payment` job with `store_data` + `skip_urls`
+- Calls Shopify GraphQL `appPurchaseOneTimeCreate`
+- Returns `{ confirmationUrl, jobId }`
+- `test: true` in non-production environments
+
+#### `web/src/app/api/payment/billing/callback/route.ts` (new)
+- Verifies `application_charge.status === 'active'` via Shopify REST
+- Updates job to `pending`, calls Railway `/import` with stored `storeData`
+- Redirects to `https://{shop}/admin/apps/shoprift?billing_job_id={jobId}`
+
+#### `web/src/app/migrate/page.tsx` (modified)
+- Added `billingJobId`, `billingError` from searchParams
+- Added `billingLoading` state
+- Added `useEffect` for billing return: detects `billing_job_id` → sets `importing` step, polls job
+- `handleImport()`: free tier → direct import (unchanged); paid → billing flow
+- Pay button: shows `loading` + "Redirecting to payment..." while billing request is in flight
+
+---
+
 ## 2026-05-27 — End-to-end migration confirmed + verification fixes
 
 **Milestone:** First complete migration end-to-end: URL → Verify → Preview → Extract → Review → Import → Done. 9 products + 3 collections live in Shopify from mmshop.
