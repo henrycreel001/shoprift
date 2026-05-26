@@ -127,11 +127,13 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   if (!gqlRes.ok) {
+    const errBody = await gqlRes.text().catch(() => '');
+    const errMsg = `Shopify billing API error ${gqlRes.status}: ${errBody.slice(0, 300)}`;
     await supabase
       .from('import_jobs')
-      .update({ status: 'failed', error: `Shopify billing API error: ${gqlRes.status}` })
+      .update({ status: 'failed', error: errMsg })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Shopify billing API error' }, { status: 502 });
+    return NextResponse.json({ error: errMsg }, { status: 502 });
   }
 
   const gqlData = await gqlRes.json() as {
