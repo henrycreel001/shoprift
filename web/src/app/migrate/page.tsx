@@ -1,741 +1,853 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import enTranslations from '@shopify/polaris/locales/en.json'
+import {
+  AppProvider,
+  Page,
+  Card,
+  BlockStack,
+  InlineStack,
+  Text,
+  TextField,
+  Button,
+  Banner,
+  ProgressBar,
+  Badge,
+  Divider,
+  Box,
+  Spinner,
+} from '@shopify/polaris'
+import { recon as runRecon } from '@/lib/dm2buy/recon'
+import { extract } from '@/lib/dm2buy/extractor'
+import { createBrowserSupabaseClient } from '@/lib/supabase'
+import type { ReconData, StoreData, ProgressEvent } from '@/lib/dm2buy/types'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-interface ReconData {
-  storeName: string
-  storeUrl: string
-  productCount: number
-  imageCount: number
-  collectionCount: number
-  priceTier: PriceTier
+type Step =
+  | 'url'
+  | 'reconning'
+  | 'preview'
+  | 'trialing'
+  | 'trial_done'
+  | 'extracting'
+  | 'results'
+  | 'importing'
+  | 'done'
+
+interface ImportStatus {
+  status: string
+  current: number
+  total: number
+  message: string
 }
 
-interface PriceTier {
-  plan: string
-  amountPaise: number    // 0 = free preview
-  label: string          // human-readable: "₹599"
-  isFree: boolean
+interface ImportResult {
+  productsCreated: number
+  productsFailed: number
+  collectionsCreated: number
+  errors?: string[]
 }
 
-interface JobProgress {
-  status: 'recon' | 'verifying' | 'extracting' | 'downloading' | 'complete' | 'failed'
-  progress: {
-    current: number
-    total: number
-    phase: string
-  }
-  error: string | null
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function priceTier(count: number) {
+  if (count <= 3) return { plan: 'Preview', price: 'Free', isFree: true }
+  if (count <= 25) return { plan: 'Starter', price: '₹599', isFree: false }
+  if (count <= 100) return { plan: 'Standard', price: '₹999', isFree: false }
+  if (count <= 500) return { plan: 'Pro', price: '₹1,999', isFree: false }
+  return { plan: 'Enterprise', price: 'Contact us', isFree: false }
 }
 
-type Step = 1 | 2 | 3 | 4 | 5
-
-// ─── Pricing logic ──────────────────────────────────────────────────────────
-
-/**
- * Derive the price tier from a product count.
- * Free: 0–3 (preview only, no download).
- * Tiers mirror PRICING.md exactly.
- */
-function getPriceTier(productCount: number): PriceTier {
-  if (productCount <= 3) {
-    return { plan: 'Preview', amountPaise: 0, label: 'Free (preview only)', isFree: true }
+function isDm2buyUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url)
+    const parts = hostname.split('.')
+    return parts.length >= 3 && parts.slice(-2).join('.') === 'dm2buy.com'
+  } catch {
+    return false
   }
-  if (productCount <= 25) {
-    return { plan: 'Starter', amountPaise: 59900, label: '₹599', isFree: false }
-  }
-  if (productCount <= 100) {
-    return { plan: 'Standard', amountPaise: 99900, label: '₹999', isFree: false }
-  }
-  if (productCount <= 500) {
-    return { plan: 'Pro', amountPaise: 199900, label: '₹1,999', isFree: false }
-  }
-  return { plan: 'Enterprise', amountPaise: 0, label: 'Contact us', isFree: false }
 }
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
+// ─── Step indicator ─────────────────────────────────────────────────────────
 
-/** Step indicator bar at the top */
-function StepIndicator({ current }: { current: Step }) {
-  const steps = ['URL', 'Recon', 'Consent', 'Payment', 'Download']
+const STEP_LABELS: Record<Step, string> = {
+  url: 'Enter URL',
+  reconning: 'Enter URL',
+  preview: 'Preview',
+  trialing: 'Extracting',
+  trial_done: 'Review',
+  extracting: 'Extracting',
+  results: 'Review',
+  importing: 'Importing',
+  done: 'Done',
+}
+
+const STEP_ORDER: Step[] = ['url', 'preview', 'extracting', 'results', 'importing', 'done']
+
+function stepIndex(step: Step): number {
+  const mapped: Partial<Record<Step, Step>> = {
+    reconning: 'url',
+    trialing: 'extracting',
+    trial_done: 'results',
+  }
+  return STEP_ORDER.indexOf(mapped[step] ?? step)
+}
+
+function StepBar({ current }: { current: Step }) {
+  const idx = stepIndex(current)
   return (
-    <div className="flex items-center gap-1 mb-10" role="list" aria-label="Migration steps">
-      {steps.map((label, i) => {
-        const stepNum = (i + 1) as Step
-        const isComplete = stepNum < current
-        const isActive = stepNum === current
-        return (
-          <div key={label} className="flex items-center gap-1 flex-1" role="listitem">
-            <div
-              className={[
-                'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                isComplete ? 'bg-green-500 text-white' :
-                isActive   ? 'bg-brand-600 text-white' :
-                             'bg-gray-100 text-gray-400',
-              ].join(' ')}
-              aria-current={isActive ? 'step' : undefined}
-            >
-              {isComplete ? (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-              ) : (
-                stepNum
+    <Box paddingBlockEnd="400">
+      <InlineStack gap="200" wrap={false}>
+        {STEP_ORDER.map((s, i) => {
+          const done = i < idx
+          const active = i === idx
+          return (
+            <InlineStack key={s} gap="100" wrap={false} blockAlign="center">
+              <Box
+                background={done ? 'bg-fill-success' : active ? 'bg-fill-emphasis' : 'bg-fill-secondary'}
+                borderRadius="full"
+                minWidth="24px"
+                minHeight="24px"
+                as="span"
+              >
+                <Box paddingInline="100" paddingBlock="050">
+                  <Text
+                    as="span"
+                    variant="bodySm"
+                    fontWeight="semibold"
+                    tone={done || active ? undefined : 'subdued'}
+                  >
+                    {done ? '✓' : String(i + 1)}
+                  </Text>
+                </Box>
+              </Box>
+              <Text
+                as="span"
+                variant="bodySm"
+                fontWeight={active ? 'semibold' : 'regular'}
+                tone={active ? undefined : 'subdued'}
+              >
+                {STEP_LABELS[s]}
+              </Text>
+              {i < STEP_ORDER.length - 1 && (
+                <Box
+                  background={done ? 'bg-fill-success' : 'bg-fill-secondary'}
+                  minWidth="24px"
+                  minHeight="2px"
+                  as="span"
+                />
               )}
-            </div>
-            <span className={[
-              'hidden text-xs sm:block',
-              isActive ? 'font-medium text-gray-900' : 'text-gray-400',
-            ].join(' ')}>
-              {label}
-            </span>
-            {i < steps.length - 1 && (
-              <div className={[
-                'h-px flex-1 mx-1',
-                isComplete ? 'bg-green-400' : 'bg-gray-200',
-              ].join(' ')} aria-hidden="true" />
-            )}
-          </div>
-        )
-      })}
-    </div>
+            </InlineStack>
+          )
+        })}
+      </InlineStack>
+    </Box>
   )
 }
 
-/** Inline error message — never toasts */
-function InlineError({ message }: { message: string }) {
-  if (!message) return null
-  return (
-    <div role="alert" className="mt-3 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-      {message}
-    </div>
-  )
-}
+// ─── Main wizard ─────────────────────────────────────────────────────────────
 
-/** Spinner + label */
-function Spinner({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-sm text-gray-500">
-      <span className="spinner" aria-hidden="true" />
-      {label}
-    </span>
-  )
-}
+function MigrateWizard() {
+  const searchParams = useSearchParams()
+  const shop = searchParams.get('shop') ?? ''
 
-// ─── Migration Consent text ──────────────────────────────────────────────────
-
-const CONSENT_TEXT = `By proceeding, you confirm that you own this dm2buy store and all content within it, and that you authorise Shoprift to extract this data on your behalf. You accept sole responsibility for compliance with dm2buy's terms of service. Shoprift's liability is limited to the amount paid for this job. Full terms: [Migration Consent Agreement]`
-
-// ─── Main component ──────────────────────────────────────────────────────────
-
-/**
- * MigratePage — 5-step client-side state machine.
- *
- * State transitions:
- *   1 (URL input) → 2 (Recon preview) → 3 (Consent) → 4 (Payment) → 5 (Progress + Download)
- *
- * All API calls go to /api/* routes which call the Railway worker.
- * No direct Playwright/engine calls from the browser.
- */
-export default function MigratePage() {
-  // ── State machine ──────────────────────────────────────────────
-  const [step, setStep] = useState<Step>(1)
+  const [step, setStep] = useState<Step>('url')
   const [storeUrl, setStoreUrl] = useState('')
+  const [urlError, setUrlError] = useState<string | undefined>()
   const [reconData, setReconData] = useState<ReconData | null>(null)
+  const [storeData, setStoreData] = useState<StoreData | null>(null)
+  const [extractProgress, setExtractProgress] = useState<ProgressEvent | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
-  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null)
-  const [consentChecked, setConsentChecked] = useState(false)
-  const [jobProgress, setJobProgress] = useState<JobProgress | null>(null)
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
-
-  // ── Loading / error per step ───────────────────────────────────
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // ── Polling ref — cleared on unmount ──────────────────────────
+  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [trialUsed, setTrialUsed] = useState(false)
+  const [trialProductUrls, setTrialProductUrls] = useState<string[]>([])
+  const [remainingCount, setRemainingCount] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const clearPoll = useCallback(() => {
-    if (pollRef.current !== null) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
   }, [])
-
   useEffect(() => () => clearPoll(), [clearPoll])
 
-  // ─────────────────────────────────────────────────────────────────
-  // STEP 1 → STEP 2 : Scan store
-  // ─────────────────────────────────────────────────────────────────
+  // ── Step 1: Recon ──────────────────────────────────────────────────────────
 
-  async function handleScan() {
-    setError('')
-    const trimmed = storeUrl.trim()
-    if (!trimmed) {
-      setError('Please enter your dm2buy store URL.')
+  async function handleCheckStore() {
+    setUrlError(undefined)
+    setError(null)
+    const url = storeUrl.trim()
+    if (!isDm2buyUrl(url)) {
+      setUrlError('Enter a valid dm2buy store URL, e.g. https://yourstore.dm2buy.com')
       return
     }
-    // Basic format guard — real validation happens in the API route
-    if (!trimmed.includes('dm2buy.com')) {
-      setError('URL must be a dm2buy store (e.g. https://yourstore.dm2buy.com).')
-      return
-    }
-
-    setLoading(true)
+    setStep('reconning')
     try {
-      const res = await fetch('/api/recon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeUrl: trimmed }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Scan failed. Please try again.')
+      const data = await runRecon(url)
+      setReconData(data)
 
-      const tier = getPriceTier(data.productCount)
-      setReconData({
-        storeName: data.storeName,
-        storeUrl: trimmed,
-        productCount: data.productCount,
-        imageCount: data.imageCount,
-        collectionCount: data.collectionCount ?? 0,
-        priceTier: tier,
-      })
-      setJobId(data.jobId ?? null)
-      setStep(2)
+      // Check if trial already used for this shop + store
+      if (shop) {
+        const supabase = createBrowserSupabaseClient()
+        const { data: trialRow } = await supabase
+          .from('import_jobs')
+          .select('recon_data')
+          .eq('account_id', shop)
+          .eq('store_url', data.store_url)
+          .filter('recon_data->>is_trial', 'eq', 'true')
+          .eq('status', 'complete')
+          .maybeSingle()
+
+        if (trialRow) {
+          const rd = trialRow.recon_data as { trial_product_urls?: string[] } | null
+          setTrialUsed(true)
+          setTrialProductUrls(rd?.trial_product_urls ?? [])
+          setRemainingCount(Math.max(0, data.product_count - 5))
+        }
+      }
+
+      setStep('preview')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error. Please try again.')
-    } finally {
-      setLoading(false)
+      setError(err instanceof Error ? err.message : 'Store scan failed. Check the URL and try again.')
+      setStep('url')
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // STEP 2 → STEP 3 : Proceed to consent
-  // ─────────────────────────────────────────────────────────────────
+  // ── Trial import: extract all → slice 5 → import to Shopify ───────────────
 
-  function handleProceedToConsent() {
-    setError('')
-    // Enterprise tier — no self-serve payment
-    if (reconData?.priceTier.plan === 'Enterprise') {
-      setError('For 500+ product stores, please contact us directly via email or WhatsApp.')
-      return
-    }
-    setStep(3)
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // STEP 3 → STEP 4 : Consent agreed
-  // ─────────────────────────────────────────────────────────────────
-
-  function handleConsentContinue() {
-    setError('')
-    if (!consentChecked) {
-      setError('Please read and accept the Migration Consent to continue.')
-      return
-    }
-    // Free tier skips payment — go straight to extraction
-    if (reconData?.priceTier.isFree) {
-      startExtraction()
-      return
-    }
-    setStep(4)
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // STEP 4 : Create Razorpay order + trigger payment
-  // ─────────────────────────────────────────────────────────────────
-
-  async function handlePayWithRazorpay() {
-    setError('')
-    setLoading(true)
+  async function handleTrialImport() {
+    if (!reconData) return
+    setStep('trialing')
+    setExtractProgress(null)
+    setImportStatus(null)
+    setError(null)
     try {
-      const res = await fetch('/api/payment/create', {
+      const allData = await extract(reconData.store_url, reconData.store_id, (ev) => {
+        setExtractProgress(ev)
+      })
+      const trialProducts = allData.products.slice(0, 5)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const trialUrls = trialProducts.map((p: any) => p.product_url as string)
+      const trialStoreData = { ...allData, products: trialProducts }
+
+      setTrialProductUrls(trialUrls)
+      setRemainingCount(Math.max(0, reconData.product_count - 5))
+
+      const res = await fetch('/api/import/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          jobId,
-          amountPaise: reconData?.priceTier.amountPaise,
+          shop,
+          storeUrl: reconData.store_url,
+          storeData: trialStoreData,
+          isTrial: true,
+          trialProductUrls: trialUrls,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Could not create payment order.')
+      const respData = await res.json() as { jobId?: string; error?: string }
+      if (!res.ok) throw new Error(respData.error ?? 'Trial import failed to start.')
+      const id = respData.jobId!
+      setJobId(id)
 
-      setPaymentOrderId(data.orderId)
-
-      // ── Open Razorpay checkout ──
-      // Razorpay JS is loaded via <Script> on client; window.Razorpay available here.
-      // TODO (Phase 14): load <Script src="https://checkout.razorpay.com/v1/checkout.js"> in layout.tsx
-      //                  then replace the stub below with real Razorpay options object.
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
-        amount: data.amount,
-        currency: data.currency,
-        name: 'Shoprift',
-        description: `Store migration — ${reconData?.priceTier.plan} plan`,
-        order_id: data.orderId,
-        handler: async (response: {
-          razorpay_order_id: string
-          razorpay_payment_id: string
-          razorpay_signature: string
-        }) => {
-          // Verify payment server-side, then start extraction
-          await verifyPaymentAndExtract(response)
-        },
-        prefill: {},
-        theme: { color: '#0284c7' },
+      const poll = async () => {
+        try {
+          const r = await fetch(`/api/import/status/${id}`)
+          const d = await r.json() as {
+            status: string
+            progress?: { current: number; total: number; message: string }
+            error?: string
+            result?: ImportResult
+          }
+          const prog = d.progress ?? { current: 0, total: 0, message: '' }
+          setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+          if (d.status === 'complete') {
+            clearPoll()
+            setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+            setTrialUsed(true)
+            setStep('trial_done')
+          } else if (d.status === 'failed') {
+            clearPoll()
+            setError(d.error ?? 'Trial import failed. Contact support.')
+            setStep('preview')
+          }
+        } catch {
+          // network blip — keep polling
+        }
       }
 
-      // @ts-expect-error — Razorpay global loaded via external script
-      const rzp = new window.Razorpay(options)
-      rzp.open()
+      poll()
+      pollRef.current = setInterval(poll, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment setup failed.')
-    } finally {
-      setLoading(false)
+      setError(err instanceof Error ? err.message : 'Trial import failed. Please try again.')
+      setStep('preview')
     }
   }
 
-  async function verifyPaymentAndExtract(response: {
-    razorpay_order_id: string
-    razorpay_payment_id: string
-    razorpay_signature: string
-  }) {
-    setLoading(true)
+  // ── Full extraction: extract all → results card ────────────────────────────
+
+  async function handleFullImport() {
+    if (!reconData) return
+    const fallbackStep: Step = trialUsed ? 'trial_done' : 'preview'
+    setStep('extracting')
+    setExtractProgress(null)
+    setError(null)
     try {
-      const res = await fetch('/api/payment/verify', {
+      const allData = await extract(reconData.store_url, reconData.store_id, (ev) => {
+        setExtractProgress(ev)
+      })
+      setStoreData(allData)
+      setStep('results')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Extraction failed. Please try again.')
+      setStep(fallbackStep)
+    }
+  }
+
+  // ── Import (billing bypassed — T7 implements Shopify Billing API) ──────────
+
+  async function handleImport() {
+    if (!storeData || !reconData) return
+    setStep('importing')
+    setError(null)
+    try {
+      const res = await fetch('/api/import/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...response, jobId }),
+        body: JSON.stringify({
+          shop,
+          storeUrl: reconData.store_url,
+          storeData,
+          ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}),
+        }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Payment verification failed.')
+      const data = await res.json() as { jobId?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Import failed to start.')
+      const id = data.jobId!
+      setJobId(id)
 
-      // Payment confirmed — start extraction
-      startExtraction()
+      const poll = async () => {
+        try {
+          const r = await fetch(`/api/import/status/${id}`)
+          const d = await r.json() as {
+            status: string
+            progress?: { current: number; total: number; message: string }
+            error?: string
+            result?: ImportResult
+          }
+          const prog = d.progress ?? { current: 0, total: 0, message: '' }
+          setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+          if (d.status === 'complete') {
+            clearPoll()
+            setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+            setStep('done')
+          } else if (d.status === 'failed') {
+            clearPoll()
+            setError(d.error ?? 'Import failed. Contact support with your Job ID.')
+          }
+        } catch {
+          // network blip — keep polling
+        }
+      }
+
+      poll()
+      pollRef.current = setInterval(poll, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment verification error.')
-      setLoading(false)
+      setError(err instanceof Error ? err.message : 'Failed to start import.')
+      setStep('results')
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // STEP 5 : Poll job status + download
-  // ─────────────────────────────────────────────────────────────────
+  // ── Derived values ─────────────────────────────────────────────────────────
 
-  function startExtraction() {
-    setStep(5)
-    setLoading(false)
-    // Start polling immediately, then every 5 seconds
-    pollJobStatus()
-    pollRef.current = setInterval(pollJobStatus, 5000)
-  }
+  const tier = reconData ? priceTier(reconData.product_count) : null
 
-  async function pollJobStatus() {
-    if (!jobId) return
-    try {
-      const res = await fetch(`/api/job/${jobId}`)
-      const data: JobProgress = await res.json()
-      setJobProgress(data)
-
-      if (data.status === 'complete') {
-        clearPoll()
-        fetchDownloadUrl()
-      } else if (data.status === 'failed') {
-        clearPoll()
-        setError(data.error ?? 'Extraction failed. Please contact support.')
-      }
-    } catch {
-      // Network blip — keep polling, don't surface error yet
-    }
-  }
-
-  async function fetchDownloadUrl() {
-    if (!jobId) return
-    try {
-      const res = await fetch(`/api/download/${jobId}`)
-      const data = await res.json()
-      if (res.ok && data.signedUrl) {
-        setDownloadUrl(data.signedUrl)
-      } else {
-        setError('Could not generate download link. Please contact support.')
-      }
-    } catch {
-      setError('Could not fetch download link. Please try refreshing.')
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // Progress helpers
-  // ─────────────────────────────────────────────────────────────────
-
-  const progressPercent =
-    jobProgress && jobProgress.progress.total > 0
-      ? Math.round((jobProgress.progress.current / jobProgress.progress.total) * 100)
+  const extractPercent =
+    extractProgress && extractProgress.total > 0
+      ? Math.round((extractProgress.current / extractProgress.total) * 100)
       : 0
 
-  const statusLabel: Record<string, string> = {
-    recon:       'Scanning store...',
-    verifying:   'Verifying ownership...',
-    extracting:  'Extracting products...',
-    downloading: 'Downloading images...',
-    complete:    'Complete',
-    failed:      'Failed',
+  const importPercent =
+    importStatus && importStatus.total > 0
+      ? Math.round((importStatus.current / importStatus.total) * 100)
+      : 0
+
+  // True once extraction phase of trialing is complete (scan done, now importing)
+  const trialExtractionComplete =
+    extractProgress != null &&
+    extractProgress.total > 0 &&
+    extractProgress.current >= extractProgress.total
+
+  const showDontCloseBanner = step === 'extracting' || step === 'trialing' || step === 'importing'
+
+  const pageTitle: Record<Step, string> = {
+    url: 'Migrate from dm2buy',
+    reconning: 'Migrate from dm2buy',
+    preview: 'Store preview',
+    trialing: 'Importing trial products',
+    trial_done: 'Trial complete',
+    extracting: 'Extracting store data',
+    results: 'Ready to import',
+    importing: 'Importing to Shopify',
+    done: 'Migration complete',
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-2xl">
+    <Page title={pageTitle[step]}>
+      <BlockStack gap="400">
 
-        {/* Header */}
-        <div className="mb-8">
-          <a href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            &larr; Shoprift
-          </a>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight text-gray-900">
-            Migrate your store
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Complete all steps to extract and download your store data.
-          </p>
-        </div>
+        <StepBar current={step} />
 
-        {/* Step indicator */}
-        <StepIndicator current={step} />
+        {/* Don't close tab banner */}
+        {showDontCloseBanner && (
+          <Banner title="Don't close this tab" tone="warning">
+            <Text as="p">
+              {step === 'trialing'
+                ? "Importing your trial products to Shopify — don't close this window."
+                : step === 'extracting'
+                ? `Collecting your store data — ${reconData?.estimated_import_label ?? 'a few minutes'}. You can switch tabs, but don't close this window.`
+                : "Products are being added to your Shopify store. Don't close this window."}
+            </Text>
+          </Banner>
+        )}
 
-        {/* Step panels */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sm:p-8">
+        {/* Error banner */}
+        {error && (
+          <Banner title="Something went wrong" tone="critical" onDismiss={() => setError(null)}>
+            <Text as="p">{error}</Text>
+          </Banner>
+        )}
 
-          {/* ── STEP 1: URL input ─────────────────────────────────── */}
-          {step === 1 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Enter your store URL</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Paste your full dm2buy store URL. Example:{' '}
-                <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">
-                  https://yourstore.dm2buy.com
-                </code>
-              </p>
+        {/* ── Step 1: URL input ──────────────────────────────────────────── */}
+        {(step === 'url' || step === 'reconning') && (
+          <BlockStack gap="400">
+            {/* Compact hero context */}
+            <Box paddingBlockEnd="200">
+              <BlockStack gap="300">
+                <Text variant="headingLg" as="h2">Move your dm2buy products to Shopify</Text>
+                <BlockStack gap="150">
+                  {[
+                    'Scan your store in seconds — no login needed',
+                    'Try free: 5 products imported straight to Shopify',
+                    'Pay only after you see your products in the store',
+                  ].map((bullet) => (
+                    <InlineStack key={bullet} gap="200" blockAlign="center" wrap={false}>
+                      <Text as="span" tone="success" fontWeight="semibold">✓</Text>
+                      <Text as="p" tone="subdued">{bullet}</Text>
+                    </InlineStack>
+                  ))}
+                </BlockStack>
+              </BlockStack>
+            </Box>
 
-              <label htmlFor="store-url" className="block text-sm font-medium text-gray-700 mb-1.5">
-                dm2buy store URL
-              </label>
-              <input
-                id="store-url"
-                type="url"
-                value={storeUrl}
-                onChange={(e) => setStoreUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !loading && handleScan()}
-                placeholder="https://yourstore.dm2buy.com"
-                autoFocus
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                aria-describedby="url-hint"
-                disabled={loading}
-              />
-              <p id="url-hint" className="mt-1.5 text-xs text-gray-400">
-                Must be a dm2buy.com subdomain. We don&apos;t store your URL beyond this session.
-              </p>
+            <Card>
+              <BlockStack gap="400">
+                <BlockStack gap="100">
+                  <Text variant="headingMd" as="h2">Enter your dm2buy store URL</Text>
+                  <Text tone="subdued" as="p">
+                    Move all your products and collections to Shopify automatically.
+                  </Text>
+                </BlockStack>
 
-              <InlineError message={error} />
-
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={handleScan}
-                  disabled={loading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                <form
+                  onSubmit={(e) => { e.preventDefault(); if (step === 'url') handleCheckStore() }}
                 >
-                  {loading ? <Spinner label="Scanning..." /> : 'Scan store'}
-                </button>
-              </div>
-            </div>
-          )}
+                  <TextField
+                    label="Store URL"
+                    value={storeUrl}
+                    onChange={(v) => { setStoreUrl(v); setUrlError(undefined) }}
+                    placeholder="https://yourstore.dm2buy.com"
+                    type="url"
+                    autoComplete="url"
+                    error={urlError}
+                    disabled={step === 'reconning'}
+                    helpText="Enter your dm2buy subdomain URL."
+                  />
+                </form>
 
-          {/* ── STEP 2: Recon preview ──────────────────────────────── */}
-          {step === 2 && reconData && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Store found</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Confirm this is your store before proceeding.
-              </p>
+                <InlineStack>
+                  <Button
+                    variant="primary"
+                    onClick={handleCheckStore}
+                    loading={step === 'reconning'}
+                    disabled={step === 'reconning'}
+                  >
+                    Check store
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </BlockStack>
+        )}
 
-              {/* Store card */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5 space-y-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-0.5">Store name</p>
-                  <p className="font-semibold text-gray-900">{reconData.storeName}</p>
-                  <p className="text-xs text-gray-400 mt-0.5 break-all">{reconData.storeUrl}</p>
-                </div>
+        {/* ── Step 2: Recon preview ──────────────────────────────────────── */}
+        {step === 'preview' && reconData && tier && (
+          <Card>
+            <BlockStack gap="500">
+              <BlockStack gap="100">
+                <Text variant="headingLg" as="h2">{reconData.store_name}</Text>
+                <Text tone="subdued" as="p">{reconData.store_url}</Text>
+              </BlockStack>
 
-                <div className="grid grid-cols-3 gap-4 pt-2 border-t border-gray-200">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">{reconData.productCount}</p>
-                    <p className="text-xs text-gray-500">Products</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">{reconData.imageCount}</p>
-                    <p className="text-xs text-gray-500">Images</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">{reconData.collectionCount}</p>
-                    <p className="text-xs text-gray-500">Collections</p>
-                  </div>
-                </div>
+              <Divider />
 
-                {/* Price tier */}
-                <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-400">Plan</p>
-                    <p className="font-semibold text-gray-900">{reconData.priceTier.plan}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Price</p>
-                    <p className="text-xl font-bold text-brand-600">{reconData.priceTier.label}</p>
-                  </div>
-                </div>
+              <InlineStack gap="600" wrap={false}>
+                <BlockStack gap="100">
+                  <Text variant="heading2xl" as="p">{reconData.product_count}</Text>
+                  <Text tone="subdued" as="p">Products</Text>
+                </BlockStack>
+                <BlockStack gap="100">
+                  <Text variant="heading2xl" as="p">{reconData.collection_count}</Text>
+                  <Text tone="subdued" as="p">Collections</Text>
+                </BlockStack>
+                <BlockStack gap="100">
+                  <Text variant="heading2xl" as="p">{reconData.image_count}</Text>
+                  <Text tone="subdued" as="p">Images</Text>
+                </BlockStack>
+              </InlineStack>
 
-                {reconData.priceTier.isFree && (
-                  <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
-                    Preview mode: with 3 or fewer products, recon is free but download is not available.
-                  </div>
+              <Divider />
+
+              <InlineStack align="space-between" wrap={false}>
+                <BlockStack gap="050">
+                  <Text tone="subdued" as="p">Plan</Text>
+                  <Text fontWeight="semibold" as="p">{tier.plan}</Text>
+                </BlockStack>
+                <BlockStack gap="050" inlineAlign="end">
+                  <Text tone="subdued" as="p">Price</Text>
+                  <Text variant="headingLg" as="p">{tier.price}</Text>
+                </BlockStack>
+              </InlineStack>
+
+              {tier.isFree && (
+                <Banner tone="info">
+                  <Text as="p">
+                    Preview mode: stores with 3 or fewer products are free.
+                  </Text>
+                </Banner>
+              )}
+
+              <Text tone="subdued" as="p">Estimated time: {reconData.estimated_import_label}</Text>
+
+              <InlineStack gap="300" wrap>
+                {!trialUsed && !tier.isFree && (
+                  <Button variant="primary" onClick={handleTrialImport}>
+                    Try free — 5 products
+                  </Button>
                 )}
-              </div>
-
-              <InlineError message={error} />
-
-              <div className="mt-6 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleProceedToConsent}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
+                <Button
+                  variant={trialUsed || tier.isFree ? 'primary' : 'secondary'}
+                  onClick={handleFullImport}
                 >
-                  Proceed &rarr;
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setStep(1); setReconData(null); setError('') }}
-                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                  {trialUsed
+                    ? `Import all ${remainingCount} remaining — ${tier.price}`
+                    : tier.isFree
+                    ? 'Import to Shopify (free)'
+                    : `Import all — ${tier.price}`}
+                </Button>
+                <Button
+                  variant="plain"
+                  onClick={() => {
+                    setReconData(null)
+                    setTrialUsed(false)
+                    setTrialProductUrls([])
+                    setStep('url')
+                  }}
                 >
                   Change URL
-                </button>
-              </div>
-            </div>
-          )}
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        )}
 
-          {/* ── STEP 3: Migration consent ──────────────────────────── */}
-          {step === 3 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Migration Consent</h2>
-              <p className="text-sm text-gray-500 mb-5">
-                Please read and agree before we proceed.
-              </p>
+        {/* ── Trial import progress ──────────────────────────────────────── */}
+        {step === 'trialing' && reconData && (
+          <Card>
+            <BlockStack gap="400">
+              <Text variant="headingMd" as="h2">Importing 5 trial products to Shopify</Text>
 
-              {/* Scrollable consent block */}
-              <div
-                className="h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 leading-relaxed"
-                role="region"
-                aria-label="Migration Consent Agreement"
-                tabIndex={0}
-              >
-                {CONSENT_TEXT}
-              </div>
-
-              {/* Checkbox */}
-              <label className="mt-4 flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={consentChecked}
-                  onChange={(e) => setConsentChecked(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                />
-                <span className="text-sm text-gray-700">
-                  I have read and agree to the Migration Consent Agreement. I confirm I own this dm2buy store.
-                </span>
-              </label>
-
-              <InlineError message={error} />
-
-              <div className="mt-6 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleConsentContinue}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading ? <Spinner label="Processing..." /> : (
-                    reconData?.priceTier.isFree ? 'Start extraction (free)' : 'Continue to payment'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setStep(2); setError('') }}
-                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 4: Payment ────────────────────────────────────── */}
-          {step === 4 && reconData && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Payment</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Your extraction starts immediately after payment is confirmed.
-              </p>
-
-              {/* Order summary */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5 space-y-3 mb-6">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Plan</span>
-                  <span className="font-medium text-gray-900">{reconData.priceTier.plan}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Products</span>
-                  <span className="font-medium text-gray-900">{reconData.productCount}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm border-t border-gray-200 pt-3">
-                  <span className="font-semibold text-gray-900">Total</span>
-                  <span className="text-xl font-bold text-brand-600">{reconData.priceTier.label}</span>
-                </div>
-              </div>
-
-              <p className="text-xs text-gray-400 mb-5">
-                Powered by Razorpay &middot; UPI, credit/debit cards, net banking accepted &middot;
-                Full refund if extraction fails.
-              </p>
-
-              <InlineError message={error} />
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handlePayWithRazorpay}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading ? <Spinner label="Setting up payment..." /> : (
-                    <>
-                      Pay {reconData.priceTier.label} with Razorpay
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setStep(3); setError('') }}
-                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 5: Progress + Download ────────────────────────── */}
-          {step === 5 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                {jobProgress?.status === 'complete'
-                  ? 'Your migration is ready'
-                  : jobProgress?.status === 'failed'
-                  ? 'Extraction failed'
-                  : 'Extracting your store...'}
-              </h2>
-              <p className="text-sm text-gray-500 mb-6">
-                {jobProgress?.status === 'complete'
-                  ? 'Download your migration package below. Link is valid for 7 days.'
-                  : jobProgress?.status === 'failed'
-                  ? 'Something went wrong during extraction.'
-                  : 'This usually takes 2–5 minutes depending on your store size. You can keep this tab open.'}
-              </p>
-
-              {/* Progress bar */}
-              {jobProgress && jobProgress.status !== 'complete' && jobProgress.status !== 'failed' && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                    <span>{statusLabel[jobProgress.status] ?? 'Processing...'}</span>
-                    <span>{progressPercent}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-brand-500 progress-pulse transition-all duration-500"
-                      style={{ width: `${progressPercent}%` }}
-                      role="progressbar"
-                      aria-valuenow={progressPercent}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    />
-                  </div>
-                  {jobProgress.progress.phase && (
-                    <p className="mt-1.5 text-xs text-gray-400">{jobProgress.progress.phase}</p>
-                  )}
-                </div>
+              {!trialExtractionComplete ? (
+                <>
+                  <ProgressBar progress={extractPercent} size="medium" tone="highlight" />
+                  <Text tone="subdued" as="p">
+                    {extractProgress
+                      ? `Scanning: ${extractProgress.current} of ${extractProgress.total} products`
+                      : 'Starting scan...'}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <ProgressBar progress={importPercent} size="medium" tone="success" />
+                  <Text tone="subdued" as="p">
+                    {importStatus?.message || 'Adding products to Shopify...'}
+                  </Text>
+                </>
               )}
+            </BlockStack>
+          </Card>
+        )}
 
-              {/* Waiting state (no progress data yet) */}
-              {!jobProgress && (
-                <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
-                  <span className="spinner" aria-hidden="true" />
-                  Starting extraction...
-                </div>
-              )}
+        {/* ── Trial done ────────────────────────────────────────────────── */}
+        {step === 'trial_done' && importResult && (
+          <BlockStack gap="400">
+            <Banner title="5 products added to your Shopify store!" tone="success">
+              <Text as="p">
+                Your trial import is complete. See them live in your store, then import the rest.
+              </Text>
+            </Banner>
 
-              {/* Job ID for support */}
-              {jobId && (
-                <p className="text-xs text-gray-300 mb-4">
-                  Job ID: <code className="font-mono">{jobId}</code>
-                </p>
-              )}
+            <Card>
+              <BlockStack gap="500">
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" wrap={false}>
+                    <Text as="p">Trial products imported</Text>
+                    <Badge tone="success">{String(importResult.productsCreated)}</Badge>
+                  </InlineStack>
+                  {remainingCount > 0 && (
+                    <InlineStack align="space-between" wrap={false}>
+                      <Text as="p">Remaining products</Text>
+                      <Text as="p" fontWeight="semibold">{remainingCount}</Text>
+                    </InlineStack>
+                  )}
+                </BlockStack>
 
-              <InlineError message={error} />
+                <Divider />
 
-              {/* Download button */}
-              {downloadUrl && (
-                <div className="mt-6">
-                  <a
-                    href={downloadUrl}
-                    download
-                    className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-green-700 transition-colors"
+                <InlineStack gap="300" wrap>
+                  <Button
+                    variant="primary"
+                    url={shop ? `https://${shop}/admin/products` : '#'}
+                    external={!!shop}
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Download migration package (.zip)
-                  </a>
-                  <p className="mt-2 text-xs text-gray-400">
-                    Contains your CSV + all product images. Import the CSV directly into Shopify.
-                  </p>
-                </div>
+                    View in Shopify
+                  </Button>
+                  {remainingCount > 0 && tier && (
+                    <Button variant="secondary" onClick={handleFullImport}>
+                      {`Import all ${remainingCount} remaining — ${tier.price}`}
+                    </Button>
+                  )}
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </BlockStack>
+        )}
+
+        {/* ── Full extraction progress ───────────────────────────────────── */}
+        {step === 'extracting' && reconData && (
+          <Card>
+            <BlockStack gap="400">
+              <Text variant="headingMd" as="h2">Collecting product data from dm2buy</Text>
+
+              <ProgressBar progress={extractPercent} size="medium" tone="highlight" />
+
+              <Text tone="subdued" as="p">
+                {extractProgress
+                  ? `${extractProgress.current} of ${extractProgress.total} products collected`
+                  : 'Starting...'}
+              </Text>
+
+              {extractProgress?.message && (
+                <Text tone="subdued" as="p">{extractProgress.message}</Text>
+              )}
+            </BlockStack>
+          </Card>
+        )}
+
+        {/* ── Results / billing gate ─────────────────────────────────────── */}
+        {step === 'results' && reconData && tier && storeData && (
+          <Card>
+            <BlockStack gap="500">
+              <Text variant="headingMd" as="h2">Your data is ready</Text>
+
+              <BlockStack gap="300">
+                <InlineStack align="space-between" wrap={false}>
+                  <Text as="p">Products collected</Text>
+                  <Badge tone="success">{String(storeData.products.length)}</Badge>
+                </InlineStack>
+                <InlineStack align="space-between" wrap={false}>
+                  <Text as="p">Collections</Text>
+                  <Text as="p" fontWeight="semibold">{storeData.categories.length}</Text>
+                </InlineStack>
+                {trialProductUrls.length > 0 && (
+                  <InlineStack align="space-between" wrap={false}>
+                    <Text as="p" tone="subdued">Trial products (already in Shopify)</Text>
+                    <Text as="p" tone="subdued">{trialProductUrls.length} skipped</Text>
+                  </InlineStack>
+                )}
+              </BlockStack>
+
+              {/* Preview first 3 products */}
+              {storeData.products.slice(0, 3).length > 0 && (
+                <BlockStack gap="100">
+                  <Text tone="subdued" as="p" variant="bodySm">Preview</Text>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {(storeData.products as any[]).slice(0, 3).map((p) => (
+                    <InlineStack key={p.product_url ?? p.name} align="space-between" wrap={false}>
+                      <Text as="p" variant="bodySm">{p.name}</Text>
+                      <Text as="p" variant="bodySm" tone="subdued">₹{p.price}</Text>
+                    </InlineStack>
+                  ))}
+                </BlockStack>
               )}
 
-              {/* Retry contact for failures */}
-              {jobProgress?.status === 'failed' && (
-                <div className="mt-4 text-sm text-gray-500">
-                  Please email{' '}
-                  <a href="mailto:support@shoprift.in" className="text-brand-600 underline">
-                    support@shoprift.in
-                  </a>{' '}
-                  with your Job ID. We&apos;ll refund or rerun your extraction.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              <Divider />
 
-        {/* Trust footer */}
-        <p className="mt-6 text-center text-xs text-gray-400">
-          Shoprift by MALIQ ENTERPRISES &middot; Delhi, India &middot; Questions?{' '}
-          <a href="mailto:support@shoprift.in" className="hover:text-gray-600 underline">
-            support@shoprift.in
-          </a>
-        </p>
-      </div>
-    </main>
+              <InlineStack align="space-between" wrap={false}>
+                <BlockStack gap="050">
+                  <Text tone="subdued" as="p">Plan</Text>
+                  <Text fontWeight="semibold" as="p">{tier.plan}</Text>
+                </BlockStack>
+                <BlockStack gap="050" inlineAlign="end">
+                  <Text tone="subdued" as="p">Total</Text>
+                  <Text variant="headingXl" as="p">{tier.price}</Text>
+                </BlockStack>
+              </InlineStack>
+
+              <Button variant="primary" size="large" onClick={handleImport}>
+                {tier.isFree
+                  ? 'Import to Shopify (free)'
+                  : `Pay ${tier.price} and import to Shopify`}
+              </Button>
+
+              <Text tone="subdued" as="p">
+                {tier.isFree
+                  ? 'No charge for stores with 3 or fewer products.'
+                  : 'Payment via Shopify Billing · Full refund if import fails.'}
+              </Text>
+            </BlockStack>
+          </Card>
+        )}
+
+        {/* ── Import progress ───────────────────────────────────────────── */}
+        {step === 'importing' && (
+          <Card>
+            <BlockStack gap="400">
+              <Text variant="headingMd" as="h2">Adding products to your Shopify store</Text>
+
+              {importStatus && importStatus.total > 0 ? (
+                <>
+                  <ProgressBar progress={importPercent} size="medium" tone="highlight" />
+                  <Text tone="subdued" as="p">
+                    {importStatus.current} of {importStatus.total} products imported
+                  </Text>
+                  {importStatus.message && (
+                    <Text tone="subdued" as="p">{importStatus.message}</Text>
+                  )}
+                </>
+              ) : (
+                <InlineStack gap="200" blockAlign="center">
+                  <Spinner size="small" />
+                  <Text tone="subdued" as="p">Starting import...</Text>
+                </InlineStack>
+              )}
+
+              {jobId && (
+                <Text tone="subdued" as="p">Job ID: {jobId}</Text>
+              )}
+            </BlockStack>
+          </Card>
+        )}
+
+        {/* ── Done ──────────────────────────────────────────────────────── */}
+        {step === 'done' && importResult && (
+          <BlockStack gap="400">
+            <Banner title="Migration complete!" tone="success">
+              <Text as="p">
+                {importResult.productsCreated} product{importResult.productsCreated !== 1 ? 's' : ''} and{' '}
+                {importResult.collectionsCreated} collection{importResult.collectionsCreated !== 1 ? 's' : ''} added to your Shopify store.
+                {importResult.productsFailed > 0 &&
+                  ` ${importResult.productsFailed} product${importResult.productsFailed !== 1 ? 's' : ''} failed — check your Shopify admin for details.`}
+              </Text>
+            </Banner>
+
+            <Card>
+              <BlockStack gap="500">
+                <InlineStack gap="600" wrap={false}>
+                  <BlockStack gap="100">
+                    <Text variant="heading2xl" as="p">{importResult.productsCreated}</Text>
+                    <Text tone="subdued" as="p">Imported</Text>
+                  </BlockStack>
+                  <BlockStack gap="100">
+                    <Text variant="heading2xl" as="p">{importResult.collectionsCreated}</Text>
+                    <Text tone="subdued" as="p">Collections</Text>
+                  </BlockStack>
+                  {importResult.productsFailed > 0 && (
+                    <BlockStack gap="100">
+                      <Text variant="heading2xl" as="p" tone="critical">{importResult.productsFailed}</Text>
+                      <Text tone="critical" as="p">Failed</Text>
+                    </BlockStack>
+                  )}
+                </InlineStack>
+
+                <InlineStack gap="300">
+                  <Button
+                    variant="primary"
+                    url={shop ? `https://${shop}/admin/products` : '#'}
+                    external={!!shop}
+                  >
+                    View your products in Shopify
+                  </Button>
+                  <Button
+                    variant="plain"
+                    onClick={() => {
+                      setStep('url')
+                      setStoreUrl('')
+                      setReconData(null)
+                      setStoreData(null)
+                      setImportResult(null)
+                      setJobId(null)
+                      setImportStatus(null)
+                      setError(null)
+                      setTrialUsed(false)
+                      setTrialProductUrls([])
+                      setRemainingCount(0)
+                    }}
+                  >
+                    Migrate another store
+                  </Button>
+                </InlineStack>
+
+                {importResult.errors && importResult.errors.length > 0 && (
+                  <BlockStack gap="200">
+                    <Text tone="subdued" as="p" fontWeight="semibold">Import errors:</Text>
+                    {importResult.errors.slice(0, 5).map((e, i) => (
+                      <Text key={i} tone="critical" as="p">{e}</Text>
+                    ))}
+                  </BlockStack>
+                )}
+              </BlockStack>
+            </Card>
+          </BlockStack>
+        )}
+
+      </BlockStack>
+    </Page>
+  )
+}
+
+// ─── Root — AppProvider + Suspense boundary for useSearchParams ──────────────
+
+export default function MigratePage() {
+  return (
+    <AppProvider i18n={enTranslations}>
+      <Suspense
+        fallback={
+          <Page title="Loading...">
+            <Box padding="800">
+              <InlineStack align="center">
+                <Spinner size="large" />
+              </InlineStack>
+            </Box>
+          </Page>
+        }
+      >
+        <MigrateWizard />
+      </Suspense>
+    </AppProvider>
   )
 }

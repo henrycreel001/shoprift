@@ -7,6 +7,49 @@
 
 ---
 
+## 2026-05-26 22:00 IST — T5 Server-side Shopify import API
+
+**Trigger:** T5.1-T5.8 from LAUNCH_PLAN.md — server-side endpoint to import StoreData into Shopify.
+
+**Files changed:**
+
+### `src/shopify-importer.js` (new)
+- Shopify Admin REST API helpers: `shopifyFetch`, `buildShopifyVariants`, `createProduct`, `createCollection`, `addToCollection`.
+- `importStore({ jobId, shop, accessToken, storeData })` — full import pipeline.
+- Phase 1: products → Phase 2: collections → Phase 3: collection assignments.
+- Per-item error isolation: one failure doesn't abort the rest.
+- Rate limiting: 550ms delay between API calls (Shopify REST 2 req/s limit).
+- Variant mapping: sizes/colors/other → Shopify options + variants. All combos for sizes+colors.
+- Images: CDN URLs passed as `src` — Shopify fetches and re-hosts. Capped at 20 per product.
+- Updates import_jobs.progress after each step.
+
+### `src/job.js` (modified)
+- Added `getShopifyToken(shop)` — reads access_token from shopify_sessions.
+- Added `getJob(jobId)` — status polling helper.
+
+### `src/server.js` (modified)
+- Added import for `importStore`.
+- Increased JSON body limit to `5mb` (handles large store payloads).
+- Added `POST /import` route: validates body, looks up Shopify token, marks job 'importing', runs import async via setImmediate, returns immediately.
+
+### `web/src/app/api/import/start/route.ts` (new)
+- POST body: `{ shop, storeUrl, storeData }`.
+- Creates import_jobs record (account_id=shop, store_url=dm2buy URL, status='pending').
+- Proxies to RAILWAY_WORKER_URL/import — returns { jobId } immediately.
+- On worker failure: marks job failed, returns 502.
+
+### `web/src/app/api/import/status/[jobId]/route.ts` (new)
+- GET — reads import_jobs from Supabase, returns { jobId, status, progress, error, result }.
+- Client polls until status is 'complete' or 'failed'.
+
+**Env var needed:** `RAILWAY_WORKER_URL` — add to web/.env.local (dev) and Vercel (prod).
+  - Dev: `RAILWAY_WORKER_URL=http://localhost:3001`
+  - Prod: Railway service public URL
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-26 20:30 IST — T4 Client-side extraction module
 
 **Trigger:** T4.1-T4.5 from LAUNCH_PLAN.md — browser TypeScript port of recon.js + extractor.js.

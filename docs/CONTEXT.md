@@ -16,8 +16,8 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-05-21
-- **Session topic:** Engine validation + pre-launch review planning
+- **Date:** 2026-05-26
+- **Session topic:** T5.9 integration test pass, T6 Polaris wizard built, Internal Server Error debugged, trial import feature planned
 - **Branch:** main
 
 ---
@@ -26,20 +26,20 @@
 
 | Group | Phase | Status | Notes |
 |-------|-------|--------|-------|
-| A — Engine | 0–10 | ✅ Passing | mmshop e2e confirmed — 5 products, 5 images, zip, 21s |
-| B — CSV mapper | 11 | ✅ Complete | Shopify + generic preset shipped, delivery zip working |
-| C — Web app | 12–14 | 🟡 Scaffolded | API routes exist; blocked on PRE_LAUNCH_CHECKLIST + architecture decision |
+| A — Engine | 0–10 | ✅ Passing | kiwiishop: 25 products, 5 collections ✅ |
+| B — CSV mapper | 11 | ✅ Complete | Shopify + generic preset shipped |
+| C — Web app | T5 ✅ T6 ✅ | 🟡 In progress | Shopify import working; T7 billing + trial import next |
 | D — Launch | 15 | ❌ Not started | Blocked on C |
 
 ---
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. Ran mmshop.dm2buy.com e2e — PASSED (5 products, 5 images, Shopify CSV, 1.7MB zip, 21s)
-2. Fixed SUPABASE_SERVICE_KEY missing from .env (mapped anon key as temp workaround)
-3. Added CONTEXT.md session handoff system + CLAUDE.md update rule
-4. Fixed Railway worker — start command, TLS redis, playwright install
-5. Pre-launch build — anti-detection, legal docs, web app scaffold
+1. **T6 complete** — Polaris 6-step migration wizard built at `/migrate`. AppProvider, Suspense, client-side extraction, progress bars, billing gate (bypassed), import polling. Build clean. Loads inside Shopify admin.
+2. **T5.9 passed** — kiwiishop integration test: 25/25 products, 0 failures, 5 collections via Shopify Admin API. CSV export confirmed correct (variant mapping, CDN images, collections via collects API).
+3. **Debugged Internal Server Error** — stale Next.js process on port 3000 (PID 39421). Kill + restart fixed it. Fresh server works. Added `allowedDevOrigins` to next.config.ts for ngrok cross-origin warning.
+4. **Shopify app confirmed loading** — ngrok URL + Shopify admin both load. Session params (hmac, id_token, shop) confirmed arriving at root page.
+5. **Trial import plan written** — see plan file at `/Users/mayankmalik/.claude/plans/virtual-herding-perlis.md`
 
 ---
 
@@ -47,55 +47,59 @@
 
 | Blocker | Blocks | Notes |
 |---------|--------|-------|
-| kiwiishop e2e not run with current code | Full engine sign-off | Run `echo y \| node src/index.js https://kiwiishop.dm2buy.com` — expect 4 products, 2 collections, 18 images |
-| PRE_LAUNCH_CHECKLIST: 3 items open | Web app ship | Refund policy, proxy plan, server-side vs client-side decision |
-| Architecture decision made this session | Web app design | **Client-side extraction chosen** — see decisions below |
+| Shop param lost on CTA click | Full import working | page.tsx "Migrate my store" link has no ?shop=xxx — fix is in the plan |
+| T7 Billing API not implemented | Paid import | Billing step currently bypasses payment — calls import/start directly |
+| Trial import not built | Trust-building UX | Full plan written, not yet implemented |
 
 ---
 
 ## UNCOMMITTED CHANGES (as of last update)
 
 - `CLAUDE.md` — modified
-- `package.json` / `package-lock.json` — modified
-- `web/next.config.ts` — modified
+- `package.json` / `package-lock.json` — modified (Polaris, shopify-api added)
+- `web/next.config.ts` — modified (transpilePackages, allowedDevOrigins, CSP)
+- `web/src/app/layout.tsx` — modified (Polaris CSS import)
+- `web/src/app/migrate/page.tsx` — complete rewrite (T6 Polaris wizard)
 - `web/src/app/api/payment/create/route.ts` — modified
 - `worker.js` — modified
 - `src/server.js` — new, untracked
+- `src/shopify-importer.js` — new, untracked (Shopify Admin API import engine)
 - `.claude/settings.json` — new, untracked
-- `prototype/` — new directory, untracked
-- `.env` — SUPABASE_SERVICE_KEY added (gitignored, safe)
+- `tests/shopify-import.test.js` — new (T5.9 integration test)
+- `docs/LAUNCH_PLAN.md` — new
 
 ---
 
 ## NEXT TASKS (in priority order)
 
-Follow `docs/LAUNCH_PLAN.md` track by track. Current track: **T1 — Engine Sign-Off**.
+Next session: implement the plan at `/Users/mayankmalik/.claude/plans/virtual-herding-perlis.md` in full.
 
-1. **T1.1** — `echo y | node src/index.js https://kiwiishop.dm2buy.com` — 4 products, 2 collections, 18 images
-2. **T1.2** — Code audit via `/caveman` reviewer on extractor.js, recon.js, formatter.js
-3. **T1.3** — Edge case tests: invalid URL, 0-product store, network timeout
-4. **T1.4** — Commit all uncommitted changes
-5. **T2.1** — Refund & Cancellation Policy via `/shoprift-legal`
+1. **Content update** — Remove "shutting down" urgency copy from `page.tsx` + `layout.tsx`. New headline: "Move your dm2buy store to Shopify"
+2. **Fix shop param bug** — `page.tsx`: add `searchParams` prop, pass `?shop=xxx` to CTA link
+3. **Trial import** — 5 products free, one-time per store. Full plan in plan file.
+4. **Merge landing context** — compact hero above URL input on step 1 of wizard
+5. **T7** — Shopify Billing API (`AppPurchaseOneTime`) — gates paid import behind confirmed Shopify charge
 
 ---
 
 ## KNOWN DECISIONS / CONTEXT
 
-- Verification skipped in V1 (concierge mode) — ownership confirmed via DM. `verifier.js` kept for V2.
-- Instagram story polling (Method A) does not work — Instagram doesn't expose story HTML. V2 problem.
-- Railway deployment exists — worker process runs via `worker.js` + BullMQ.
-- Razorpay payment route scaffolded but not live — blocked on PRE_LAUNCH_CHECKLIST.
-- Collections map to Tags column in Shopify CSV (convention — do not change without updating all emitters).
-- **[NEW] Target product: Shopify App Store app** — embedded in Shopify admin, uses Shopify Admin API for direct import.
-- **[NEW] Extraction architecture: client-side** — seller's browser runs extraction JS against dm2buy API. Server handles Shopify API import only. No proxy needed. Playwright stays in CLI/concierge only.
-- **[NEW] Web app UX:** "Don't close tab" banner during extraction (~5–10s). Tab switching is fine (JS keeps running). Images uploaded to Shopify directly from dm2buy CDN URLs via Admin API.
+- Verification skipped in V1 (concierge mode) — `verifier.js` kept for V2.
+- Collections → Tags column in Shopify CSV. Do not change without updating all emitters.
+- **Extraction architecture: client-side** — seller's browser runs extraction JS against dm2buy API (CORS open). Server handles Shopify Admin API import only. No proxy needed.
+- **Shopify app embedded** — loads inside Shopify admin iframe. CSP `frame-ancestors` set. Session params (hmac, host, id_token, shop) arrive via URL query string.
+- **T6.5 billing bypassed** — the "Pay and import" button in the wizard calls `/api/import/start` directly without Shopify billing. T7 wires real `AppPurchaseOneTime`.
+- **Trial import plan**: 5 free products, one-time per shop+store_url. Stored in `import_jobs.recon_data` with `is_trial: true` and `trial_product_urls: []`. Full import filters those URLs out to avoid duplicates.
+- **Railway worker running** — `RAILWAY_WORKER_URL` in `.env.local` points to `http://localhost:3001` for local dev. Worker serves POST /import via `src/server.js`.
+- **Razorpay scaffolded but unused** — `/api/payment/create` exists but Shopify Billing API is the payment path for the embedded app.
+- **dm2buy is NOT shutting down** — remove all urgency/fear copy. New positioning: scale your business by migrating from dm2buy to Shopify.
 
 ---
 
 ## SESSION NOTES
 
-> Full launch plan written → `docs/LAUNCH_PLAN.md`. 14-day roadmap to Shopify App Store submission.
-> CORS confirmed open on api.dm2buy.com (`access-control-allow-origin: *`) — client-side extraction viable, no proxy needed.
-> Concierge mode is live. Take CLI jobs anytime while app builds.
-> Next session: T1.1 kiwiishop e2e test.
-
+> T5.9 kiwiishop test: 25/25 products, 0 failures, 5 collections. CSV export verified.
+> T6 Polaris wizard fully working inside Shopify admin. Build clean, TypeScript 0 errors.
+> Bug found: page.tsx "Migrate my store" loses ?shop param → "Invalid shop" error on import.
+> Full plan for next session: trial import + content update + shop param fix → plan file above.
+> Dev setup: `cd web && npm run dev` (port 3000) + ngrok forwarding to 3000 + Railway worker on 3001.

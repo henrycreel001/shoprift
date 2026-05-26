@@ -125,3 +125,36 @@ export async function getActiveJob(accountId) {
   if (error) throw new Error(`[job.getActiveJob] ${error.message}`);
   return data;
 }
+
+/**
+ * Reads the Shopify access token for a shop from shopify_sessions.
+ * Returns the most recently updated session's token, or null if none.
+ * @param {string} shop — e.g. "shoprift-dev.myshopify.com"
+ * @returns {Promise<string|null>}
+ */
+export async function getShopifyToken(shop) {
+  const { data, error } = await supabase
+    .from('shopify_sessions')
+    .select('access_token')
+    .eq('shop', shop)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.access_token) return null;
+  return data.access_token;
+}
+
+/**
+ * Fetches a single job record by ID. Used by status polling endpoints.
+ * @param {string} jobId
+ * @returns {Promise<object|null>}
+ */
+export async function getJob(jobId) {
+  const { data, error } = await supabase
+    .from('import_jobs')
+    .select('id, status, progress, error, recon_data, created_at, updated_at')
+    .eq('id', jobId)
+    .single();
+  if (error) return null;
+  return data;
+}

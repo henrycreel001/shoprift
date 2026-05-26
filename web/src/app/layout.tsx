@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import '@shopify/polaris/build/esm/styles.css'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -9,14 +10,14 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Shoprift — dm2buy Store Migration',
+  title: 'Shoprift — dm2buy to Shopify Migration',
   description:
-    'Extract all your products, images and data from dm2buy in minutes. Get a complete migration package ready to load into Shopify or any other platform.',
+    'Move your dm2buy store to Shopify. Extract all your products, images and data in minutes — complete migration package ready to import.',
   keywords: ['dm2buy', 'store migration', 'Shopify migration', 'e-commerce migration', 'India'],
   openGraph: {
-    title: 'Shoprift — dm2buy Store Migration',
+    title: 'Shoprift — dm2buy to Shopify Migration',
     description:
-      'Extract all your products, images and data from dm2buy in minutes.',
+      'Move your dm2buy store to Shopify. Extract all your products, images and data in minutes.',
     type: 'website',
   },
 }

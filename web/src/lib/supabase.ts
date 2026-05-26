@@ -43,16 +43,20 @@ let browserClient: SupabaseClient<Database> | null = null
 export function createBrowserSupabaseClient(): SupabaseClient<Database> {
   if (browserClient) return browserClient
 
-  browserClient = createClient<Database>(
-    getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    }
-  )
+  // Static dot-notation required — Next.js only inlines NEXT_PUBLIC_* vars
+  // when accessed as literal property names, not via bracket notation.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url) throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_URL')
+  if (!key) throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_ANON_KEY')
+
+  browserClient = createClient<Database>(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  })
 
   return browserClient
 }

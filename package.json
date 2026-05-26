@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "worker": "node worker.js",
+    "dev:server": "node src/dev-server.js",
     "test": "node tests/kiwiishop.test.js",
     "lint": "node --check src/*.js"
   },
