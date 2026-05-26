@@ -81,7 +81,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const jobId = jobRow.id;
   const appUrl = requireEnv('SHOPIFY_APP_URL');
-  const returnUrl = `${appUrl}/api/payment/billing/callback?jobId=${jobId}`;
+  const returnUrl = `${appUrl}/api/payment/billing/callback?jobId=${jobId}&shop=${encodeURIComponent(shop)}`;
   const chargeLabel = typeof planName === 'string' ? planName : 'Shoprift Migration';
   const isTest = process.env.NODE_ENV !== 'production';
 
