@@ -39,3 +39,26 @@ export function getShopify() {
 
   return _shopify;
 }
+
+/**
+ * Returns a valid access token for the given shop.
+ * Auto-refreshes the session if the token is expired or expiring within 5 minutes.
+ */
+export async function getValidAccessToken(shop: string): Promise<string | null> {
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
+  if (!session?.accessToken) return null;
+
+  if (!session.isExpired(5 * 60 * 1000)) {
+    return session.accessToken;
+  }
+
+  if (!session.refreshToken) return null;
+  try {
+    const shopify = getShopify();
+    const { session: refreshed } = await shopify.auth.refreshToken({ shop, refreshToken: session.refreshToken });
+    await sessionStorage.storeSession(refreshed);
+    return refreshed.accessToken ?? null;
+  } catch {
+    return null;
+  }
+}

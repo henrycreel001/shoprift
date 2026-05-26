@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { sessionStorage } from '@/lib/shopify';
+import { getValidAccessToken } from '@/lib/shopify';
 
 const SHOPIFY_API_VERSION = '2026-04';
 
@@ -18,11 +18,6 @@ function requireEnv(name: string): string {
   const val = process.env[name];
   if (!val) throw new Error(`Missing env var: ${name}`);
   return val;
-}
-
-async function getAccessToken(shop: string): Promise<string | null> {
-  const session = await sessionStorage.loadSession(`offline_${shop}`);
-  return session?.accessToken ?? null;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -55,7 +50,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
   }
 
-  const accessToken = await getAccessToken(shop);
+  const accessToken = await getValidAccessToken(shop);
   if (!accessToken) {
     return NextResponse.json(
       { error: 'No active Shopify session — reinstall the app' },

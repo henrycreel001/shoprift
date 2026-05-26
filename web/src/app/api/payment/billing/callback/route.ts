@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { sessionStorage } from '@/lib/shopify';
+import { getValidAccessToken } from '@/lib/shopify';
 
 const SHOPIFY_API_VERSION = '2026-04';
 
@@ -43,8 +43,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     return adminRedirect(shop, { billing_error: 'job_not_found' });
   }
 
-  const session = await sessionStorage.loadSession(`offline_${shop}`);
-  const accessToken = session?.accessToken;
+  const accessToken = await getValidAccessToken(shop);
   if (!accessToken) {
     return adminRedirect(shop, { billing_error: 'no_session' });
   }

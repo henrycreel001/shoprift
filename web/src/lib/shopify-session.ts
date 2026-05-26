@@ -15,6 +15,8 @@ type SessionRow = {
   scope: string | null;
   expires_at: string | null;
   access_token: string | null;
+  refresh_token: string | null;
+  refresh_token_expires_at: string | null;
 };
 
 function rowToSession(row: SessionRow): Session {
@@ -27,6 +29,8 @@ function rowToSession(row: SessionRow): Session {
   if (row.scope) session.scope = row.scope;
   if (row.expires_at) session.expires = new Date(row.expires_at);
   if (row.access_token) session.accessToken = row.access_token;
+  if (row.refresh_token) session.refreshToken = row.refresh_token;
+  if (row.refresh_token_expires_at) session.refreshTokenExpires = new Date(row.refresh_token_expires_at);
   return session;
 }
 
@@ -44,6 +48,8 @@ export class SupabaseSessionStorage {
       scope: session.scope ?? null,
       expires_at: session.expires?.toISOString() ?? null,
       access_token: session.accessToken ?? null,
+      refresh_token: session.refreshToken ?? null,
+      refresh_token_expires_at: session.refreshTokenExpires?.toISOString() ?? null,
       updated_at: new Date().toISOString(),
     });
     if (error) console.error('[session] storeSession error:', error.message);
