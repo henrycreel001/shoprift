@@ -51,8 +51,8 @@ Each job = practice + signal for what the app needs.
 |---|------|------|
 | T1.1 | Run kiwiishop e2e — `echo y \| node src/index.js https://kiwiishop.dm2buy.com` — 25 products, 5 collections, 63 images, 0 failures, 2m19s | [x] |
 | T1.2 | Code audit — run `/caveman` reviewer on `src/extractor.js`, `src/recon.js`, `src/formatter.js` — fix any severity issues | [ ] |
-| T1.3 | Test edge cases: invalid URL, store with 0 products, network timeout mid-extraction | [ ] |
-| T1.4 | Commit all uncommitted changes | [ ] |
+| T1.3 | Test edge cases: invalid URL, store with 0 products, network timeout mid-extraction | [x] |
+| T1.4 | Commit all uncommitted changes | [x] |
 
 ---
 

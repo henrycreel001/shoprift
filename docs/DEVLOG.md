@@ -7,6 +7,23 @@
 
 ---
 
+## 2026-05-26 19:10 IST — T1.3 edge case tests (19/19 passed)
+
+**Trigger:** T1.3 from LAUNCH_PLAN.md — edge case test suite.
+
+**Files changed:**
+- `tests/edge-cases.test.js` — new file. 19 assertions across 4 groups.
+
+**Test groups:**
+1. `isDm2buyUrl` — 7 assertions. Valid dm2buy URLs pass; empty string, malformed URLs, non-dm2buy domains, plain `dm2buy.com` (no subdomain), Shopify URLs all correctly return false.
+2. `withRetry` — 6 assertions. Retries then succeeds on 3rd attempt. Exhausts all attempts and re-throws. Times out per-attempt (`timeoutMs`). `err.permanent = true` skips retries — fn called once only.
+3. 0-product store pipeline — 5 assertions. `format()` does not crash with 0 products. Returns empty products array, correct scrape_meta, `total_products_found: 0`. `validate()` throws `Schema validation failed` (schema's `products.min(1)` constraint) — not an unhandled crash. This is correct: write nothing for a 0-product store.
+4. Non-existent subdomain (network) — 1 assertion. `recon('https://shoprift-test-nonexistent-abc123.dm2buy.com')` → dm2buy API returns 404 → `withRetry` retries 3 times → throws clean error. No crash, no silent failure.
+
+**Known behavior noted:** `withRetry` retries "store not found" (404) as if it were a transient error — it is not. This wastes ~3s (1s + 2s delays) on a non-existent store. Not fixed in T1.3 scope; flagged for V2 (`err.permanent` on 404 responses).
+
+---
+
 ## 2026-05-26 17:18 IST — T1.1 kiwiishop e2e + test expectation update
 
 **Trigger:** T1.1 from LAUNCH_PLAN.md — first e2e run after launch plan session.
