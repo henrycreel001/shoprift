@@ -57,10 +57,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     status: 'pending',
   };
   if (isTrial === true) {
-    insertPayload.recon_data = {
-      is_trial: true,
-      trial_product_urls: Array.isArray(trialProductUrls) ? trialProductUrls : [],
-    };
+    insertPayload.is_trial = true;
+    insertPayload.trial_product_urls = Array.isArray(trialProductUrls) ? trialProductUrls : [];
   }
 
   const { data: jobRow, error: insertError } = await supabase

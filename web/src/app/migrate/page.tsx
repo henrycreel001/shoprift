@@ -30,6 +30,7 @@ type Step =
   | 'url'
   | 'reconning'
   | 'preview'
+  | 'verifying'
   | 'trialing'
   | 'trial_done'
   | 'extracting'
@@ -74,18 +75,19 @@ function isDm2buyUrl(url: string): boolean {
 // ─── Step indicator ─────────────────────────────────────────────────────────
 
 const STEP_LABELS: Record<Step, string> = {
-  url: 'Enter URL',
-  reconning: 'Enter URL',
+  url: 'URL',
+  reconning: 'URL',
+  verifying: 'Verify',
   preview: 'Preview',
-  trialing: 'Extracting',
+  trialing: 'Extract',
   trial_done: 'Review',
-  extracting: 'Extracting',
+  extracting: 'Extract',
   results: 'Review',
-  importing: 'Importing',
+  importing: 'Import',
   done: 'Done',
 }
 
-const STEP_ORDER: Step[] = ['url', 'preview', 'extracting', 'results', 'importing', 'done']
+const STEP_ORDER: Step[] = ['url', 'verifying', 'preview', 'extracting', 'results', 'importing', 'done']
 
 function stepIndex(step: Step): number {
   const mapped: Partial<Record<Step, Step>> = {
@@ -167,6 +169,11 @@ function MigrateWizard() {
   const [trialUsed, setTrialUsed] = useState(false)
   const [trialProductUrls, setTrialProductUrls] = useState<string[]>([])
   const [remainingCount, setRemainingCount] = useState(0)
+  const [verified, setVerified] = useState(false)
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifyAttemptId, setVerifyAttemptId] = useState<string | null>(null)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const clearPoll = useCallback(() => {
@@ -174,7 +181,7 @@ function MigrateWizard() {
   }, [])
   useEffect(() => () => clearPoll(), [clearPoll])
 
-  // ── Step 1: Recon ──────────────────────────────────────────────────────────
+  // ── Step 1: Recon + verification gate ─────────────────────────────────────
 
   async function handleCheckStore() {
     setUrlError(undefined)
@@ -189,30 +196,100 @@ function MigrateWizard() {
       const data = await runRecon(url)
       setReconData(data)
 
-      // Check if trial already used for this shop + store
       if (shop) {
         const supabase = createBrowserSupabaseClient()
+
+        // Check if trial already used for this shop + store (using top-level columns)
         const { data: trialRow } = await supabase
           .from('import_jobs')
-          .select('recon_data')
+          .select('trial_product_urls')
           .eq('account_id', shop)
           .eq('store_url', data.store_url)
-          .filter('recon_data->>is_trial', 'eq', 'true')
+          .eq('is_trial', true)
           .eq('status', 'complete')
           .maybeSingle()
 
         if (trialRow) {
-          const rd = trialRow.recon_data as { trial_product_urls?: string[] } | null
           setTrialUsed(true)
-          setTrialProductUrls(rd?.trial_product_urls ?? [])
+          setTrialProductUrls(
+            Array.isArray(trialRow.trial_product_urls) ? trialRow.trial_product_urls as string[] : [],
+          )
           setRemainingCount(Math.max(0, data.product_count - 5))
         }
-      }
 
-      setStep('preview')
+        // Check if already verified for this shop + store
+        const { data: va } = await supabase
+          .from('verification_attempts')
+          .select('id')
+          .eq('account_id', shop)
+          .eq('store_url', data.store_url)
+          .eq('status', 'verified')
+          .maybeSingle()
+
+        if (va) {
+          setVerified(true)
+          setStep('preview')
+        } else {
+          const vRes = await fetch('/api/verify/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shop, storeUrl: data.store_url }),
+          })
+          const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
+          if (!vRes.ok || !vData.code) {
+            throw new Error(vData.error ?? 'Failed to start verification.')
+          }
+          setVerifyCode(vData.code)
+          setVerifyAttemptId(vData.attemptId ?? null)
+          setStep('verifying')
+        }
+      } else {
+        // Dev mode without shop param — skip verification
+        setStep('preview')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Store scan failed. Check the URL and try again.')
       setStep('url')
+    }
+  }
+
+  // ── Step 2: Verify ownership ───────────────────────────────────────────────
+
+  async function handleVerifyCheck() {
+    setVerifyLoading(true)
+    setVerifyError(null)
+    try {
+      const r = await fetch('/api/verify/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId: verifyAttemptId, shop, storeUrl: reconData!.store_url }),
+      })
+      const d = await r.json() as { verified?: boolean; error?: string; expired?: boolean }
+      if (d.expired) {
+        // Code expired — get a new one
+        const vRes = await fetch('/api/verify/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shop, storeUrl: reconData!.store_url }),
+        })
+        const vData = await vRes.json() as { code?: string; attemptId?: string }
+        if (vData.code) {
+          setVerifyCode(vData.code)
+          setVerifyAttemptId(vData.attemptId ?? null)
+          setVerifyError('Your code expired. A new code has been generated — add the new product and try again.')
+        }
+        return
+      }
+      if (d.verified) {
+        setVerified(true)
+        setStep('preview')
+      } else {
+        setVerifyError('Product not found. Make sure the product name is exactly the code shown, then try again.')
+      }
+    } catch {
+      setVerifyError('Check failed. Try again.')
+    } finally {
+      setVerifyLoading(false)
     }
   }
 
@@ -345,7 +422,7 @@ function MigrateWizard() {
             setStep('done')
           } else if (d.status === 'failed') {
             clearPoll()
-            setError(d.error ?? 'Import failed. Contact support with your Job ID.')
+            setError(d.error ?? 'Import failed. Contact support.')
           }
         } catch {
           // network blip — keep polling
@@ -385,6 +462,7 @@ function MigrateWizard() {
   const pageTitle: Record<Step, string> = {
     url: 'Migrate from dm2buy',
     reconning: 'Migrate from dm2buy',
+    verifying: 'Confirm store ownership',
     preview: 'Store preview',
     trialing: 'Importing trial products',
     trial_done: 'Trial complete',
@@ -484,7 +562,98 @@ function MigrateWizard() {
           </BlockStack>
         )}
 
-        {/* ── Step 2: Recon preview ──────────────────────────────────────── */}
+        {/* ── Step 2: Ownership verification ────────────────────────────── */}
+        {step === 'verifying' && reconData && (
+          <Card>
+            <BlockStack gap="500">
+              <BlockStack gap="100">
+                <Text variant="headingMd" as="h2">Confirm you own this store</Text>
+                <Text tone="subdued" as="p">
+                  We verify ownership before importing to protect dm2buy sellers&apos; data.
+                </Text>
+              </BlockStack>
+
+              <BlockStack gap="300">
+                <Text as="p" fontWeight="semibold">Add a product to your dm2buy store:</Text>
+                {[
+                  'Log in to your dm2buy seller dashboard.',
+                  'Go to Products → Add Product.',
+                  'Set the product name to exactly the code below.',
+                  'Save the product — draft status is fine.',
+                  'Click "I\'ve added it — verify now" below.',
+                ].map((instruction, i) => (
+                  <InlineStack key={i} gap="200" blockAlign="start" wrap={false}>
+                    <Box
+                      background="bg-fill-secondary"
+                      borderRadius="full"
+                      minWidth="24px"
+                      minHeight="24px"
+                      as="span"
+                    >
+                      <Box paddingInline="100" paddingBlock="050">
+                        <Text as="span" variant="bodySm" fontWeight="semibold">{i + 1}</Text>
+                      </Box>
+                    </Box>
+                    <Text as="p">{instruction}</Text>
+                  </InlineStack>
+                ))}
+              </BlockStack>
+
+              <BlockStack gap="200">
+                <Text as="p" tone="subdued" variant="bodySm">Your verification code</Text>
+                <Box
+                  background="bg-fill-secondary"
+                  borderRadius="100"
+                  padding="300"
+                >
+                  <InlineStack align="space-between" blockAlign="center" wrap={false}>
+                    <Text as="p" fontWeight="bold" variant="headingMd">{verifyCode}</Text>
+                    <Button
+                      variant="plain"
+                      size="micro"
+                      onClick={() => navigator.clipboard.writeText(verifyCode)}
+                    >
+                      Copy
+                    </Button>
+                  </InlineStack>
+                </Box>
+                <Text tone="subdued" as="p" variant="bodySm">
+                  The product name must match exactly. Delete the test product after verification.
+                </Text>
+              </BlockStack>
+
+              {verifyError && (
+                <Banner tone="critical" onDismiss={() => setVerifyError(null)}>
+                  <Text as="p">{verifyError}</Text>
+                </Banner>
+              )}
+
+              <InlineStack gap="300" wrap>
+                <Button
+                  variant="primary"
+                  onClick={handleVerifyCheck}
+                  loading={verifyLoading}
+                >
+                  I&apos;ve added it — verify now
+                </Button>
+                <Button
+                  variant="plain"
+                  onClick={() => {
+                    setReconData(null)
+                    setVerifyCode('')
+                    setVerifyAttemptId(null)
+                    setVerifyError(null)
+                    setStep('url')
+                  }}
+                >
+                  Change URL
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        )}
+
+        {/* ── Step 3: Recon preview ──────────────────────────────────────── */}
         {step === 'preview' && reconData && tier && (
           <Card>
             <BlockStack gap="500">
@@ -555,6 +724,7 @@ function MigrateWizard() {
                     setReconData(null)
                     setTrialUsed(false)
                     setTrialProductUrls([])
+                    setVerified(false)
                     setStep('url')
                   }}
                 >
@@ -595,7 +765,7 @@ function MigrateWizard() {
         {/* ── Trial done ────────────────────────────────────────────────── */}
         {step === 'trial_done' && importResult && (
           <BlockStack gap="400">
-            <Banner title="5 products added to your Shopify store!" tone="success">
+            <Banner title="5 products added to your Shopify store." tone="success">
               <Text as="p">
                 Your trial import is complete. See them live in your store, then import the rest.
               </Text>
@@ -733,21 +903,14 @@ function MigrateWizard() {
                 <>
                   <ProgressBar progress={importPercent} size="medium" tone="highlight" />
                   <Text tone="subdued" as="p">
-                    {importStatus.current} of {importStatus.total} products imported
+                    {importStatus.message || `${importStatus.current} of ${importStatus.total} imported`}
                   </Text>
-                  {importStatus.message && (
-                    <Text tone="subdued" as="p">{importStatus.message}</Text>
-                  )}
                 </>
               ) : (
                 <InlineStack gap="200" blockAlign="center">
                   <Spinner size="small" />
                   <Text tone="subdued" as="p">Starting import...</Text>
                 </InlineStack>
-              )}
-
-              {jobId && (
-                <Text tone="subdued" as="p">Job ID: {jobId}</Text>
               )}
             </BlockStack>
           </Card>
@@ -756,7 +919,7 @@ function MigrateWizard() {
         {/* ── Done ──────────────────────────────────────────────────────── */}
         {step === 'done' && importResult && (
           <BlockStack gap="400">
-            <Banner title="Migration complete!" tone="success">
+            <Banner title="Migration complete." tone="success">
               <Text as="p">
                 {importResult.productsCreated} product{importResult.productsCreated !== 1 ? 's' : ''} and{' '}
                 {importResult.collectionsCreated} collection{importResult.collectionsCreated !== 1 ? 's' : ''} added to your Shopify store.
@@ -806,6 +969,10 @@ function MigrateWizard() {
                       setTrialUsed(false)
                       setTrialProductUrls([])
                       setRemainingCount(0)
+                      setVerified(false)
+                      setVerifyCode('')
+                      setVerifyAttemptId(null)
+                      setVerifyError(null)
                     }}
                   >
                     Migrate another store

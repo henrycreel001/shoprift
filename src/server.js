@@ -111,12 +111,9 @@ app.post('/import', async (req, res) => {
   setImmediate(async () => {
     try {
       const result = await importStore({ jobId, shop, accessToken, storeData, skipUrls: skipUrls ?? [] });
-      // Merge result into existing recon_data BEFORE marking complete — preserves is_trial +
-      // trial_product_urls set at job creation, and ensures the poll sees productsCreated
-      // on the same tick it sees status='complete' (no race condition).
-      const existing = await job.getJob(jobId).catch(() => null);
-      const merged = { ...(existing?.recon_data ?? {}), ...result };
-      await job.updateReconData(jobId, merged).catch(() => {});
+      // is_trial + trial_product_urls are top-level columns set at INSERT — never overwritten here.
+      // updateReconData BEFORE updateStatus to avoid race condition on poll.
+      await job.updateReconData(jobId, result).catch(() => {});
       await job.updateStatus(jobId, 'complete').catch(() => {});
     } catch (err) {
       console.error(JSON.stringify({ phase: 'shopify-import', jobId, shop, error: err.message }));
@@ -125,6 +122,38 @@ app.post('/import', async (req, res) => {
   });
 
   return res.json({ queued: true });
+});
+
+/**
+ * POST /verify/check
+ * Body: { storeUrl: string, code: string }
+ * One-shot check: fetches dm2buy public API to see if any product name contains code.
+ * Returns { verified: boolean }. Client retries on false.
+ */
+app.post('/verify/check', async (req, res) => {
+  const { storeUrl, code } = req.body ?? {};
+  if (!storeUrl || !code) {
+    return res.status(400).json({ error: 'storeUrl and code required.' });
+  }
+  try {
+    const subdomain = new URL(storeUrl).hostname.split('.')[0];
+    const storeRes = await fetch(
+      `https://api.dm2buy.com/v4/store/get-by-subdomain/${subdomain}?select=internationalPayment`,
+    );
+    const storeData = await storeRes.json();
+    const storeId = storeData?.data?.id;
+    if (!storeId) return res.status(404).json({ error: 'Store not found.', verified: false });
+
+    const productsRes = await fetch(
+      `https://api.dm2buy.com/v3/product/store/${storeId}/collectionv2?page=1&limit=50&source=web`,
+    );
+    const productsData = await productsRes.json();
+    const products = productsData?.data?.docs ?? [];
+    const found = products.some((p) => (p.name ?? '').includes(code));
+    return res.json({ verified: found });
+  } catch (err) {
+    return res.status(502).json({ error: err.message, verified: false });
+  }
 });
 
 /**

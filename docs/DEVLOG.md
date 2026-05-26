@@ -7,6 +7,44 @@
 
 ---
 
+## 2026-05-27 — Trial lock + ownership verification
+
+**Trigger:** 3 production bugs (trial not enforced, progress label wrong, job ID visible) + missing ownership verification gate.
+
+**Files changed:**
+
+### `supabase/migrations/002_trial_columns.sql` (new)
+- `ALTER TABLE import_jobs ADD COLUMN is_trial BOOLEAN` + `trial_product_urls JSONB`
+- `CREATE TABLE verification_attempts` — stores pending/verified ownership checks per shop+store
+- Unique index: one verified record per (account_id, store_url) pair
+
+### `web/src/app/api/import/start/route.ts` (modified)
+- Trial state now stored in top-level `is_trial` + `trial_product_urls` columns, not inside `recon_data` JSONB
+- Worker no longer needs to preserve trial state during merge
+
+### `web/src/app/api/verify/start/route.ts` (new)
+- Generates `SHR-XXXX-XXXXXX` verification code, stores in `verification_attempts` with 30-min expiry
+- Returns `{ code, attemptId }`
+
+### `web/src/app/api/verify/check/route.ts` (new)
+- Validates attempt not expired, forwards to Railway `POST /verify/check`
+- Marks attempt `status='verified'` on success
+
+### `src/server.js` (modified)
+- Removed getJob/merge pattern in `/import` handler — trial columns now immutable at INSERT
+- Added `POST /verify/check` — one-shot dm2buy API check for product with verification code
+
+### `web/src/app/migrate/page.tsx` (modified)
+- Added `verifying` step + `verified`, `verifyCode`, `verifyAttemptId`, `verifyError`, `verifyLoading` state
+- Step bar extended to 7 steps: URL → Verify → Preview → Extract → Review → Import → Done
+- `handleCheckStore`: fixed trial query to use `is_trial` column; added verification check after recon
+- `handleVerifyCheck`: calls `/api/verify/check`, handles expired code (auto-refreshes)
+- Fixed progress label: uses `importStatus.message` instead of hardcoded "X of Y products imported"
+- Removed job ID display from importing step
+- Fixed banner copy: removed exclamation marks
+
+---
+
 ## 2026-05-26 22:00 IST — T5 Server-side Shopify import API
 
 **Trigger:** T5.1-T5.8 from LAUNCH_PLAN.md — server-side endpoint to import StoreData into Shopify.
