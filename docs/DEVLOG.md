@@ -7,6 +7,64 @@
 
 ---
 
+## 2026-05-26 19:45 IST — T3.4-T3.6 Shopify OAuth + session storage + uninstall webhook
+
+**Trigger:** T3 from LAUNCH_PLAN.md — Shopify App Infrastructure (code portion; T3.1-T3.3 are manual Partner dashboard steps).
+
+**Files changed:**
+
+### `web/src/lib/shopify.ts` (new)
+- Lazy singleton that calls `shopifyApi()` with env vars.
+- Uses `ApiVersion.April26` (v13 removed `LATEST_API_VERSION` export).
+- Exports `sessionStorage` instance directly — v13 types don't expose `shopify.config.sessionStorage`.
+
+### `web/src/lib/shopify-session.ts` (new)
+- `SupabaseSessionStorage` class implementing `SessionStorage` interface.
+- `storeSession` / `loadSession` / `deleteSession` / `deleteSessions` / `findSessionsByShop` — all backed by `shopify_sessions` Supabase table.
+- `rowToSession()` helper maps DB row → `Session` object.
+
+### `web/src/app/api/auth/route.ts` (new)
+- `GET /api/auth?shop=mystore.myshopify.com` — begins OAuth, returns redirect Response to Shopify consent screen.
+- Validates `shop` param ends with `.myshopify.com` before calling `shopify.auth.begin()`.
+- Offline token (`isOnline: false`) — persists after merchant closes tab.
+- Runtime: `nodejs` (not Edge).
+
+### `web/src/app/api/auth/callback/route.ts` (new)
+- `GET /api/auth/callback` — handles Shopify OAuth callback.
+- Calls `shopify.auth.callback()`, stores session via `sessionStorage.storeSession()`.
+- Redirects to `https://{shop}/admin/apps/{apiKey}` (embedded app URL).
+- Returns 500 with message on auth or storage failure.
+
+### `web/src/app/api/webhooks/app-uninstalled/route.ts` (new)
+- `POST /api/webhooks/app-uninstalled` — validates HMAC, deletes all sessions for uninstalled shop.
+- Uses `result.valid` type narrowing — `result.domain` only present on `WebhookValidationValid`.
+
+### `web/next.config.ts`
+- Added `Content-Security-Policy: frame-ancestors https://*.myshopify.com https://admin.shopify.com` — required for Shopify Admin to embed the app in an iframe without blocking it.
+
+### `web/.env.example`
+- Added `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL`, `SHOPIFY_SCOPES`.
+
+**Supabase table required (run in SQL Editor):**
+```sql
+CREATE TABLE shopify_sessions (
+  id TEXT PRIMARY KEY,
+  shop TEXT NOT NULL,
+  state TEXT,
+  is_online BOOLEAN DEFAULT FALSE,
+  scope TEXT,
+  expires_at TIMESTAMPTZ,
+  access_token TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_shopify_sessions_shop ON shopify_sessions(shop);
+```
+
+**T3.7 (test install on dev store) blocked on:** T3.1-T3.3 (Partner account + app creation + dev store) — manual steps not yet done.
+
+---
+
 ## 2026-05-26 19:10 IST — T1.3 edge case tests (19/19 passed)
 
 **Trigger:** T1.3 from LAUNCH_PLAN.md — edge case test suite.
