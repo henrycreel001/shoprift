@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const { data, error } = await supabase
     .from('verification_attempts')
-    .insert({ account_id: shop, store_url: storeUrl, code, expires_at: expiresAt })
+    .insert({ account_id: shop, store_url: storeUrl, code, method: 'dm2buy_product', expires_at: expiresAt })
     .select('id')
     .single();
 
