@@ -259,7 +259,7 @@ function MigrateWizard() {
         // Check if already verified for this shop + store
         const { data: va } = await supabase
           .from('verification_attempts')
-          .select('id')
+          .select('id, code')
           .eq('account_id', shop)
           .eq('store_url', data.store_url)
           .eq('status', 'verified')
@@ -267,6 +267,7 @@ function MigrateWizard() {
 
         if (va) {
           setVerified(true)
+          if (va.code) setVerifyCode(va.code)
           setStep('preview')
         } else {
           const vRes = await fetch('/api/verify/start', {
