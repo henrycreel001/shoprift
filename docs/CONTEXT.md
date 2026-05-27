@@ -17,8 +17,8 @@
 ## LAST UPDATED
 
 - **Date:** 2026-05-27
-- **Session topic:** Billing flow confirmed E2E. Verification product bug fixed. Legal docs complete. Production readiness in progress.
-- **Branch:** main (working, uncommitted changes in migrate/page.tsx)
+- **Session topic:** Phase 0 complete — Vercel production deploy, migration 004, smoke test passing.
+- **Branch:** main (clean)
 
 ---
 
@@ -35,11 +35,11 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Verification product bug fixed** — When a store was already verified (short-circuit path in recon handler), `verifyCode` state was never set → filter at extraction skipped → `SHR-XXXX` product included in `storeData` sent to billing. Fix: `.select('id, code')` + `setVerifyCode(va.code)` on the short-circuit path (migrate/page.tsx ~line 262).
-2. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0. Consumer Protection (E-Commerce) Rules 2020 compliant. Covers pre-extraction cancellation, complete failure auto-refund, 70% threshold partial refund, Shopify Billing + UPI timelines.
-3. **PRE_LAUNCH_CHECKLIST updated** — Proxy rotation + client-side decision ticked (N/A, client-side confirmed). Domain/email item added: 17 occurrences of personal email across 5 legal files to replace after domain purchase.
-4. **Billing flow confirmed E2E** — AppPurchaseOneTime wired. Test charge approved. Import progress screen (step 6/7) and migration complete screen (9 products + 3 collections) confirmed working. `page.tsx` bug fixed: was dropping `billing_job_id` param on redirect to `/migrate`.
-5. **T7 Billing API shipped** — `POST /api/payment/billing/create` + `GET /api/payment/billing/callback` wired. Shopify `AppPurchaseOneTime` mutation, charge verification, Railway worker trigger.
+1. **Phase 0 complete — Vercel production deploy** — App live at `https://project-pjqwm.vercel.app`. OAuth smoke test passed: `shoprift-dev.myshopify.com` installs and loads embedded app correctly. Supabase migration 004 run. shopify.app.toml updated to Vercel URLs (shoprift-4 active in Dev Dashboard).
+2. **Verification product bug fixed** — `.select('id, code')` + `setVerifyCode(va.code)` on short-circuit path in migrate/page.tsx.
+3. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0.
+4. **Billing flow confirmed E2E** — AppPurchaseOneTime wired, test charge approved, 9 products + 3 collections confirmed in Shopify.
+5. **T7 Billing API shipped** — `POST /api/payment/billing/create` + `GET /api/payment/billing/callback`.
 
 ---
 
@@ -47,26 +47,29 @@
 
 | Blocker | Blocks | Notes |
 |---------|--------|-------|
-| Vercel production deploy not done | Real users | App still runs via ngrok → localhost:3000. Needs Vercel deploy with all env vars set + Shopify Partner app URL updated. |
-| Migration 004 not run on production | Session refresh | `004_session_refresh_token.sql` adds `refresh_token` + `refresh_token_expires_at` to `shopify_sessions`. Must run in Supabase SQL editor before prod launch. |
-| Domain not purchased | Legal / branding | All legal docs use personal email `001henrycreel@gmail.com`. Replace with domain email after purchase. |
+| Domain not purchased | Legal / branding | All legal docs use personal email `001henrycreel@gmail.com`. Replace with domain email after purchase. 17 occurrences across 5 files. |
+| GDPR webhooks absent | App Store listing | `customers/data_request`, `customers/redact`, `shop/redact` not in toml. Phase 1 Task 1.1. |
+| App Bridge not installed | App Store listing | No `@shopify/app-bridge` package, no meta tag in layout. Phase 1 Task 1.2. |
+| JWT session token auth missing | Security | All API routes trust `shop` from request body. Phase 1 Task 1.3. |
+| Billing callback uses REST | App Store rule 2.2.4 | Must use GraphQL for public apps. Phase 1 Task 1.4. |
+| CSP static wildcard | Security | `*.myshopify.com` must be per-shop dynamic. Phase 1 Task 1.5. |
 
 ---
 
 ## UNCOMMITTED CHANGES
 
-- `web/src/app/migrate/page.tsx` — verification product filter fix (`.select('id, code')` + `setVerifyCode(va.code)` on short-circuit path)
+None.
 
 ---
 
 ## NEXT TASKS (in priority order)
 
-1. **Commit current changes** — migrate/page.tsx verification fix.
-2. **Deploy to Vercel** — set all env vars (see list below), update Shopify Partner app URL + redirect URL to Vercel domain.
-3. **Run migration 004** — `supabase/migrations/004_session_refresh_token.sql` in Supabase SQL editor (production project).
-4. **Test one full paid flow on production** — real Shopify store, Vercel URL, real test charge, full E2E.
-5. **Buy domain** — then replace `001henrycreel@gmail.com` with domain email in all 5 legal files (17 occurrences).
-6. **Add refund policy link to checkout UI** — must be visible before payment per Consumer Protection Rules 2020.
+1. **Phase 1 — GDPR webhooks** — add `compliance_topics` to `shopify.app.toml` + create `web/src/app/api/webhooks/compliance/route.ts`
+2. **Phase 1 — App Bridge** — `npm install @shopify/app-bridge` + meta tag in layout + session token on API calls
+3. **Phase 1 — JWT auth** — create `web/src/lib/auth.ts` + apply to 6 API routes
+4. **Phase 1 — Billing callback REST→GraphQL** — `web/src/app/api/payment/billing/callback/route.ts:55`
+5. **Phase 1 — Dynamic CSP middleware** — `web/src/middleware.ts`
+6. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
 
 ---
 
