@@ -1,18 +1,21 @@
-name = "Shoprift"
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
 client_id = "09b414e0b4717bf7de0c61d5e7a90984"
+name = "Shoprift"
 application_url = "https://project-pjqwm.vercel.app"
 embedded = true
+
+[webhooks]
+api_version = "2026-04"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products,write_product_listings,write_products"
 
 [auth]
 redirect_urls = [
   "https://project-pjqwm.vercel.app/api/auth/callback"
 ]
-
-[access_scopes]
-scopes = "write_products,read_products,write_product_listings"
-
-[webhooks]
-api_version = "2026-04"
 
 [pos]
 embedded = false
