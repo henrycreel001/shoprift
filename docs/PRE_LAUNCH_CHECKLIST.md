@@ -26,11 +26,8 @@ Concierge mode = your laptop IP. Changes per session. Fine.
 Web app on Railway = one fixed datacenter IP making hundreds of jobs/day. Gets blocked fast.
 
 - [x] **Implement job queue** — one extraction job at a time, max ~10-15 jobs/hour, queue everything else. Zero cost. Protects Railway IP from looking like a scraping farm. This is the V1 solution.
-- [ ] **Plan proxy rotation** — research Bright Data / Oxylabs / Smartproxy pricing. Budget ~$15-50/month into web app pricing tiers before scaling past early users. Needed when queue times become unacceptable.
-- [ ] **Decide: server-side vs. client-side extraction** — two architectures:
-  - **Server-side** (current plan): Railway server runs Playwright, needs proxy rotation at scale
-  - **Client-side**: user's browser makes API calls, results sent back to server — every job comes from seller's own home IP, infinitely scalable, free, but user must keep tab open
-  - Decision must be made before building the web app extraction flow.
+- [x] **Plan proxy rotation** — N/A. Client-side extraction decided (2026-05-27). Seller's browser makes dm2buy API calls. No Railway IP exposure. Proxy rotation not needed for V1.
+- [x] **Decide: server-side vs. client-side extraction** — **Client-side chosen** (2026-05-27). Seller's browser runs extraction via dm2buy's CORS-open API. Results sent to server for Shopify import only. Every job originates from seller's own IP — infinitely scalable, free, no proxy needed.
 
 ---
 
@@ -49,9 +46,16 @@ DPDP Act fines start at ₹50 lakh. Consumer Protection Act requires visible ref
 - [x] **Terms of Service** — seller-facing contract. Must include indemnity clause from seller to Shoprift for their content claims and customer disputes.
 - [x] **Privacy Policy** — DPDP Act 2023 compliant. Purpose-specific consent, withdrawable, plain language.
 - [x] **Grievance Officer notice** — mandatory under IT Rules 2021. Name, email, address, response timeline (24hr acknowledgement, 15 days resolution).
-- [ ] **Refund & Cancellation Policy** — required by Consumer Protection (E-Commerce) Rules 2020. Must be visible before payment is taken.
+- [x] **Refund & Cancellation Policy** — required by Consumer Protection (E-Commerce) Rules 2020. Must be visible before payment is taken. See `docs/legal/refund-policy.md`. **Still needs: link from checkout UI + lawyer review pass.**
 - [x] **Lawyer review** — one pass by Indian tech lawyer before publishing any of the above. Budget ₹20–30k. Non-negotiable before web app goes live.
 - [x] **Maintain consent records** — every extraction job must have a signed/accepted consent on file. If dm2buy ever sends a legal notice, these records kill the case before it starts.
+- [ ] **Buy domain + update contact email everywhere** — all legal docs currently use personal dev email (`001henrycreel@gmail.com`). Once domain is bought, replace with a professional address (e.g. `legal@shoprift.com` or `support@shoprift.com`). 17 occurrences across 5 files:
+  - `docs/legal/terms-of-service.md` (4 occurrences)
+  - `docs/legal/privacy-policy.md` (5 occurrences)
+  - `docs/legal/refund-policy.md` (4 occurrences)
+  - `docs/legal/migration-consent.md` (2 occurrences)
+  - `docs/legal/grievance-officer.md` (3 occurrences)
+  - Also check web app UI (any hardcoded email in components or API routes)
 
 ---
 

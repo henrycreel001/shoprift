@@ -50,7 +50,7 @@ Each job = practice + signal for what the app needs.
 | # | Task | Done |
 |---|------|------|
 | T1.1 | Run kiwiishop e2e — `echo y \| node src/index.js https://kiwiishop.dm2buy.com` — 25 products, 5 collections, 63 images, 0 failures, 2m19s | [x] |
-| T1.2 | Code audit — run `/caveman` reviewer on `src/extractor.js`, `src/recon.js`, `src/formatter.js` — fix any severity issues | [ ] |
+| T1.2 | Code audit — run `/caveman` reviewer on `src/extractor.js`, `src/recon.js`, `src/formatter.js` — fix any severity issues | [x] |
 | T1.3 | Test edge cases: invalid URL, store with 0 products, network timeout mid-extraction | [x] |
 | T1.4 | Commit all uncommitted changes | [x] |
 
@@ -63,10 +63,10 @@ Each job = practice + signal for what the app needs.
 
 | # | Task | Done |
 |---|------|------|
-| T2.1 | Write Refund & Cancellation Policy (Consumer Protection E-Commerce Rules 2020) — use `/shoprift-legal` | [ ] |
-| T2.2 | Review Shopify App Store policies — confirm nothing in our flow violates their terms | [ ] |
-| T2.3 | Update ToS + Privacy Policy for Shopify context (OAuth access, Shopify store data handling) | [ ] |
-| T2.4 | Tick all remaining PRE_LAUNCH_CHECKLIST items | [ ] |
+| T2.1 | Write Refund & Cancellation Policy (Consumer Protection E-Commerce Rules 2020) — use `/shoprift-legal` | [x] |
+| T2.2 | Review Shopify App Store policies — confirm nothing in our flow violates their terms | [x] |
+| T2.3 | Update ToS + Privacy Policy for Shopify context (OAuth access, Shopify store data handling) | [x] |
+| T2.4 | Tick all remaining PRE_LAUNCH_CHECKLIST items | [x] |
 
 ---
 
@@ -77,13 +77,13 @@ Each job = practice + signal for what the app needs.
 
 | # | Task | Done |
 |---|------|------|
-| T3.1 | Create Shopify Partner account at partners.shopify.com | [ ] |
-| T3.2 | Create app in Partner dashboard — App name: Shoprift · Type: Public | [ ] |
-| T3.3 | Set OAuth scopes: `write_products,read_products,write_product_listings` | [ ] |
-| T3.4 | Install `@shopify/shopify-app-remix` or `@shopify/shopify-app-next` — pick stack | [ ] |
-| T3.5 | Implement OAuth install flow: `/api/auth` → Shopify → `/api/auth/callback` → store token in Supabase | [ ] |
-| T3.6 | Set up `app/uninstalled` webhook → delete session from Supabase | [ ] |
-| T3.7 | Test install on Shopify dev store — confirm embedded app loads in admin | [ ] |
+| T3.1 | Create Shopify Partner account at partners.shopify.com | [x] |
+| T3.2 | Create app in Partner dashboard — App name: Shoprift · Type: Public | [x] |
+| T3.3 | Set OAuth scopes: `write_products,read_products,write_product_listings` | [x] |
+| T3.4 | Install `@shopify/shopify-app-remix` or `@shopify/shopify-app-next` — pick stack | [x] |
+| T3.5 | Implement OAuth install flow: `/api/auth` → Shopify → `/api/auth/callback` → store token in Supabase | [x] |
+| T3.6 | Set up `app/uninstalled` webhook → delete session from Supabase | [x] |
+| T3.7 | Test install on Shopify dev store — confirm embedded app loads in admin | [x] |
 
 **Decision needed at T3.4:** Shopify recommends Remix for new apps. But we're already on Next.js.
 Use `@shopify/shopify-app-next` + `@shopify/shopify-api` (Node) to stay on Next.js.
@@ -99,11 +99,11 @@ Use `@shopify/shopify-app-next` + `@shopify/shopify-api` (Node) to stay on Next.
 
 | # | Task | Done |
 |---|------|------|
-| T4.1 | Create `web/src/lib/dm2buy/recon.ts` — port `src/recon.js` to browser fetch (no Playwright, no Axios) | [ ] |
-| T4.2 | Create `web/src/lib/dm2buy/extractor.ts` — port `src/extractor.js` core logic | [ ] |
-| T4.3 | Create `web/src/lib/dm2buy/types.ts` — TypeScript types matching SCHEMA.md | [ ] |
-| T4.4 | Progress callback pattern — extraction emits `{ phase, current, total }` events for UI | [ ] |
-| T4.5 | Test in browser console against kiwiishop — confirm same data as CLI | [ ] |
+| T4.1 | Create `web/src/lib/dm2buy/recon.ts` — port `src/recon.js` to browser fetch (no Playwright, no Axios) | [x] |
+| T4.2 | Create `web/src/lib/dm2buy/extractor.ts` — port `src/extractor.js` core logic | [x] |
+| T4.3 | Create `web/src/lib/dm2buy/types.ts` — TypeScript types matching SCHEMA.md | [x] |
+| T4.4 | Progress callback pattern — extraction emits `{ phase, current, total }` events for UI | [x] |
+| T4.5 | Test in browser console against kiwiishop — confirm same data as CLI | [x] |
 
 **Note:** No image download in web flow. Images go from dm2buy CDN → Shopify via Admin API.
 No delay randomization needed for client-side (seller's own browser, own IP, one store).
@@ -117,15 +117,15 @@ No delay randomization needed for client-side (seller's own browser, own IP, one
 
 | # | Task | Done |
 |---|------|------|
-| T5.1 | Create `web/src/app/api/import/start/route.ts` — accepts store data JSON, returns jobId | [ ] |
-| T5.2 | Build `web/src/lib/shopify/products.ts` — `createProduct(shopifyClient, product)` via Admin API | [ ] |
-| T5.3 | Image handling — use `product_images` with `src` pointing to dm2buy CDN. Shopify fetches + re-hosts. | [ ] |
-| T5.4 | Variant handling — map extracted variants to Shopify `options` + `variants` fields | [ ] |
-| T5.5 | Collection handling — create Smart Collections or Custom Collections from extracted categories | [ ] |
-| T5.6 | Progress tracking — update Supabase job after each product created. Client polls `/api/import/status/[jobId]` | [ ] |
-| T5.7 | Rate limit handling — Shopify API: 2 req/s (REST) or leaky bucket (GraphQL). Add delay between creates. | [ ] |
-| T5.8 | Error recovery — if one product fails, continue with rest. Surface failures in job result. | [ ] |
-| T5.9 | Test import with kiwiishop data → real Shopify dev store. Confirm all 4 products appear correctly. | [ ] |
+| T5.1 | Create `web/src/app/api/import/start/route.ts` — accepts store data JSON, returns jobId | [x] |
+| T5.2 | Build `web/src/lib/shopify/products.ts` — `createProduct(shopifyClient, product)` via Admin API | [x] |
+| T5.3 | Image handling — use `product_images` with `src` pointing to dm2buy CDN. Shopify fetches + re-hosts. | [x] |
+| T5.4 | Variant handling — map extracted variants to Shopify `options` + `variants` fields | [x] |
+| T5.5 | Collection handling — create Smart Collections or Custom Collections from extracted categories | [x] |
+| T5.6 | Progress tracking — update Supabase job after each product created. Client polls `/api/import/status/[jobId]` | [x] |
+| T5.7 | Rate limit handling — Shopify API: 2 req/s (REST) or leaky bucket (GraphQL). Add delay between creates. | [x] |
+| T5.8 | Error recovery — if one product fails, continue with rest. Surface failures in job result. | [x] |
+| T5.9 | Test import with kiwiishop data → real Shopify dev store. Confirm all 4 products appear correctly. | [x] |
 
 **API choice:** Use Shopify REST Admin API for V1 (simpler, well-documented). GraphQL in V2.
 
@@ -148,15 +148,15 @@ Step 6: Done             → summary card, "View your products" button, migratio
 
 | # | Task | Done |
 |---|------|------|
-| T6.1 | App shell — `@shopify/polaris` AppProvider, App Bridge, page layout | [ ] |
-| T6.2 | Step 1 — URL input + client-side `isDm2buyUrl()` validation | [ ] |
-| T6.3 | Step 2 — Recon card (call `recon.ts` in browser, render summary) | [ ] |
-| T6.4 | Step 3 — Extraction progress (call `extractor.ts` in browser, progress callback → UI) | [ ] |
-| T6.5 | Billing gate — trigger Shopify Billing API charge before import starts | [ ] |
-| T6.6 | Step 4 — Import progress (poll `/api/import/status/[jobId]`) | [ ] |
-| T6.7 | Step 5 — Done state (success card, links, report download) | [ ] |
-| T6.8 | Error states — network fail, store not found, payment declined, import partial | [ ] |
-| T6.9 | "Don't close this tab" banner (visible during Steps 3-4 only) | [ ] |
+| T6.1 | App shell — `@shopify/polaris` AppProvider, App Bridge, page layout | [x] |
+| T6.2 | Step 1 — URL input + client-side `isDm2buyUrl()` validation | [x] |
+| T6.3 | Step 2 — Recon card (call `recon.ts` in browser, render summary) | [x] |
+| T6.4 | Step 3 — Extraction progress (call `extractor.ts` in browser, progress callback → UI) | [x] |
+| T6.5 | Billing gate — trigger Shopify Billing API charge before import starts | [x] |
+| T6.6 | Step 4 — Import progress (poll `/api/import/status/[jobId]`) | [x] |
+| T6.7 | Step 5 — Done state (success card, links, report download) | [x] |
+| T6.8 | Error states — network fail, store not found, payment declined, import partial | [x] |
+| T6.9 | "Don't close this tab" banner (visible during Steps 3-4 only) | [x] |
 
 ---
 
@@ -167,11 +167,11 @@ Step 6: Done             → summary card, "View your products" button, migratio
 
 | # | Task | Done |
 |---|------|------|
-| T7.1 | Pricing decision — use `/shoprift-accountant`. Propose: Free (≤5 products) / ₹199 flat / ₹499 flat | [ ] |
-| T7.2 | Implement `AppPurchaseOneTime` via Shopify Billing API | [ ] |
-| T7.3 | Store charge record in Supabase `payments` table (existing schema) | [ ] |
-| T7.4 | Gate import behind confirmed charge — never import without payment confirmed | [ ] |
-| T7.5 | Test billing in Shopify dev store test mode | [ ] |
+| T7.1 | Pricing decision — use `/shoprift-accountant`. Propose: Free (≤5 products) / ₹199 flat / ₹499 flat | [x] |
+| T7.2 | Implement `AppPurchaseOneTime` via Shopify Billing API | [x] |
+| T7.3 | Store charge record in Supabase `payments` table (existing schema) | [x] |
+| T7.4 | Gate import behind confirmed charge — never import without payment confirmed | [x] |
+| T7.5 | Test billing in Shopify dev store test mode | [x] |
 
 **Note:** Shopify Billing API is mandatory for paid apps on the App Store.
 Razorpay can still be used for concierge (off-app payments).
@@ -280,4 +280,4 @@ Day 19-21  Approved + live (estimated)
 
 ---
 
-*Created: 2026-05-21 | Owner: Mayank Malik | Next update: after Track 1 completes*
+*Created: 2026-05-21 | Updated: 2026-05-27 | Owner: Mayank Malik | T1–T7 complete. Next: T8 QA + T9 App Store submission.*

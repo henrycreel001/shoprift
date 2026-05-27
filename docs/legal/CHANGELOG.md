@@ -18,11 +18,18 @@ Minor changes (1.0 → 1.1) may be published with updated "Last updated" date on
 
 ---
 
+## 2026-05-27
+
+- [1.0] 2026-05-27 — `refund-policy.md` — Initial standalone version. Consumer Protection (E-Commerce) Rules 2020 compliant. Covers pre-extraction cancellation, complete failure (auto-refund), partial failure (70% threshold + re-run), delivery success (no refund), Shopify Billing + UPI/Razorpay refund timelines, exceptions, dispute escalation.
+
+---
+
 ## Next review
 
 Before web app go-live: obtain one-time review by Indian technology lawyer. Estimated cost ₹15–30k.  
 Lawyer review checklist:
 - [ ] Migration Consent — indemnity scope and enforceability
 - [ ] Terms of Service — refund clause vs. Consumer Protection Act 2019
+- [ ] Refund Policy — Consumer Protection (E-Commerce) Rules 2020 compliance; Shopify Billing refund mechanism
 - [ ] Privacy Policy — DPDP Act 2023 compliance (notice, consent, retention)
 - [ ] Grievance Officer — IT Rules 2021 compliance check

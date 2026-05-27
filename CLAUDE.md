@@ -1,7 +1,7 @@
 # CLAUDE.md — Shoprift Agent Instructions
 
 > Read this file first. Every decision must align with it.
-> Cross-reference: ARCHITECTURE.md → TASKS.md → SCHEMA.md → ERRORS.md → PRE_LAUNCH_CHECKLIST.md
+> Cross-reference: ARCHITECTURE.md → TASKS.md → SCHEMA.md → ERRORS.md → PRE_LAUNCH_CHECKLIST.md → LAUNCH_STABILITY_CHECKLIST.md
 > **Project skills:** `/shoprift-pm` · `/shoprift-legal` · `/shoprift-accountant` · `/shoprift-content` · `/caveman`
 > **Change log:** Every edit recorded in `docs/DEVLOG.md` — date, files, reason. Update before each commit.
 
