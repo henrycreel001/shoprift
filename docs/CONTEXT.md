@@ -17,7 +17,7 @@
 ## LAST UPDATED
 
 - **Date:** 2026-05-27
-- **Session topic:** Phase 0 complete — Vercel production deploy, migration 004, smoke test passing.
+- **Session topic:** Phase 1 complete — GDPR webhooks, App Bridge, JWT auth, GraphQL billing, dynamic CSP.
 - **Branch:** main (clean)
 
 ---
@@ -35,11 +35,11 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Phase 0 complete — Vercel production deploy** — App live at `https://project-pjqwm.vercel.app`. OAuth smoke test passed: `shoprift-dev.myshopify.com` installs and loads embedded app correctly. Supabase migration 004 run. shopify.app.toml updated to Vercel URLs (shoprift-4 active in Dev Dashboard).
-2. **Verification product bug fixed** — `.select('id, code')` + `setVerifyCode(va.code)` on short-circuit path in migrate/page.tsx.
-3. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0.
-4. **Billing flow confirmed E2E** — AppPurchaseOneTime wired, test charge approved, 9 products + 3 collections confirmed in Shopify.
-5. **T7 Billing API shipped** — `POST /api/payment/billing/create` + `GET /api/payment/billing/callback`.
+1. **Phase 1 complete** — GDPR webhooks (compliance/route.ts + toml), App Bridge v3 (meta tag in layout + createApp/getSessionToken in migrate/page.tsx), JWT HS256 verification (lib/auth.ts applied to 5 routes + account_id guards), billing/callback REST→GraphQL, dynamic CSP middleware. Deployed to Vercel production.
+2. **Phase 0 complete** — Vercel production deploy, OAuth smoke test passed, Supabase migration 004 run. shoprift-4 active in Dev Dashboard at `https://project-pjqwm.vercel.app`.
+3. **Verification product bug fixed** — `.select('id, code')` + `setVerifyCode(va.code)` on short-circuit path in migrate/page.tsx.
+4. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0.
+5. **Billing flow confirmed E2E** — AppPurchaseOneTime wired, test charge approved, 9 products + 3 collections confirmed in Shopify.
 
 ---
 
@@ -48,11 +48,9 @@
 | Blocker | Blocks | Notes |
 |---------|--------|-------|
 | Domain not purchased | Legal / branding | All legal docs use personal email `001henrycreel@gmail.com`. Replace with domain email after purchase. 17 occurrences across 5 files. |
-| GDPR webhooks absent | App Store listing | `customers/data_request`, `customers/redact`, `shop/redact` not in toml. Phase 1 Task 1.1. |
-| App Bridge not installed | App Store listing | No `@shopify/app-bridge` package, no meta tag in layout. Phase 1 Task 1.2. |
-| JWT session token auth missing | Security | All API routes trust `shop` from request body. Phase 1 Task 1.3. |
-| Billing callback uses REST | App Store rule 2.2.4 | Must use GraphQL for public apps. Phase 1 Task 1.4. |
-| CSP static wildcard | Security | `*.myshopify.com` must be per-shop dynamic. Phase 1 Task 1.5. |
+| Rate limiting not implemented | Security | No per-shop cooldown on verify/start. Phase 2 Task 2.3. |
+| Error messages expose internals | Security | Some routes return raw `error.message`. Phase 2 Task 2.4. |
+| Sentry not installed | Observability | No error tracking. Phase 3. |
 
 ---
 
@@ -64,12 +62,11 @@ None.
 
 ## NEXT TASKS (in priority order)
 
-1. **Phase 1 — GDPR webhooks** — add `compliance_topics` to `shopify.app.toml` + create `web/src/app/api/webhooks/compliance/route.ts`
-2. **Phase 1 — App Bridge** — `npm install @shopify/app-bridge` + meta tag in layout + session token on API calls
-3. **Phase 1 — JWT auth** — create `web/src/lib/auth.ts` + apply to 6 API routes
-4. **Phase 1 — Billing callback REST→GraphQL** — `web/src/app/api/payment/billing/callback/route.ts:55`
-5. **Phase 1 — Dynamic CSP middleware** — `web/src/middleware.ts`
-6. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
+1. **Phase 2 — Rate limiting** — per-shop cooldown on `/api/verify/start` (max 3 per hour)
+2. **Phase 2 — Error response hardening** — replace raw error.message with generic messages across all routes
+3. **Phase 3 — Sentry** — `@sentry/nextjs` on web + `@sentry/node` on Railway worker
+4. **Phase 4 — Legal** — AUP + DMCA drafting (`/shoprift-legal`), refund policy link before billing step
+5. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
 
 ---
 
