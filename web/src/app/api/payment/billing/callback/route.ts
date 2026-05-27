@@ -48,16 +48,26 @@ export async function GET(request: NextRequest): Promise<Response> {
     return adminRedirect(shop, { billing_error: 'no_session' });
   }
 
-  // Verify charge status via Shopify REST
+  // Verify charge status via Shopify GraphQL (required for public apps)
   let charge: { status: string } | null = null;
   try {
     const res = await fetch(
-      `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/application_charges/${chargeId}.json`,
-      { headers: { 'X-Shopify-Access-Token': accessToken } },
+      `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': accessToken,
+        },
+        body: JSON.stringify({
+          query: `{ node(id: "gid://shopify/AppPurchaseOneTime/${chargeId}") { ... on AppPurchaseOneTime { status } } }`,
+        }),
+      },
     );
     if (res.ok) {
-      const body = await res.json() as { application_charge?: { status: string } };
-      charge = body.application_charge ?? null;
+      const body = await res.json() as { data?: { node?: { status?: string } } };
+      const status = body.data?.node?.status;
+      if (status) charge = { status: status.toLowerCase() };
     }
   } catch {
     // fall through to status check

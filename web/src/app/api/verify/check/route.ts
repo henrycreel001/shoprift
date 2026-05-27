@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { verifySessionToken } from '@/lib/auth';
 
 function requireEnv(name: string): string {
   const val = process.env[name];
@@ -17,19 +18,24 @@ function requireEnv(name: string): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  let body: { attemptId?: unknown; shop?: unknown; storeUrl?: unknown };
+  let shop: string;
+  try {
+    shop = await verifySessionToken(request);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
+  }
+
+  let body: { attemptId?: unknown; storeUrl?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { attemptId, shop, storeUrl } = body;
+  const { attemptId, storeUrl } = body;
   if (!attemptId || typeof attemptId !== 'string') {
     return NextResponse.json({ error: 'attemptId is required' }, { status: 400 });
-  }
-  if (!shop || typeof shop !== 'string') {
-    return NextResponse.json({ error: 'shop is required' }, { status: 400 });
   }
   if (!storeUrl || typeof storeUrl !== 'string') {
     return NextResponse.json({ error: 'storeUrl is required' }, { status: 400 });
@@ -41,6 +47,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     .from('verification_attempts')
     .select('code, expires_at, status')
     .eq('id', attemptId)
+    .eq('account_id', shop)
     .single();
 
   if (fetchError || !attempt) {

@@ -23,6 +23,8 @@ import { recon as runRecon } from '@/lib/dm2buy/recon'
 import { extract } from '@/lib/dm2buy/extractor'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import type { ReconData, StoreData, ProgressEvent } from '@/lib/dm2buy/types'
+import createApp from '@shopify/app-bridge'
+import { getSessionToken } from '@shopify/app-bridge/utilities'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -155,6 +157,7 @@ function StepBar({ current }: { current: Step }) {
 function MigrateWizard() {
   const searchParams = useSearchParams()
   const shop = searchParams.get('shop') ?? ''
+  const host = searchParams.get('host') ?? ''
   const billingJobId = searchParams.get('billing_job_id')
   const billingError = searchParams.get('billing_error')
 
@@ -178,11 +181,31 @@ function MigrateWizard() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [billingLoading, setBillingLoading] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const appBridgeRef = useRef<ReturnType<typeof createApp> | null>(null)
 
   const clearPoll = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
   }, [])
   useEffect(() => () => clearPoll(), [clearPoll])
+
+  // Initialize App Bridge (must run before billing polling effect)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !host) return
+    try {
+      const apiKey = document.querySelector<HTMLMetaElement>('meta[name="shopify-api-key"]')?.content ?? ''
+      if (apiKey) appBridgeRef.current = createApp({ apiKey, host })
+    } catch { /* not in Shopify context — dev mode */ }
+  }, [host])
+
+  async function authHeaders(): Promise<Record<string, string>> {
+    if (!appBridgeRef.current) return {}
+    try {
+      const token = await getSessionToken(appBridgeRef.current)
+      return { Authorization: `Bearer ${token}` }
+    } catch {
+      return {}
+    }
+  }
 
   // ── Return from Shopify billing page ──────────────────────────────────────
   useEffect(() => {
@@ -195,7 +218,7 @@ function MigrateWizard() {
     setStep('importing')
     const poll = async () => {
       try {
-        const r = await fetch(`/api/import/status/${id}`)
+        const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
         const d = await r.json() as {
           status: string
           progress?: { current: number; total: number; message: string }
@@ -272,8 +295,8 @@ function MigrateWizard() {
         } else {
           const vRes = await fetch('/api/verify/start', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shop, storeUrl: data.store_url }),
+            headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+            body: JSON.stringify({ storeUrl: data.store_url }),
           })
           const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
           if (!vRes.ok || !vData.code) {
@@ -301,16 +324,16 @@ function MigrateWizard() {
     try {
       const r = await fetch('/api/verify/check', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId: verifyAttemptId, shop, storeUrl: reconData!.store_url }),
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ attemptId: verifyAttemptId, storeUrl: reconData!.store_url }),
       })
       const d = await r.json() as { verified?: boolean; error?: string; expired?: boolean }
       if (d.expired) {
         // Code expired — get a new one
         const vRes = await fetch('/api/verify/start', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shop, storeUrl: reconData!.store_url }),
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+          body: JSON.stringify({ storeUrl: reconData!.store_url }),
         })
         const vData = await vRes.json() as { code?: string; attemptId?: string }
         if (vData.code) {
@@ -357,9 +380,8 @@ function MigrateWizard() {
 
       const res = await fetch('/api/import/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
-          shop,
           storeUrl: reconData.store_url,
           storeData: trialStoreData,
           isTrial: true,
@@ -373,7 +395,7 @@ function MigrateWizard() {
 
       const poll = async () => {
         try {
-          const r = await fetch(`/api/import/status/${id}`)
+          const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
           const d = await r.json() as {
             status: string
             progress?: { current: number; total: number; message: string }
@@ -439,9 +461,8 @@ function MigrateWizard() {
       try {
         const res = await fetch('/api/import/start', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
           body: JSON.stringify({
-            shop,
             storeUrl: reconData.store_url,
             storeData,
             ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}),
@@ -454,7 +475,7 @@ function MigrateWizard() {
 
         const poll = async () => {
           try {
-            const r = await fetch(`/api/import/status/${id}`)
+            const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
             const d = await r.json() as {
               status: string
               progress?: { current: number; total: number; message: string }
@@ -490,9 +511,8 @@ function MigrateWizard() {
       const amount = parseInt(tier.price.replace(/[₹,]/g, ''), 10)
       const res = await fetch('/api/payment/billing/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
-          shop,
           storeUrl: reconData.store_url,
           storeData,
           skipUrls: trialProductUrls.length > 0 ? trialProductUrls : undefined,

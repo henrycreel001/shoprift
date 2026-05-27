@@ -14,11 +14,20 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { verifySessionToken } from '@/lib/auth';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> },
 ): Promise<Response> {
+  let shop: string;
+  try {
+    shop = await verifySessionToken(request);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
+  }
+
   const { jobId } = await params;
 
   if (!jobId || typeof jobId !== 'string') {
@@ -30,6 +39,7 @@ export async function GET(
     .from('import_jobs')
     .select('id, status, progress, error, recon_data, created_at, updated_at')
     .eq('id', jobId)
+    .eq('account_id', shop)
     .single();
 
   if (error || !data) {

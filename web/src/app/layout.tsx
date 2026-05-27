@@ -34,6 +34,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <meta name="shopify-api-key" content={process.env.SHOPIFY_API_KEY ?? ''} />
+      </head>
       <body className="min-h-screen bg-white text-gray-900 font-sans antialiased">
         {children}
       </body>

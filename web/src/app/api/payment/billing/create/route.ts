@@ -11,6 +11,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getValidAccessToken } from '@/lib/shopify';
+import { verifySessionToken } from '@/lib/auth';
 
 const SHOPIFY_API_VERSION = '2026-04';
 
@@ -21,8 +22,15 @@ function requireEnv(name: string): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  let shop: string;
+  try {
+    shop = await verifySessionToken(request);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
+  }
+
   let body: {
-    shop?: unknown;
     storeUrl?: unknown;
     storeData?: unknown;
     skipUrls?: unknown;
@@ -35,11 +43,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { shop, storeUrl, storeData, skipUrls, amount, planName } = body;
+  const { storeUrl, storeData, skipUrls, amount, planName } = body;
 
-  if (!shop || typeof shop !== 'string' || !shop.endsWith('.myshopify.com')) {
-    return NextResponse.json({ error: 'Invalid shop' }, { status: 400 });
-  }
   if (!storeUrl || typeof storeUrl !== 'string') {
     return NextResponse.json({ error: 'storeUrl required' }, { status: 400 });
   }

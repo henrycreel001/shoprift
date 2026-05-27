@@ -13,22 +13,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [],
   },
 
-  // Required for Shopify embedded app: allow *.myshopify.com to embed this app in an iframe.
-  // Without this, Shopify Admin will refuse to load the app (X-Frame-Options / CSP block).
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            // frame-ancestors must list all Shopify Admin domains
-            value: "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
-          },
-        ],
-      },
-    ]
-  },
+  // CSP frame-ancestors is set dynamically per-shop in src/middleware.ts
 }
 
 export default nextConfig

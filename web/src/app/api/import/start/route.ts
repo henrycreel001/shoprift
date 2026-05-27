@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { verifySessionToken } from '@/lib/auth';
 
 function requireEnv(name: string): string {
   const val = process.env[name];
@@ -17,8 +18,15 @@ function requireEnv(name: string): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  let shop: string;
+  try {
+    shop = await verifySessionToken(request);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
+  }
+
   let body: {
-    shop?: unknown
     storeUrl?: unknown
     storeData?: unknown
     isTrial?: unknown
@@ -31,14 +39,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { shop, storeUrl, storeData, isTrial, trialProductUrls, skipUrls } = body;
+  const { storeUrl, storeData, isTrial, trialProductUrls, skipUrls } = body;
 
-  if (!shop || typeof shop !== 'string' || !shop.endsWith('.myshopify.com')) {
-    return NextResponse.json(
-      { error: 'Invalid shop — must end with .myshopify.com' },
-      { status: 400 },
-    );
-  }
   if (!storeUrl || typeof storeUrl !== 'string' || !storeUrl.includes('dm2buy.com')) {
     return NextResponse.json(
       { error: 'Invalid storeUrl — must be a dm2buy.com URL' },

@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { verifySessionToken } from '@/lib/auth';
 
 function genCode(): string {
   // No I, O, 0, 1 — easy to read aloud or type
@@ -18,17 +19,22 @@ function genCode(): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  let body: { shop?: unknown; storeUrl?: unknown };
+  let shop: string;
+  try {
+    shop = await verifySessionToken(request);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
+  }
+
+  let body: { storeUrl?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { shop, storeUrl } = body;
-  if (!shop || typeof shop !== 'string' || !shop.endsWith('.myshopify.com')) {
-    return NextResponse.json({ error: 'shop is required and must end with .myshopify.com' }, { status: 400 });
-  }
+  const { storeUrl } = body;
   if (!storeUrl || typeof storeUrl !== 'string' || !storeUrl.includes('dm2buy.com')) {
     return NextResponse.json({ error: 'storeUrl is required and must be a dm2buy.com URL' }, { status: 400 });
   }
