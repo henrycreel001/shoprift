@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const NGROK_ORIGIN = process.env.SHOPIFY_APP_URL?.replace(/^https?:\/\//, '') ?? ''
 
@@ -16,4 +17,9 @@ const nextConfig: NextConfig = {
   // CSP frame-ancestors is set dynamically per-shop in src/middleware.ts
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  sourcemaps: { disable: true },
+  disableLogger: true,
+  autoInstrumentServerFunctions: false,
+})

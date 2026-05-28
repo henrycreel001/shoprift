@@ -5,8 +5,14 @@
  */
 
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import { extractionWorker } from './src/queue.js';
 import { startServer } from './src/server.js';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  tracesSampleRate: 0.1,
+});
 
 console.log('🚂 Shoprift extraction worker started');
 console.log(`   Queue: shoprift-jobs`);
