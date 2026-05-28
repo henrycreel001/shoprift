@@ -17,7 +17,7 @@
 ## LAST UPDATED
 
 - **Date:** 2026-05-28
-- **Session topic:** Phase 2 complete — rate limiting + error response hardening.
+- **Session topic:** Phase 3 complete — Sentry on web app + Railway worker.
 - **Branch:** main (clean)
 
 ---
@@ -31,13 +31,15 @@
 | C — Web app | T1–T7 | ✅ Complete | Full flow incl. Shopify Billing (AppPurchaseOneTime). 9 products + 3 collections confirmed live in Shopify via paid test charge. |
 | D — Launch | Phase 1 | ✅ Complete | GDPR webhooks, App Bridge, JWT auth, GraphQL billing, dynamic CSP. |
 | D — Launch | Phase 2 | ✅ Complete | Rate limiting (3/hr on verify/start) + error response hardening (no raw messages in response bodies). |
-| D — Launch | Phase 3–6 | 🟡 In progress | Sentry → Legal → Pre-submission ops → App Store submission. |
+| D — Launch | Phase 3 | ✅ Complete | Sentry on web (@sentry/nextjs v10) + Railway worker (@sentry/node). onRequestError + global-error boundary. Needs SENTRY_DSN env vars set. |
+| D — Launch | Phase 4–6 | 🟡 In progress | Legal → Pre-submission ops → App Store submission. |
 
 ---
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Phase 2 complete** — Rate limiting on verify/start (3 per shop per hour, 429 response). Error hardening: raw DB/worker error.message stripped from all response bodies across verify/start, verify/check, import/start, billing/create — full detail logged to console.error only. Deployed to Vercel production.
+1. **Phase 3 complete** — @sentry/nextjs (v10) wired: sentry.{client,server,edge}.config.ts + src/instrumentation.ts (onRequestError hook) + global-error.tsx boundary + withSentryConfig in next.config.ts. @sentry/node added to worker.js. Deployed to Vercel production. Needs SENTRY_DSN (server/worker) + NEXT_PUBLIC_SENTRY_DSN (client) env vars.
+2. **Phase 2 complete** — Rate limiting on verify/start (3 per shop per hour, 429 response). Error hardening: raw DB/worker error.message stripped from all response bodies across verify/start, verify/check, import/start, billing/create — full detail logged to console.error only. Deployed to Vercel production.
 2. **Phase 1 complete** — GDPR webhooks (compliance/route.ts + toml), App Bridge v3 (meta tag in layout + createApp/getSessionToken in migrate/page.tsx), JWT HS256 verification (lib/auth.ts applied to 5 routes + account_id guards), billing/callback REST→GraphQL, dynamic CSP middleware. Deployed to Vercel production.
 3. **Phase 0 complete** — Vercel production deploy, OAuth smoke test passed, Supabase migration 004 run. shoprift-4 active in Dev Dashboard at `https://project-pjqwm.vercel.app`.
 4. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0.
@@ -62,7 +64,7 @@ None.
 
 ## NEXT TASKS (in priority order)
 
-1. **Phase 3 — Sentry** — `@sentry/nextjs` on web + `@sentry/node` on Railway worker; add `SENTRY_DSN` to Vercel + Railway env vars
+1. **Set SENTRY_DSN env vars** — create Sentry project → get DSN → add `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel env vars; `SENTRY_DSN` to Railway env vars; then redeploy both
 2. **Phase 4 — Legal** — AUP + DMCA drafting (`/shoprift-legal`), refund policy link before billing step
 3. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
 4. **Phase 5 — Pre-submission ops** — PostHog analytics, billing-update webhook, webhook dedup table, production E2E test
