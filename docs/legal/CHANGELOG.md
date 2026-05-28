@@ -24,6 +24,13 @@ Minor changes (1.0 → 1.1) may be published with updated "Last updated" date on
 
 ---
 
+## 2026-05-28
+
+- [1.0] 2026-05-28 — `acceptable-use.md` — Initial version. IT Act §79 safe-harbour aligned. Covers permitted use, prohibited content (illegal goods, harmful content, third-party rights violations, regulated categories), prohibited conduct (9 categories), DPDP Act customer data obligations, enforcement + reporting, governing law.
+- [1.0] 2026-05-28 — `dmca.md` — Initial version (Copyright Infringement and Takedown Policy). IT Act §79 + IT Rules 2021 safe-harbour mechanism. Voluntary DMCA §512 compliance for US rights-holders. Covers valid notice requirements, Shoprift response timeline, counter-notice procedure, repeat infringer policy, abuse of process.
+
+---
+
 ## Next review
 
 Before web app go-live: obtain one-time review by Indian technology lawyer. Estimated cost ₹15–30k.  

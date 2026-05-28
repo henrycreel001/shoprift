@@ -18,6 +18,7 @@ import {
   Divider,
   Box,
   Spinner,
+  Link,
 } from '@shopify/polaris'
 import { recon as runRecon } from '@/lib/dm2buy/recon'
 import { extract } from '@/lib/dm2buy/extractor'
@@ -988,7 +989,7 @@ function MigrateWizard() {
               <Text tone="subdued" as="p">
                 {tier.isFree
                   ? 'No charge for stores with 3 or fewer products.'
-                  : 'Payment via Shopify Billing · Full refund if import fails.'}
+                  : <>Payment via Shopify Billing · Full refund if import fails · <Link url="https://project-pjqwm.vercel.app/refund-policy" target="_blank" removeUnderline={false}>Refund policy</Link></>}
               </Text>
             </BlockStack>
           </Card>
@@ -1094,6 +1095,27 @@ function MigrateWizard() {
         )}
 
       </BlockStack>
+
+      <Box paddingBlockStart="800" paddingBlockEnd="400">
+        <InlineStack gap="400" align="center" wrap>
+          <Link url="https://project-pjqwm.vercel.app/terms" target="_blank" removeUnderline>
+            <Text tone="subdued" as="span" variant="bodySm">Terms of Service</Text>
+          </Link>
+          <Text tone="subdued" as="span" variant="bodySm">·</Text>
+          <Link url="https://project-pjqwm.vercel.app/privacy" target="_blank" removeUnderline>
+            <Text tone="subdued" as="span" variant="bodySm">Privacy Policy</Text>
+          </Link>
+          <Text tone="subdued" as="span" variant="bodySm">·</Text>
+          <Link url="https://project-pjqwm.vercel.app/refund-policy" target="_blank" removeUnderline>
+            <Text tone="subdued" as="span" variant="bodySm">Refund Policy</Text>
+          </Link>
+          <Text tone="subdued" as="span" variant="bodySm">·</Text>
+          <Link url="mailto:001henrycreel@gmail.com" removeUnderline>
+            <Text tone="subdued" as="span" variant="bodySm">Grievance Officer</Text>
+          </Link>
+        </InlineStack>
+      </Box>
+
     </Page>
   )
 }
