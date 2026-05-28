@@ -17,7 +17,7 @@
 ## LAST UPDATED
 
 - **Date:** 2026-05-28
-- **Session topic:** Phase 5 in progress — PostHog (10 events), billing-update webhook, webhook dedup, shoprift.app domain live, email replaced in all legal docs.
+- **Session topic:** In-app UI redesign (migrate/page.tsx — full Tailwind dark theme, no AI slop), brand/landing page content overhaul (CSV→direct import model, dm2buy casing, all stale copy fixed).
 - **Branch:** main (uncommitted changes)
 
 ---
@@ -40,11 +40,11 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Domain + email migration** — shoprift.app purchased, connected to Vercel. `support@shoprift.app` Cloudflare Email Routing → `001henrycreel@gmail.com`. All 26 occurrences of `001henrycreel@gmail.com` replaced with `support@shoprift.app` across 7 files (legal docs + migrate page mailto links).
-2. **Phase 5 partial** — PostHog analytics (10 events wired in migrate/page.tsx, lazy init, memory persistence, no autocapture). `APP_PURCHASES_ONE_TIME_UPDATE` webhook handler (billing-update/route.ts). Webhook deduplication (migration 005: charge_id column + webhook_idempotency table; all 3 webhook handlers dedup on X-Shopify-Webhook-Id). All URLs updated to shoprift.app.
-3. **Phase 4 complete** — `docs/legal/acceptable-use.md` + `docs/legal/dmca.md` drafted (IT Act §79 safe-harbour). Three legal pages created: `/terms`, `/privacy`, `/refund-policy`. Footer + pre-billing refund link in migrate UI. Deployed to Vercel production.
-4. **Phase 3 complete** — @sentry/nextjs (v10) wired: sentry.{client,server,edge}.config.ts + src/instrumentation.ts (onRequestError hook) + global-error.tsx boundary + withSentryConfig in next.config.ts. @sentry/node added to worker.js. SENTRY_DSN set in Vercel + Railway.
-5. **Phase 2 complete** — Rate limiting on verify/start (3 per shop per hour, 429 response). Error hardening: raw DB/worker error.message stripped from all response bodies. Full detail logged to console.error only.
+1. **In-app UI redesign** — `web/src/app/migrate/page.tsx` fully rewritten from Polaris visual components to custom Tailwind dark-theme UI (`bg-void #0A0B0F`). Geist + Geist Mono fonts, custom Btn/StepTrack/ProgressTrack/Alert components, inline SVG icons. All business logic preserved. AppProvider retained (required for App Bridge). `tailwind.config.ts`, `globals.css`, `layout.tsx` updated with brand tokens. Zero TS errors, 200 on /migrate route confirmed.
+2. **Landing page content overhaul** — `shoprift-landing-v5.html`: 15 edits fixing all stale CSV-delivery-model content (hero sub, output meta, how-it-works steps, terminal, 4 FAQs) + `Dm2buy` → `dm2buy` casing throughout. All 6 original planned fixes (CTAs, pricing, email, legal links, handle, ticker) were already done in a prior session.
+3. **Brand/voice files audited** — `shoprift-brand-guidelines.html` and `shoprift-voice-messaging.html` already clean — no Dukaan references, correct handle (@mayankmalikx), correct domain (shoprift.app), direct-import delivery model already present. No changes needed.
+4. **Domain + email migration** — shoprift.app purchased, connected to Vercel. `support@shoprift.app` Cloudflare Email Routing → `001henrycreel@gmail.com`. All 26 occurrences replaced across 7 files.
+5. **Phase 5 partial** — PostHog analytics (10 events), billing-update webhook, webhook dedup (migration 005), all URLs → shoprift.app.
 
 ---
 
@@ -59,15 +59,19 @@
 
 ## UNCOMMITTED CHANGES
 
+- `web/src/app/migrate/page.tsx` — full UI redesign (dark theme, custom components, analytics, email) + 10 PostHog events
 - `web/src/lib/analytics.ts` — PostHog wrapper (new)
-- `web/src/app/migrate/page.tsx` — 10 analytics events + email replaced
+- `web/tailwind.config.ts` — brand tokens (void, mint, portal) + Geist/Geist Mono vars + shimmer animation
+- `web/src/app/globals.css` — shimmer keyframe + Polaris frame override
+- `web/src/app/layout.tsx` — Geist + Geist Mono replacing Inter
 - `web/src/app/api/payment/billing/create/route.ts` — stores charge_id GID after charge creation
 - `web/src/app/api/webhooks/billing-update/route.ts` — APP_PURCHASES_ONE_TIME_UPDATE handler (new)
 - `web/src/app/api/webhooks/compliance/route.ts` — deduplication added
 - `web/src/app/api/webhooks/app-uninstalled/route.ts` — deduplication added
 - `shopify.app.toml` — billing-update webhook subscription + URLs updated to shoprift.app
-- `supabase/migrations/005_charge_id_and_webhook_dedup.sql` — charge_id column + webhook_idempotency table (new, NOT YET RUN in production)
+- `supabase/migrations/005_charge_id_and_webhook_dedup.sql` — charge_id column + webhook_idempotency table (NOT YET RUN in production)
 - `docs/legal/*.md` — email replaced with support@shoprift.app (6 files)
+- `Shoprift Designs and Brand/shoprift-landing-v5.html` — 15 content edits (CSV→direct import, dm2buy casing, FAQ rewrites)
 - `docs/CONTEXT.md` — updated
 
 ---
@@ -76,11 +80,11 @@
 
 1. **Run migration 005** — execute `supabase/migrations/005_charge_id_and_webhook_dedup.sql` in Supabase production SQL editor
 2. **`shopify app deploy`** — push toml changes to register billing-update webhook with Shopify
-3. **Commit + deploy** — commit all Phase 5 changes, push to Vercel
+3. **Commit + deploy** — commit all Phase 5 + UI redesign changes, push to Vercel
 4. **Phase 5.4** — confirm distribution = Public in Partner Dashboard (irreversible — production app only)
 5. **Phase 5.5** — production E2E payment test (install → recon → verify → pay → import → complete)
-6. **Phase 6 — App Store submission** — listing assets (`/shoprift-content`), demo video (30–60s), test credentials for reviewers, submit
-7. **"Send mail as" in Gmail** — configure `support@shoprift.app` as send-from alias in Gmail SMTP settings (deferred by user)
+6. **Phase 6 — App Store submission** — app icon (1200×1200 PNG, manual Canva), 5 screenshots (manual capture), 30–60s demo video (manual record), submit via Partner Dashboard
+7. **"Send mail as" in Gmail** — configure `support@shoprift.app` as send-from alias in Gmail SMTP settings (deferred)
 
 ---
 

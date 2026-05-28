@@ -2,38 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Base resets ─────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+/* ─── Base ────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Spinner utility ─────────────────────────────────────────────── */
+/* ─── Keyframes ───────────────────────────────────────────────────── */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-.spinner {
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
-/* ─── Progress bar animation ──────────────────────────────────────── */
-@keyframes progress-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
-}
-
-.progress-pulse {
-  animation: progress-pulse 1.5s ease-in-out infinite;
+/* ─── Polaris overrides ───────────────────────────────────────────── */
+/* Keep AppProvider functional but strip its visual frame chrome */
+.Polaris-Frame,
+.Polaris-Frame__Main,
+.Polaris-Frame__Content {
+  background-color: #F6F6F7 !important;
+  min-height: 100vh;
 }

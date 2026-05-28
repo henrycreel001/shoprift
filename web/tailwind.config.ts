@@ -9,24 +9,35 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-geist)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'ui-monospace', 'Menlo', 'monospace'],
       },
       colors: {
-        brand: {
-          50:  '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+        void: '#0A0B0F',     // kept: primary button text (dark text on mint bg)
+        page: '#F6F6F7',     // page background — matches Shopify admin
+        surface: '#FFFFFF',  // card and input surfaces
+        mint: {
+          DEFAULT: '#00E5A0',
+          hover: '#00CC8E',
+          dark: '#007A52',   // mint-colored text on light backgrounds (a11y contrast)
+        },
+        portal: '#6B8AFF',
+        ink: {
+          DEFAULT: '#1A1A1A',
+          '2': '#4A4F54',
+          '3': '#6D7175',
+          '4': '#8C9196',
+          '5': '#C9CCCF',
+        },
+        wire: {
+          DEFAULT: '#E1E3E5',
+          subtle: '#F1F2F3',
+          strong: '#C9CCCF',
         },
       },
       animation: {
-        spin: 'spin 1s linear infinite',
+        spin: 'spin 0.7s linear infinite',
+        shimmer: 'shimmer 1.8s linear infinite',
       },
     },
   },

@@ -3,23 +3,7 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import enTranslations from '@shopify/polaris/locales/en.json'
-import {
-  AppProvider,
-  Page,
-  Card,
-  BlockStack,
-  InlineStack,
-  Text,
-  TextField,
-  Button,
-  Banner,
-  ProgressBar,
-  Badge,
-  Divider,
-  Box,
-  Spinner,
-  Link,
-} from '@shopify/polaris'
+import { AppProvider } from '@shopify/polaris'
 import { recon as runRecon } from '@/lib/dm2buy/recon'
 import { extract } from '@/lib/dm2buy/extractor'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
@@ -28,7 +12,7 @@ import createApp from '@shopify/app-bridge'
 import { getSessionToken } from '@shopify/app-bridge/utilities'
 import { track } from '@/lib/analytics'
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step =
   | 'url'
@@ -56,14 +40,14 @@ interface ImportResult {
   errors?: string[]
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function priceTier(count: number) {
-  if (count <= 3) return { plan: 'Preview', price: 'Free', isFree: true }
-  if (count <= 25) return { plan: 'Starter', price: '₹599', isFree: false }
-  if (count <= 100) return { plan: 'Standard', price: '₹999', isFree: false }
-  if (count <= 500) return { plan: 'Pro', price: '₹1,999', isFree: false }
-  return { plan: 'Enterprise', price: 'Contact us', isFree: false }
+  if (count <= 3)   return { plan: 'Preview',    price: 'Free',      isFree: true }
+  if (count <= 25)  return { plan: 'Starter',    price: '₹599',      isFree: false }
+  if (count <= 100) return { plan: 'Standard',   price: '₹999',      isFree: false }
+  if (count <= 500) return { plan: 'Pro',         price: '₹1,999',   isFree: false }
+  return                    { plan: 'Enterprise', price: 'Contact us', isFree: false }
 }
 
 function isDm2buyUrl(url: string): boolean {
@@ -71,27 +55,22 @@ function isDm2buyUrl(url: string): boolean {
     const { hostname } = new URL(url)
     const parts = hostname.split('.')
     return parts.length >= 3 && parts.slice(-2).join('.') === 'dm2buy.com'
-  } catch {
-    return false
-  }
+  } catch { return false }
 }
 
-// ─── Step indicator ─────────────────────────────────────────────────────────
+// ─── Step tracking ────────────────────────────────────────────────────────────
 
-const STEP_LABELS: Record<Step, string> = {
+const STEP_ORDER: Step[] = ['url', 'verifying', 'preview', 'extracting', 'results', 'importing', 'done']
+
+const STEP_LABELS: Record<string, string> = {
   url: 'URL',
-  reconning: 'URL',
   verifying: 'Verify',
   preview: 'Preview',
-  trialing: 'Extract',
-  trial_done: 'Review',
   extracting: 'Extract',
   results: 'Review',
   importing: 'Import',
   done: 'Done',
 }
-
-const STEP_ORDER: Step[] = ['url', 'verifying', 'preview', 'extracting', 'results', 'importing', 'done']
 
 function stepIndex(step: Step): number {
   const mapped: Partial<Record<Step, Step>> = {
@@ -102,87 +81,271 @@ function stepIndex(step: Step): number {
   return STEP_ORDER.indexOf(mapped[step] ?? step)
 }
 
-function StepBar({ current }: { current: Step }) {
-  const idx = stepIndex(current)
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function IcoArrow() {
   return (
-    <Box paddingBlockEnd="400">
-      <InlineStack gap="200" wrap={false}>
-        {STEP_ORDER.map((s, i) => {
-          const done = i < idx
-          const active = i === idx
-          return (
-            <InlineStack key={s} gap="100" wrap={false} blockAlign="center">
-              <Box
-                background={done ? 'bg-fill-success' : active ? 'bg-fill-emphasis' : 'bg-fill-secondary'}
-                borderRadius="full"
-                minWidth="24px"
-                minHeight="24px"
-                as="span"
-              >
-                <Box paddingInline="100" paddingBlock="050">
-                  <Text
-                    as="span"
-                    variant="bodySm"
-                    fontWeight="semibold"
-                    tone={done || active ? undefined : 'subdued'}
-                  >
-                    {done ? '✓' : String(i + 1)}
-                  </Text>
-                </Box>
-              </Box>
-              <Text
-                as="span"
-                variant="bodySm"
-                fontWeight={active ? 'semibold' : 'regular'}
-                tone={active ? undefined : 'subdued'}
-              >
-                {STEP_LABELS[s]}
-              </Text>
-              {i < STEP_ORDER.length - 1 && (
-                <Box
-                  background={done ? 'bg-fill-success' : 'bg-fill-secondary'}
-                  minWidth="24px"
-                  minHeight="2px"
-                  as="span"
-                />
-              )}
-            </InlineStack>
-          )
-        })}
-      </InlineStack>
-    </Box>
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+      <path d="M2 6.5h9M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   )
 }
 
-// ─── Main wizard ─────────────────────────────────────────────────────────────
+function IcoCheck() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+      <path d="M1.5 5.5l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function IcoCopy() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+      <rect x="4.5" y="4.5" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M4.5 8.5H2.5a1 1 0 01-1-1V2.5a1 1 0 011-1h5a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IcoDismiss() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+      <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+// ─── UI Primitives ────────────────────────────────────────────────────────────
+
+type BtnVariant = 'primary' | 'secondary' | 'ghost'
+
+interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: BtnVariant
+  loading?: boolean
+  size?: 'sm' | 'md' | 'lg'
+}
+
+function Btn({ variant = 'primary', loading, size = 'md', children, className = '', disabled, ...rest }: BtnProps) {
+  const base = [
+    'inline-flex items-center justify-center gap-2 rounded-lg font-medium select-none',
+    'transition-all duration-150 focus-visible:outline-none focus-visible:ring-2',
+    'focus-visible:ring-mint/40 disabled:pointer-events-none',
+  ].join(' ')
+
+  const sizes: Record<string, string> = {
+    sm:  'px-4 py-2 text-xs',
+    md:  'px-5 py-2.5 text-sm',
+    lg:  'px-5 py-[0.8125rem] text-[0.9375rem]',
+  }
+
+  const variants: Record<BtnVariant, string> = {
+    primary:   'bg-mint text-void font-semibold hover:bg-mint-hover active:scale-[0.982] shadow-[0_1px_3px_rgba(0,229,160,0.25)] disabled:opacity-50',
+    secondary: 'border border-wire-strong text-ink-2 hover:border-ink-4 hover:text-ink active:scale-[0.982] disabled:opacity-40',
+    ghost:     'text-ink-4 hover:text-ink-2 px-2 py-1.5 disabled:opacity-30',
+  }
+
+  return (
+    <button
+      {...rest}
+      disabled={disabled || loading}
+      className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
+    >
+      {loading && (
+        <span className="w-[13px] h-[13px] border-[1.5px] border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />
+      )}
+      {children}
+    </button>
+  )
+}
+
+interface LinkBtnProps {
+  href: string
+  external?: boolean
+  variant?: BtnVariant
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+  children: React.ReactNode
+}
+
+function LinkBtn({ href, external, variant = 'secondary', size = 'md', className = '', children }: LinkBtnProps) {
+  const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium select-none transition-all duration-150'
+  const sizes: Record<string, string> = {
+    sm:  'px-4 py-2 text-xs',
+    md:  'px-5 py-2.5 text-sm',
+    lg:  'px-5 py-[0.8125rem] text-[0.9375rem]',
+  }
+  const variants: Record<BtnVariant, string> = {
+    primary:   'bg-mint text-void font-semibold hover:bg-mint-hover active:scale-[0.982]',
+    secondary: 'border border-wire-strong text-ink-2 hover:border-ink-4 hover:text-ink active:scale-[0.982]',
+    ghost:     'text-ink-4 hover:text-ink-2 px-2 py-1.5',
+  }
+  return (
+    <a
+      href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
+      className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
+    >
+      {children}
+    </a>
+  )
+}
+
+function StepTrack({ current }: { current: Step }) {
+  const idx = stepIndex(current)
+  return (
+    <div className="mb-10 select-none">
+      <div className="flex gap-[3px] mb-2">
+        {STEP_ORDER.map((s, i) => {
+          const done   = i < idx
+          const active = i === idx
+          return (
+            <div key={s} className="flex-1">
+              <div className={[
+                'h-[2px] rounded-full transition-all duration-500 ease-out',
+                done   ? 'bg-mint/50' :
+                active ? 'bg-mint'    :
+                         'bg-wire',
+              ].join(' ')} />
+            </div>
+          )
+        })}
+      </div>
+      <div className="flex">
+        {STEP_ORDER.map((s, i) => {
+          const done   = i < idx
+          const active = i === idx
+          return (
+            <div key={s} className="flex-1 text-center">
+              <span className={[
+                'font-mono text-[9px] tracking-[0.13em] uppercase transition-colors duration-300',
+                active ? 'text-mint-dark' :
+                done   ? 'text-ink-4'     :
+                         'text-ink-5',
+              ].join(' ')}>
+                {STEP_LABELS[s]}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ProgressTrack({ percent }: { percent: number }) {
+  const pct = Math.min(Math.max(percent, 0), 100)
+  return (
+    <div className="relative h-[2px] bg-wire rounded-full overflow-hidden">
+      <div
+        className="absolute inset-y-0 left-0 bg-mint rounded-full transition-all duration-700 ease-out"
+        style={{ width: `${pct}%` }}
+      />
+      {pct > 2 && pct < 98 && (
+        <div
+          className="absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-white/40 to-transparent rounded-full animate-shimmer"
+          style={{ left: `${pct - 12}%` }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AlertWarn({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-6">
+      <div className="w-1 h-1 rounded-full bg-amber-500 mt-[7px] flex-shrink-0" />
+      <p className="font-mono text-[11px] text-amber-700 leading-relaxed">{children}</p>
+    </div>
+  )
+}
+
+function AlertErr({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
+      <div className="w-1 h-1 rounded-full bg-red-500 mt-[7px] flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="font-mono text-[11px] text-red-600 leading-relaxed">{message}</p>
+        <p className="font-mono text-[10px] text-ink-4 mt-1.5">
+          Need help?{' '}
+          <a href="mailto:support@shoprift.app" className="text-portal hover:text-portal/80 transition-colors">
+            support@shoprift.app
+          </a>
+        </p>
+      </div>
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss error"
+        className="text-ink-5 hover:text-ink-3 transition-colors flex-shrink-0 mt-0.5 p-0.5"
+      >
+        <IcoDismiss />
+      </button>
+    </div>
+  )
+}
+
+function AlertOk({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 mb-6">
+      <div className="w-1 h-1 rounded-full bg-emerald-500 mt-[7px] flex-shrink-0" />
+      <p className="font-mono text-[11px] text-emerald-700 leading-relaxed">{children}</p>
+    </div>
+  )
+}
+
+function RowLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3 mb-1.5">
+      {children}
+    </p>
+  )
+}
+
+function DataRow({
+  label, value, accent, dim,
+}: { label: string; value: React.ReactNode; accent?: boolean; dim?: boolean }) {
+  return (
+    <div className="flex items-center justify-between px-5 py-3.5">
+      <span className={`text-sm ${dim ? 'text-ink-5' : 'text-ink-3'}`}>{label}</span>
+      <span className={`font-mono text-sm font-medium ${accent ? 'text-mint-dark' : dim ? 'text-ink-5' : 'text-ink'}`}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+// ─── Main wizard ──────────────────────────────────────────────────────────────
 
 function MigrateWizard() {
-  const searchParams = useSearchParams()
-  const shop = searchParams.get('shop') ?? ''
-  const host = searchParams.get('host') ?? ''
-  const billingJobId = searchParams.get('billing_job_id')
-  const billingError = searchParams.get('billing_error')
+  const searchParams      = useSearchParams()
+  const shop              = searchParams.get('shop') ?? ''
+  const host              = searchParams.get('host') ?? ''
+  const billingJobId      = searchParams.get('billing_job_id')
+  const billingError      = searchParams.get('billing_error')
 
-  const [step, setStep] = useState<Step>('url')
-  const [storeUrl, setStoreUrl] = useState('')
-  const [urlError, setUrlError] = useState<string | undefined>()
-  const [reconData, setReconData] = useState<ReconData | null>(null)
-  const [storeData, setStoreData] = useState<StoreData | null>(null)
-  const [extractProgress, setExtractProgress] = useState<ProgressEvent | null>(null)
-  const [jobId, setJobId] = useState<string | null>(null)
-  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null)
-  const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [trialUsed, setTrialUsed] = useState(false)
-  const [trialProductUrls, setTrialProductUrls] = useState<string[]>([])
-  const [remainingCount, setRemainingCount] = useState(0)
-  const [verified, setVerified] = useState(false)
-  const [verifyCode, setVerifyCode] = useState('')
-  const [verifyAttemptId, setVerifyAttemptId] = useState<string | null>(null)
-  const [verifyError, setVerifyError] = useState<string | null>(null)
-  const [verifyLoading, setVerifyLoading] = useState(false)
-  const [billingLoading, setBillingLoading] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [step,              setStep]             = useState<Step>('url')
+  const [storeUrl,          setStoreUrl]          = useState('')
+  const [urlError,          setUrlError]          = useState<string | undefined>()
+  const [reconData,         setReconData]         = useState<ReconData | null>(null)
+  const [storeData,         setStoreData]         = useState<StoreData | null>(null)
+  const [extractProgress,   setExtractProgress]   = useState<ProgressEvent | null>(null)
+  const [jobId,             setJobId]             = useState<string | null>(null)
+  const [importStatus,      setImportStatus]      = useState<ImportStatus | null>(null)
+  const [importResult,      setImportResult]      = useState<ImportResult | null>(null)
+  const [error,             setError]             = useState<string | null>(null)
+  const [trialUsed,         setTrialUsed]         = useState(false)
+  const [trialProductUrls,  setTrialProductUrls]  = useState<string[]>([])
+  const [remainingCount,    setRemainingCount]    = useState(0)
+  const [verified,          setVerified]          = useState(false)
+  const [verifyCode,        setVerifyCode]        = useState('')
+  const [verifyAttemptId,   setVerifyAttemptId]   = useState<string | null>(null)
+  const [verifyError,       setVerifyError]       = useState<string | null>(null)
+  const [verifyLoading,     setVerifyLoading]     = useState(false)
+  const [billingLoading,    setBillingLoading]    = useState(false)
+  const [copied,            setCopied]            = useState(false)
+
+  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
   const appBridgeRef = useRef<ReturnType<typeof createApp> | null>(null)
 
   const clearPoll = useCallback(() => {
@@ -190,13 +353,12 @@ function MigrateWizard() {
   }, [])
   useEffect(() => () => clearPoll(), [clearPoll])
 
-  // Initialize App Bridge (must run before billing polling effect)
   useEffect(() => {
     if (typeof window === 'undefined' || !host) return
     try {
       const apiKey = document.querySelector<HTMLMetaElement>('meta[name="shopify-api-key"]')?.content ?? ''
       if (apiKey) appBridgeRef.current = createApp({ apiKey, host })
-    } catch { /* not in Shopify context — dev mode */ }
+    } catch { /* not in Shopify context */ }
   }, [host])
 
   async function authHeaders(): Promise<Record<string, string>> {
@@ -204,12 +366,16 @@ function MigrateWizard() {
     try {
       const token = await getSessionToken(appBridgeRef.current)
       return { Authorization: `Bearer ${token}` }
-    } catch {
-      return {}
-    }
+    } catch { return {} }
   }
 
-  // ── Return from Shopify billing page ──────────────────────────────────────
+  function copyCode() {
+    navigator.clipboard.writeText(verifyCode).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // ── Return from Shopify billing ────────────────────────────────────────────
   useEffect(() => {
     if (billingError) {
       setError(`Payment issue: ${billingError.replace(/_/g, ' ')}. Try again or contact support.`)
@@ -241,22 +407,20 @@ function MigrateWizard() {
           track('migration_failed', { shop, phase: 'import' })
           setError(d.error ?? 'Import failed. Contact support.')
         }
-      } catch {
-        // network blip — keep polling
-      }
+      } catch { /* network blip */ }
     }
     poll()
     pollRef.current = setInterval(poll, 3000)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Step 1: Recon + verification gate ─────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   async function handleCheckStore() {
     setUrlError(undefined)
     setError(null)
     const url = storeUrl.trim()
     if (!isDm2buyUrl(url)) {
-      setUrlError('Enter a valid dm2buy store URL, e.g. https://yourstore.dm2buy.com')
+      setUrlError('Enter a valid dm2buy store URL — e.g. https://yourstore.dm2buy.com')
       return
     }
     track('recon_started', { store_url: url, shop })
@@ -268,8 +432,6 @@ function MigrateWizard() {
 
       if (shop) {
         const supabase = createBrowserSupabaseClient()
-
-        // Check if trial already used for this shop + store (using top-level columns)
         const { data: trialRow } = await supabase
           .from('import_jobs')
           .select('trial_product_urls')
@@ -281,13 +443,10 @@ function MigrateWizard() {
 
         if (trialRow) {
           setTrialUsed(true)
-          setTrialProductUrls(
-            Array.isArray(trialRow.trial_product_urls) ? trialRow.trial_product_urls as string[] : [],
-          )
+          setTrialProductUrls(Array.isArray(trialRow.trial_product_urls) ? trialRow.trial_product_urls as string[] : [])
           setRemainingCount(Math.max(0, data.product_count - 5))
         }
 
-        // Check if already verified for this shop + store
         const { data: va } = await supabase
           .from('verification_attempts')
           .select('id, code')
@@ -307,16 +466,13 @@ function MigrateWizard() {
             body: JSON.stringify({ storeUrl: data.store_url }),
           })
           const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
-          if (!vRes.ok || !vData.code) {
-            throw new Error(vData.error ?? 'Failed to start verification.')
-          }
+          if (!vRes.ok || !vData.code) throw new Error(vData.error ?? 'Failed to start verification.')
           setVerifyCode(vData.code)
           setVerifyAttemptId(vData.attemptId ?? null)
           setStep('verifying')
           track('verification_started', { store_url: data.store_url, shop })
         }
       } else {
-        // Dev mode without shop param — skip verification
         setStep('preview')
       }
     } catch (err) {
@@ -324,8 +480,6 @@ function MigrateWizard() {
       setStep('url')
     }
   }
-
-  // ── Step 2: Verify ownership ───────────────────────────────────────────────
 
   async function handleVerifyCheck() {
     setVerifyLoading(true)
@@ -338,7 +492,6 @@ function MigrateWizard() {
       })
       const d = await r.json() as { verified?: boolean; error?: string; expired?: boolean }
       if (d.expired) {
-        // Code expired — get a new one
         const vRes = await fetch('/api/verify/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
@@ -348,7 +501,7 @@ function MigrateWizard() {
         if (vData.code) {
           setVerifyCode(vData.code)
           setVerifyAttemptId(vData.attemptId ?? null)
-          setVerifyError('Your code expired. A new code has been generated — add the new product and try again.')
+          setVerifyError('Code expired. A new one is ready — add the new product name and try again.')
         }
         return
       }
@@ -357,7 +510,7 @@ function MigrateWizard() {
         track('verification_complete', { store_url: reconData?.store_url, shop })
         setStep('preview')
       } else {
-        setVerifyError('Product not found. Make sure the product name is exactly the code shown, then try again.')
+        setVerifyError('Product not found. Check the name matches exactly, then try again.')
       }
     } catch {
       setVerifyError('Check failed. Try again.')
@@ -365,8 +518,6 @@ function MigrateWizard() {
       setVerifyLoading(false)
     }
   }
-
-  // ── Trial import: extract all → slice 5 → import to Shopify ───────────────
 
   async function handleTrialImport() {
     if (!reconData) return
@@ -376,28 +527,19 @@ function MigrateWizard() {
     setImportStatus(null)
     setError(null)
     try {
-      const allData = await extract(reconData.store_url, reconData.store_id, (ev) => {
-        setExtractProgress(ev)
-      })
+      const allData = await extract(reconData.store_url, reconData.store_id, (ev) => setExtractProgress(ev))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const realProducts = verifyCode ? allData.products.filter((p: any) => !(p.name ?? '').includes(verifyCode)) : allData.products
+      const realProducts  = verifyCode ? allData.products.filter((p: any) => !(p.name ?? '').includes(verifyCode)) : allData.products
       const trialProducts = realProducts.slice(0, 5)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const trialUrls = trialProducts.map((p: any) => p.product_url as string)
-      const trialStoreData = { ...allData, products: trialProducts }
-
+      const trialUrls     = trialProducts.map((p: any) => p.product_url as string)
       setTrialProductUrls(trialUrls)
       setRemainingCount(Math.max(0, realProducts.length - 5))
 
       const res = await fetch('/api/import/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({
-          storeUrl: reconData.store_url,
-          storeData: trialStoreData,
-          isTrial: true,
-          trialProductUrls: trialUrls,
-        }),
+        body: JSON.stringify({ storeUrl: reconData.store_url, storeData: { ...allData, products: trialProducts }, isTrial: true, trialProductUrls: trialUrls }),
       })
       const respData = await res.json() as { jobId?: string; error?: string }
       if (!res.ok) throw new Error(respData.error ?? 'Trial import failed to start.')
@@ -407,12 +549,7 @@ function MigrateWizard() {
       const poll = async () => {
         try {
           const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
-          const d = await r.json() as {
-            status: string
-            progress?: { current: number; total: number; message: string }
-            error?: string
-            result?: ImportResult
-          }
+          const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string }; error?: string; result?: ImportResult }
           const prog = d.progress ?? { current: 0, total: 0, message: '' }
           setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
           if (d.status === 'complete') {
@@ -428,11 +565,8 @@ function MigrateWizard() {
             setError(d.error ?? 'Trial import failed. Contact support.')
             setStep('preview')
           }
-        } catch {
-          // network blip — keep polling
-        }
+        } catch { /* network blip */ }
       }
-
       poll()
       pollRef.current = setInterval(poll, 3000)
     } catch (err) {
@@ -441,8 +575,6 @@ function MigrateWizard() {
     }
   }
 
-  // ── Full extraction: extract all → results card ────────────────────────────
-
   async function handleFullImport() {
     if (!reconData) return
     const fallbackStep: Step = trialUsed ? 'trial_done' : 'preview'
@@ -450,9 +582,7 @@ function MigrateWizard() {
     setExtractProgress(null)
     setError(null)
     try {
-      const allData = await extract(reconData.store_url, reconData.store_id, (ev) => {
-        setExtractProgress(ev)
-      })
+      const allData = await extract(reconData.store_url, reconData.store_id, (ev) => setExtractProgress(ev))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const filtered = verifyCode ? { ...allData, products: allData.products.filter((p: any) => !(p.name ?? '').includes(verifyCode)) } : allData
       setStoreData(filtered)
@@ -463,24 +593,17 @@ function MigrateWizard() {
     }
   }
 
-  // ── Import ─────────────────────────────────────────────────────────────────
-
   async function handleImport() {
     if (!storeData || !reconData || !tier) return
     setError(null)
 
     if (tier.isFree) {
-      // Free tier — direct import, no billing
       setStep('importing')
       try {
         const res = await fetch('/api/import/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-          body: JSON.stringify({
-            storeUrl: reconData.store_url,
-            storeData,
-            ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}),
-          }),
+          body: JSON.stringify({ storeUrl: reconData.store_url, storeData, ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}) }),
         })
         const data = await res.json() as { jobId?: string; error?: string }
         if (!res.ok) throw new Error(data.error ?? 'Import failed to start.')
@@ -490,12 +613,7 @@ function MigrateWizard() {
         const poll = async () => {
           try {
             const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
-            const d = await r.json() as {
-              status: string
-              progress?: { current: number; total: number; message: string }
-              error?: string
-              result?: ImportResult
-            }
+            const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string }; error?: string; result?: ImportResult }
             const prog = d.progress ?? { current: 0, total: 0, message: '' }
             setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
             if (d.status === 'complete') {
@@ -509,9 +627,7 @@ function MigrateWizard() {
               track('migration_failed', { shop, phase: 'import_free' })
               setError(d.error ?? 'Import failed. Contact support.')
             }
-          } catch {
-            // network blip — keep polling
-          }
+          } catch { /* network blip */ }
         }
         poll()
         pollRef.current = setInterval(poll, 3000)
@@ -522,7 +638,6 @@ function MigrateWizard() {
       return
     }
 
-    // Paid tier — Shopify Billing API
     setBillingLoading(true)
     track('payment_initiated', { shop, plan: tier.plan, price: tier.price, product_count: storeData.products.length })
     try {
@@ -530,17 +645,10 @@ function MigrateWizard() {
       const res = await fetch('/api/payment/billing/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({
-          storeUrl: reconData.store_url,
-          storeData,
-          skipUrls: trialProductUrls.length > 0 ? trialProductUrls : undefined,
-          amount,
-          planName: `Shoprift ${tier.plan}`,
-        }),
+        body: JSON.stringify({ storeUrl: reconData.store_url, storeData, skipUrls: trialProductUrls.length > 0 ? trialProductUrls : undefined, amount, planName: `Shoprift ${tier.plan}` }),
       })
       const d = await res.json() as { confirmationUrl?: string; error?: string }
       if (!res.ok) throw new Error(d.error ?? 'Failed to create payment.')
-      // Escape iframe — navigate top frame to Shopify payment page
       window.top!.location.href = d.confirmationUrl!
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment setup failed. Try again.')
@@ -548,617 +656,542 @@ function MigrateWizard() {
     }
   }
 
-  // ── Derived values ─────────────────────────────────────────────────────────
+  // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const tier = reconData ? priceTier(reconData.product_count) : null
+  const tier           = reconData ? priceTier(reconData.product_count) : null
+  const extractPercent = extractProgress && extractProgress.total > 0
+    ? Math.round((extractProgress.current / extractProgress.total) * 100) : 0
+  const importPercent  = importStatus && importStatus.total > 0
+    ? Math.round((importStatus.current / importStatus.total) * 100) : 0
+  const trialExtDone   = extractProgress != null && extractProgress.total > 0 && extractProgress.current >= extractProgress.total
+  const showWarnBanner = step === 'extracting' || step === 'trialing' || step === 'importing'
 
-  const extractPercent =
-    extractProgress && extractProgress.total > 0
-      ? Math.round((extractProgress.current / extractProgress.total) * 100)
-      : 0
+  // suppress unused warning — verified is set to track auth state for other flows
+  void verified
+  void jobId
 
-  const importPercent =
-    importStatus && importStatus.total > 0
-      ? Math.round((importStatus.current / importStatus.total) * 100)
-      : 0
-
-  // True once extraction phase of trialing is complete (scan done, now importing)
-  const trialExtractionComplete =
-    extractProgress != null &&
-    extractProgress.total > 0 &&
-    extractProgress.current >= extractProgress.total
-
-  const showDontCloseBanner = step === 'extracting' || step === 'trialing' || step === 'importing'
-
-  const pageTitle: Record<Step, string> = {
-    url: 'Migrate from dm2buy',
-    reconning: 'Migrate from dm2buy',
-    verifying: 'Confirm store ownership',
-    preview: 'Store preview',
-    trialing: 'Importing trial products',
-    trial_done: 'Trial complete',
-    extracting: 'Extracting store data',
-    results: 'Ready to import',
-    importing: 'Importing to Shopify',
-    done: 'Migration complete',
-  }
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <Page title={pageTitle[step]}>
-      <BlockStack gap="400">
+    <div className="min-h-screen bg-page">
+      <div className="max-w-[592px] mx-auto px-6 py-8 pb-24">
 
-        <StepBar current={step} />
+        <StepTrack current={step} />
 
-        {/* Don't close tab banner */}
-        {showDontCloseBanner && (
-          <Banner title="Don't close this tab" tone="warning">
-            <Text as="p">
-              {step === 'trialing'
-                ? "Importing your trial products to Shopify — don't close this window."
-                : step === 'extracting'
-                ? `Collecting your store data — ${reconData?.estimated_import_label ?? 'a few minutes'}. You can switch tabs, but don't close this window.`
-                : "Products are being added to your Shopify store. Don't close this window."}
-            </Text>
-          </Banner>
+        {/* Keep-window-open notice */}
+        {showWarnBanner && (
+          <AlertWarn>
+            {step === 'trialing'   ? "Adding trial products to Shopify — keep this window open." :
+             step === 'extracting' ? `Reading your store — ${reconData?.estimated_import_label ?? 'a few minutes'}. You can switch tabs but don't close this window.` :
+                                     "Products are being added to your Shopify store. Don't close this window."}
+          </AlertWarn>
         )}
 
-        {/* Error banner */}
-        {error && (
-          <Banner title="Something went wrong" tone="critical" onDismiss={() => setError(null)}>
-            <BlockStack gap="100">
-              <Text as="p">{error}</Text>
-              <Text as="p" tone="subdued">
-                Need help?{' '}
-                <Link url="mailto:support@shoprift.app" removeUnderline={false}>
-                  Email support
-                </Link>
-              </Text>
-            </BlockStack>
-          </Banner>
-        )}
+        {/* Error */}
+        {error && <AlertErr message={error} onDismiss={() => setError(null)} />}
 
-        {/* ── Step 1: URL input ──────────────────────────────────────────── */}
+        {/* ── URL input ─────────────────────────────────────────────────── */}
         {(step === 'url' || step === 'reconning') && (
-          <BlockStack gap="400">
-            {/* Compact hero context */}
-            <Box paddingBlockEnd="200">
-              <BlockStack gap="300">
-                <Text variant="headingLg" as="h2">Move your dm2buy products to Shopify</Text>
-                <BlockStack gap="150">
-                  {[
-                    'Scan your store in seconds — no login needed',
-                    'Try free: 5 products imported straight to Shopify',
-                    'Pay only after you see your products in the store',
-                  ].map((bullet) => (
-                    <InlineStack key={bullet} gap="200" blockAlign="center" wrap={false}>
-                      <Text as="span" tone="success" fontWeight="semibold">✓</Text>
-                      <Text as="p" tone="subdued">{bullet}</Text>
-                    </InlineStack>
-                  ))}
-                </BlockStack>
-              </BlockStack>
-            </Box>
+          <div>
+            <div className="mb-9">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-4 mb-3">
+                dm2buy → Shopify
+              </p>
+              <h1 className="text-[1.8rem] font-semibold tracking-[-0.025em] text-ink leading-tight mb-3">
+                Move your store.
+              </h1>
+              <p className="text-[0.9375rem] text-ink-3 leading-relaxed max-w-[40ch]">
+                Products, images, and collections land directly in your Shopify admin. No CSV. No re-entering data.
+              </p>
+            </div>
 
-            <Card>
-              <BlockStack gap="400">
-                <BlockStack gap="100">
-                  <Text variant="headingMd" as="h2">Enter your dm2buy store URL</Text>
-                  <Text tone="subdued" as="p">
-                    Move all your products and collections to Shopify automatically.
-                  </Text>
-                </BlockStack>
-
-                <form
-                  onSubmit={(e) => { e.preventDefault(); if (step === 'url') handleCheckStore() }}
-                >
-                  <TextField
-                    label="Store URL"
-                    value={storeUrl}
-                    onChange={(v) => { setStoreUrl(v); setUrlError(undefined) }}
-                    placeholder="https://yourstore.dm2buy.com"
-                    type="url"
-                    autoComplete="url"
-                    error={urlError}
-                    disabled={step === 'reconning'}
-                    helpText="Enter your dm2buy subdomain URL."
-                  />
-                </form>
-
-                <InlineStack>
-                  <Button
-                    variant="primary"
-                    onClick={handleCheckStore}
-                    loading={step === 'reconning'}
-                    disabled={step === 'reconning'}
-                  >
-                    Check store
-                  </Button>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </BlockStack>
-        )}
-
-        {/* ── Step 2: Ownership verification ────────────────────────────── */}
-        {step === 'verifying' && reconData && (
-          <Card>
-            <BlockStack gap="500">
-              <BlockStack gap="100">
-                <Text variant="headingMd" as="h2">Confirm you own this store</Text>
-                <Text tone="subdued" as="p">
-                  We verify ownership before importing to protect dm2buy sellers&apos; data.
-                </Text>
-              </BlockStack>
-
-              <BlockStack gap="300">
-                <Text as="p" fontWeight="semibold">Add a product to your dm2buy store:</Text>
-                {[
-                  'Log in to your dm2buy seller dashboard.',
-                  'Go to Products → Add Product.',
-                  'Set the product name to exactly the code below.',
-                  'Save the product — draft status is fine.',
-                  'Click "I\'ve added it — verify now" below.',
-                ].map((instruction, i) => (
-                  <InlineStack key={i} gap="200" blockAlign="start" wrap={false}>
-                    <Box
-                      background="bg-fill-secondary"
-                      borderRadius="full"
-                      minWidth="24px"
-                      minHeight="24px"
-                      as="span"
-                    >
-                      <Box paddingInline="100" paddingBlock="050">
-                        <Text as="span" variant="bodySm" fontWeight="semibold">{i + 1}</Text>
-                      </Box>
-                    </Box>
-                    <Text as="p">{instruction}</Text>
-                  </InlineStack>
-                ))}
-              </BlockStack>
-
-              <BlockStack gap="200">
-                <Text as="p" tone="subdued" variant="bodySm">Your verification code</Text>
-                <Box
-                  background="bg-fill-secondary"
-                  borderRadius="100"
-                  padding="300"
-                >
-                  <InlineStack align="space-between" blockAlign="center" wrap={false}>
-                    <Text as="p" fontWeight="bold" variant="headingMd">{verifyCode}</Text>
-                    <Button
-                      variant="plain"
-                      size="micro"
-                      onClick={() => navigator.clipboard.writeText(verifyCode)}
-                    >
-                      Copy
-                    </Button>
-                  </InlineStack>
-                </Box>
-                <Text tone="subdued" as="p" variant="bodySm">
-                  The product name must match exactly. Delete the test product after verification.
-                </Text>
-              </BlockStack>
-
-              {verifyError && (
-                <Banner tone="critical" onDismiss={() => setVerifyError(null)}>
-                  <Text as="p">{verifyError}</Text>
-                </Banner>
-              )}
-
-              <InlineStack gap="300" wrap>
-                <Button
-                  variant="primary"
-                  onClick={handleVerifyCheck}
-                  loading={verifyLoading}
-                >
-                  I&apos;ve added it — verify now
-                </Button>
-                <Button
-                  variant="plain"
-                  onClick={() => {
-                    setReconData(null)
-                    setVerifyCode('')
-                    setVerifyAttemptId(null)
-                    setVerifyError(null)
-                    setStep('url')
-                  }}
-                >
-                  Change URL
-                </Button>
-              </InlineStack>
-            </BlockStack>
-          </Card>
-        )}
-
-        {/* ── Step 3: Recon preview ──────────────────────────────────────── */}
-        {step === 'preview' && reconData && tier && (
-          <Card>
-            <BlockStack gap="500">
-              <BlockStack gap="100">
-                <Text variant="headingLg" as="h2">{reconData.store_name}</Text>
-                <Text tone="subdued" as="p">{reconData.store_url}</Text>
-              </BlockStack>
-
-              <Divider />
-
-              <InlineStack gap="600" wrap={false}>
-                <BlockStack gap="100">
-                  <Text variant="heading2xl" as="p">{reconData.product_count}</Text>
-                  <Text tone="subdued" as="p">Products</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text variant="heading2xl" as="p">{reconData.collection_count}</Text>
-                  <Text tone="subdued" as="p">Collections</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text variant="heading2xl" as="p">{reconData.image_count}</Text>
-                  <Text tone="subdued" as="p">Images</Text>
-                </BlockStack>
-              </InlineStack>
-
-              <Divider />
-
-              <InlineStack align="space-between" wrap={false}>
-                <BlockStack gap="050">
-                  <Text tone="subdued" as="p">Plan</Text>
-                  <Text fontWeight="semibold" as="p">{tier.plan}</Text>
-                </BlockStack>
-                <BlockStack gap="050" inlineAlign="end">
-                  <Text tone="subdued" as="p">Price</Text>
-                  <Text variant="headingLg" as="p">{tier.price}</Text>
-                </BlockStack>
-              </InlineStack>
-
-              {tier.isFree && (
-                <Banner tone="info">
-                  <Text as="p">
-                    Preview mode: stores with 3 or fewer products are free.
-                  </Text>
-                </Banner>
-              )}
-
-              <Text tone="subdued" as="p">Estimated time: {reconData.estimated_import_label}</Text>
-
-              <InlineStack gap="300" wrap>
-                {!trialUsed && !tier.isFree && (
-                  <Button variant="primary" onClick={handleTrialImport}>
-                    Try free — 5 products
-                  </Button>
+            <form onSubmit={(e) => { e.preventDefault(); if (step === 'url') handleCheckStore() }}>
+              <div className="mb-4">
+                <label htmlFor="store-url" className="block font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3 mb-2">
+                  Store URL
+                </label>
+                <input
+                  id="store-url"
+                  type="url"
+                  value={storeUrl}
+                  onChange={(e) => { setStoreUrl(e.target.value); setUrlError(undefined) }}
+                  placeholder="https://yourstore.dm2buy.com"
+                  autoComplete="url"
+                  disabled={step === 'reconning'}
+                  className={[
+                    'w-full bg-surface rounded-xl px-4 py-3.5',
+                    'font-mono text-sm text-ink placeholder:text-ink-5',
+                    'border transition-all duration-200 focus:outline-none',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    urlError
+                      ? 'border-red-300 focus:border-red-400'
+                      : 'border-wire-strong focus:border-mint focus:ring-2 focus:ring-mint/10',
+                  ].join(' ')}
+                />
+                {urlError && (
+                  <p className="mt-2 font-mono text-[11px] text-red-500">{urlError}</p>
                 )}
-                <Button
-                  variant={trialUsed || tier.isFree ? 'primary' : 'secondary'}
-                  onClick={handleFullImport}
+              </div>
+
+              <Btn
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={step === 'reconning'}
+                className="w-full"
+              >
+                {step === 'reconning' ? 'Scanning...' : <><span>Check store</span><IcoArrow /></>}
+              </Btn>
+            </form>
+          </div>
+        )}
+
+        {/* ── Ownership verification ─────────────────────────────────────── */}
+        {step === 'verifying' && reconData && (
+          <div>
+            <div className="mb-8">
+              <RowLabel>Step 2 — Ownership verification</RowLabel>
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight mb-1.5">
+                Confirm you own this store.
+              </h2>
+              <p className="text-[0.9375rem] text-ink-3">
+                We verify ownership before any data moves.
+              </p>
+            </div>
+
+            {/* Timeline instructions */}
+            <ol className="mb-8 relative">
+              {[
+                'Log in to your dm2buy seller dashboard.',
+                'Go to Products → Add Product.',
+                'Set the product name to exactly the code below.',
+                'Save — draft status is fine.',
+                'Click "Verify now" below.',
+              ].map((instruction, i, arr) => (
+                <li key={i} className="flex gap-4 relative">
+                  {i < arr.length - 1 && (
+                    <div className="absolute left-[8px] top-7 bottom-0 w-px bg-wire" />
+                  )}
+                  <div className="flex-shrink-0 w-[17px] h-[17px] rounded-full border border-wire-strong flex items-center justify-center mt-[2px]">
+                    <span className="font-mono text-[8.5px] text-ink-4">{i + 1}</span>
+                  </div>
+                  <p className="text-[0.9rem] text-ink-2 pb-[18px] leading-snug">{instruction}</p>
+                </li>
+              ))}
+            </ol>
+
+            {/* Code display */}
+            <div className="mb-8">
+              <RowLabel>Your verification code</RowLabel>
+              <div className="flex items-center justify-between gap-4 bg-surface border border-wire rounded-xl px-5 py-4">
+                <code className="font-mono text-xl text-mint-dark tracking-[0.06em] break-all select-all">
+                  {verifyCode}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyCode}
+                  className="flex-shrink-0 flex items-center gap-1.5 font-mono text-[11px] text-ink-4 hover:text-ink-2 transition-colors duration-150 py-1"
+                  aria-label="Copy verification code"
                 >
-                  {trialUsed
-                    ? `Import all ${remainingCount} remaining — ${tier.price}`
-                    : tier.isFree
-                    ? 'Import to Shopify (free)'
-                    : `Import all — ${tier.price}`}
-                </Button>
-                <Button
-                  variant="plain"
-                  onClick={() => {
-                    setReconData(null)
-                    setTrialUsed(false)
-                    setTrialProductUrls([])
-                    setVerified(false)
-                    setStep('url')
-                  }}
-                >
-                  Change URL
-                </Button>
-              </InlineStack>
-            </BlockStack>
-          </Card>
+                  <IcoCopy />
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <p className="mt-2 font-mono text-[10px] text-ink-5">
+                Product name must match exactly. Delete it after verification.
+              </p>
+            </div>
+
+            {verifyError && (
+              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <p className="font-mono text-[11px] text-red-600">{verifyError}</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Btn variant="primary" loading={verifyLoading} onClick={handleVerifyCheck}>
+                Verify now <IcoArrow />
+              </Btn>
+              <Btn
+                variant="ghost"
+                onClick={() => { setReconData(null); setVerifyCode(''); setVerifyAttemptId(null); setVerifyError(null); setStep('url') }}
+              >
+                Change URL
+              </Btn>
+            </div>
+          </div>
+        )}
+
+        {/* ── Store preview ──────────────────────────────────────────────── */}
+        {step === 'preview' && reconData && tier && (
+          <div>
+            <div className="mb-7">
+              <RowLabel>Step 3 — Store preview</RowLabel>
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight">
+                {reconData.store_name}
+              </h2>
+              <p className="font-mono text-[11px] text-ink-4 mt-1">{reconData.store_url}</p>
+            </div>
+
+            {/* Stats bar */}
+            <div className="flex border border-wire rounded-xl overflow-hidden mb-7">
+              {[
+                { n: reconData.product_count,    label: 'products'    },
+                { n: reconData.collection_count, label: 'collections' },
+                { n: reconData.image_count,      label: 'images'      },
+              ].map(({ n, label }, i) => (
+                <div key={label} className={`flex-1 px-5 py-4 bg-surface ${i > 0 ? 'border-l border-wire' : ''}`}>
+                  <p className="font-mono text-[1.9rem] font-medium text-ink leading-none mb-1 tabular-nums">{n}</p>
+                  <p className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-ink-4">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Price row */}
+            <div className="flex items-end justify-between pb-6 mb-5 border-b border-wire-subtle">
+              <div>
+                <RowLabel>Plan</RowLabel>
+                <p className="text-[0.9375rem] text-ink-3">{tier.plan}</p>
+              </div>
+              <div className="text-right">
+                <RowLabel>Price</RowLabel>
+                <p className="font-mono text-[1.6rem] font-semibold text-ink tracking-[-0.02em]">{tier.price}</p>
+              </div>
+            </div>
+
+            <p className="font-mono text-[10px] text-ink-4 mb-6">
+              Est. {reconData.estimated_import_label}
+            </p>
+
+            {tier.isFree && (
+              <AlertOk>Preview mode — stores with 3 or fewer products import free.</AlertOk>
+            )}
+
+            <div className="flex flex-col gap-2.5">
+              {!trialUsed && !tier.isFree && (
+                <Btn variant="secondary" size="lg" onClick={handleTrialImport} className="w-full">
+                  Try free — import 5 products first
+                </Btn>
+              )}
+              <Btn variant="primary" size="lg" onClick={handleFullImport} className="w-full">
+                {trialUsed
+                  ? `Import ${remainingCount} remaining — ${tier.price}`
+                  : tier.isFree
+                  ? 'Import to Shopify — free'
+                  : `Import all — ${tier.price}`}
+                <IcoArrow />
+              </Btn>
+              <Btn
+                variant="ghost"
+                onClick={() => { setReconData(null); setTrialUsed(false); setTrialProductUrls([]); setVerified(false); setStep('url') }}
+              >
+                Change URL
+              </Btn>
+            </div>
+          </div>
         )}
 
         {/* ── Trial import progress ──────────────────────────────────────── */}
         {step === 'trialing' && reconData && (
-          <Card>
-            <BlockStack gap="400">
-              <Text variant="headingMd" as="h2">Importing 5 trial products to Shopify</Text>
+          <div>
+            <div className="mb-8">
+              <RowLabel>{trialExtDone ? 'Adding to Shopify' : 'Reading products'}</RowLabel>
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink">
+                Importing 5 trial products.
+              </h2>
+            </div>
 
-              {!trialExtractionComplete ? (
-                <>
-                  <ProgressBar progress={extractPercent} size="medium" tone="highlight" />
-                  <Text tone="subdued" as="p">
-                    {extractProgress
-                      ? `Scanning: ${extractProgress.current} of ${extractProgress.total} products`
-                      : 'Starting scan...'}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <ProgressBar progress={importPercent} size="medium" tone="success" />
-                  <Text tone="subdued" as="p">
-                    {importStatus?.message || 'Adding products to Shopify...'}
-                  </Text>
-                </>
-              )}
-            </BlockStack>
-          </Card>
+            <ProgressTrack percent={trialExtDone ? importPercent : extractPercent} />
+
+            <div className="flex items-center justify-between mt-3">
+              <p className="font-mono text-[11px] text-ink-4">
+                {trialExtDone
+                  ? (importStatus?.message || 'Adding to Shopify...')
+                  : extractProgress
+                    ? `${extractProgress.current} / ${extractProgress.total} products scanned`
+                    : 'Starting scan...'}
+              </p>
+              <p className="font-mono text-[11px] text-ink-5">
+                {trialExtDone ? importPercent : extractPercent}%
+              </p>
+            </div>
+          </div>
         )}
 
         {/* ── Trial done ────────────────────────────────────────────────── */}
         {step === 'trial_done' && importResult && (
-          <BlockStack gap="400">
-            <Banner title="5 products added to your Shopify store." tone="success">
-              <Text as="p">
-                Your trial import is complete. See them live in your store, then import the rest.
-              </Text>
-            </Banner>
+          <div>
+            <div className="flex items-center gap-2 text-mint-dark font-mono text-xs mb-5">
+              <IcoCheck /> 5 products added to Shopify
+            </div>
 
-            <Card>
-              <BlockStack gap="500">
-                <BlockStack gap="300">
-                  <InlineStack align="space-between" wrap={false}>
-                    <Text as="p">Trial products imported</Text>
-                    <Badge tone="success">{String(importResult.productsCreated)}</Badge>
-                  </InlineStack>
-                  {remainingCount > 0 && (
-                    <InlineStack align="space-between" wrap={false}>
-                      <Text as="p">Remaining products</Text>
-                      <Text as="p" fontWeight="semibold">{remainingCount}</Text>
-                    </InlineStack>
-                  )}
-                </BlockStack>
+            <div className="mb-7">
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight mb-1.5">
+                Trial complete.
+              </h2>
+              <p className="text-[0.9375rem] text-ink-3">
+                Check them in your Shopify admin, then import the rest.
+              </p>
+            </div>
 
-                <Divider />
+            <div className="border border-wire rounded-xl overflow-hidden mb-7 divide-y divide-wire-subtle">
+              <DataRow label="Trial products imported" value={String(importResult.productsCreated)} accent />
+              {remainingCount > 0 && (
+                <DataRow label="Remaining products" value={String(remainingCount)} />
+              )}
+            </div>
 
-                <InlineStack gap="300" wrap>
-                  <Button
-                    variant="primary"
-                    url={shop ? `https://${shop}/admin/products` : '#'}
-                    external={!!shop}
-                  >
-                    View in Shopify
-                  </Button>
-                  {remainingCount > 0 && tier && (
-                    <Button variant="secondary" onClick={handleFullImport}>
-                      {`Import all ${remainingCount} remaining — ${tier.price}`}
-                    </Button>
-                  )}
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </BlockStack>
+            <div className="flex flex-col gap-2.5">
+              <LinkBtn href={shop ? `https://${shop}/admin/products` : '#'} external={!!shop} variant="secondary">
+                View in Shopify
+              </LinkBtn>
+              {remainingCount > 0 && tier && (
+                <Btn variant="primary" size="lg" onClick={handleFullImport} className="w-full">
+                  Import {remainingCount} remaining — {tier.price} <IcoArrow />
+                </Btn>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ── Full extraction progress ───────────────────────────────────── */}
         {step === 'extracting' && reconData && (
-          <Card>
-            <BlockStack gap="400">
-              <Text variant="headingMd" as="h2">Collecting product data from dm2buy</Text>
+          <div>
+            <div className="mb-8">
+              <RowLabel>Collecting data</RowLabel>
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink">
+                Reading your store.
+              </h2>
+            </div>
 
-              <ProgressBar progress={extractPercent} size="medium" tone="highlight" />
+            <ProgressTrack percent={extractPercent} />
 
-              <Text tone="subdued" as="p">
+            <div className="flex items-center justify-between mt-3">
+              <p className="font-mono text-[11px] text-ink-4">
                 {extractProgress
-                  ? `${extractProgress.current} of ${extractProgress.total} products collected`
+                  ? `${extractProgress.current} / ${extractProgress.total} products`
                   : 'Starting...'}
-              </Text>
+              </p>
+              <p className="font-mono text-[11px] text-ink-5">{extractPercent}%</p>
+            </div>
 
-              {extractProgress?.message && (
-                <Text tone="subdued" as="p">{extractProgress.message}</Text>
-              )}
-            </BlockStack>
-          </Card>
+            {extractProgress?.message && (
+              <p className="mt-2 font-mono text-[10px] text-ink-5">{extractProgress.message}</p>
+            )}
+          </div>
         )}
 
         {/* ── Results / billing gate ─────────────────────────────────────── */}
         {step === 'results' && reconData && tier && storeData && (
-          <Card>
-            <BlockStack gap="500">
-              <Text variant="headingMd" as="h2">Your data is ready</Text>
+          <div>
+            <div className="mb-7">
+              <RowLabel>Step 5 — Ready to import</RowLabel>
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight">
+                Your data is ready.
+              </h2>
+            </div>
 
-              <BlockStack gap="300">
-                <InlineStack align="space-between" wrap={false}>
-                  <Text as="p">Products collected</Text>
-                  <Badge tone="success">{String(storeData.products.length)}</Badge>
-                </InlineStack>
-                <InlineStack align="space-between" wrap={false}>
-                  <Text as="p">Collections</Text>
-                  <Text as="p" fontWeight="semibold">{storeData.categories.length}</Text>
-                </InlineStack>
-                {trialProductUrls.length > 0 && (
-                  <InlineStack align="space-between" wrap={false}>
-                    <Text as="p" tone="subdued">Trial products (already in Shopify)</Text>
-                    <Text as="p" tone="subdued">{trialProductUrls.length} skipped</Text>
-                  </InlineStack>
-                )}
-              </BlockStack>
+            <div className="border border-wire rounded-xl overflow-hidden mb-5 divide-y divide-wire-subtle">
+              <DataRow label="Products collected" value={String(storeData.products.length)} accent />
+              <DataRow label="Collections" value={String(storeData.categories.length)} />
+              {trialProductUrls.length > 0 && (
+                <DataRow label="Already in Shopify — skipped" value={String(trialProductUrls.length)} dim />
+              )}
+            </div>
 
-              {/* Preview first 3 products */}
-              {storeData.products.slice(0, 3).length > 0 && (
-                <BlockStack gap="100">
-                  <Text tone="subdued" as="p" variant="bodySm">Preview</Text>
+            {/* Product preview */}
+            {storeData.products.length > 0 && (
+              <div className="mb-6">
+                <RowLabel>Preview</RowLabel>
+                <div className="border border-wire-subtle rounded-xl overflow-hidden divide-y divide-[#F4F4F4]">
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {(storeData.products as any[]).slice(0, 3).map((p) => (
-                    <InlineStack key={p.product_url ?? p.name} align="space-between" wrap={false}>
-                      <Text as="p" variant="bodySm">{p.name}</Text>
-                      <Text as="p" variant="bodySm" tone="subdued">₹{p.price}</Text>
-                    </InlineStack>
+                    <div key={p.product_url ?? p.name} className="flex items-center justify-between px-5 py-3 bg-surface">
+                      <span className="text-sm text-ink-3 truncate mr-4">{p.name}</span>
+                      <span className="font-mono text-xs text-ink-4 flex-shrink-0 tabular-nums">₹{p.price}</span>
+                    </div>
                   ))}
-                </BlockStack>
-              )}
+                </div>
+              </div>
+            )}
 
-              <Divider />
+            {/* Pricing summary */}
+            <div className="flex items-end justify-between pb-6 mb-5 border-b border-wire-subtle">
+              <div>
+                <RowLabel>Plan</RowLabel>
+                <p className="text-[0.9375rem] text-ink-3">{tier.plan}</p>
+              </div>
+              <div className="text-right">
+                <RowLabel>Total</RowLabel>
+                <p className="font-mono text-[1.6rem] font-semibold text-ink tracking-[-0.02em]">{tier.price}</p>
+              </div>
+            </div>
 
-              <InlineStack align="space-between" wrap={false}>
-                <BlockStack gap="050">
-                  <Text tone="subdued" as="p">Plan</Text>
-                  <Text fontWeight="semibold" as="p">{tier.plan}</Text>
-                </BlockStack>
-                <BlockStack gap="050" inlineAlign="end">
-                  <Text tone="subdued" as="p">Total</Text>
-                  <Text variant="headingXl" as="p">{tier.price}</Text>
-                </BlockStack>
-              </InlineStack>
+            <Btn
+              variant="primary"
+              size="lg"
+              onClick={handleImport}
+              loading={billingLoading}
+              className="w-full mb-3"
+            >
+              {tier.isFree
+                ? 'Import to Shopify — free'
+                : billingLoading
+                ? 'Redirecting to payment...'
+                : `Pay ${tier.price} and import`}
+              {!billingLoading && <IcoArrow />}
+            </Btn>
 
-              <Button
-                variant="primary"
-                size="large"
-                onClick={handleImport}
-                loading={billingLoading}
-                disabled={billingLoading}
-              >
-                {tier.isFree
-                  ? 'Import to Shopify (free)'
-                  : billingLoading
-                  ? 'Redirecting to payment...'
-                  : `Pay ${tier.price} and import to Shopify`}
-              </Button>
-
-              <Text tone="subdued" as="p">
-                {tier.isFree
-                  ? 'No charge for stores with 3 or fewer products.'
-                  : <>Payment via Shopify Billing · Full refund if import fails · <Link url="https://shoprift.app/refund-policy" target="_blank" removeUnderline={false}>Refund policy</Link></>}
-              </Text>
-            </BlockStack>
-          </Card>
+            <p className="font-mono text-[10px] text-ink-5 text-center leading-relaxed">
+              {tier.isFree
+                ? 'No charge — stores with 3 or fewer products are free.'
+                : <>
+                    Payment via Shopify Billing · Full refund if import fails ·{' '}
+                    <a href="https://shoprift.app/refund-policy" target="_blank" rel="noopener noreferrer"
+                       className="text-portal hover:text-portal/80 transition-colors">
+                      Refund policy
+                    </a>
+                  </>}
+            </p>
+          </div>
         )}
 
         {/* ── Import progress ───────────────────────────────────────────── */}
         {step === 'importing' && (
-          <Card>
-            <BlockStack gap="400">
-              <Text variant="headingMd" as="h2">Adding products to your Shopify store</Text>
+          <div>
+            <div className="mb-8">
+              <RowLabel>Importing</RowLabel>
+              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink">
+                Adding products to Shopify.
+              </h2>
+            </div>
 
-              {importStatus && importStatus.total > 0 ? (
-                <>
-                  <ProgressBar progress={importPercent} size="medium" tone="highlight" />
-                  <Text tone="subdued" as="p">
-                    {importStatus.message || `${importStatus.current} of ${importStatus.total} imported`}
-                  </Text>
-                </>
-              ) : (
-                <InlineStack gap="200" blockAlign="center">
-                  <Spinner size="small" />
-                  <Text tone="subdued" as="p">Starting import...</Text>
-                </InlineStack>
-              )}
-            </BlockStack>
-          </Card>
+            {importStatus && importStatus.total > 0 ? (
+              <>
+                <ProgressTrack percent={importPercent} />
+                <div className="flex items-center justify-between mt-3">
+                  <p className="font-mono text-[11px] text-ink-4">
+                    {importStatus.message || `${importStatus.current} / ${importStatus.total} products`}
+                  </p>
+                  <p className="font-mono text-[11px] text-ink-5">{importPercent}%</p>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="w-3 h-3 border-[1.5px] border-wire border-t-mint rounded-full animate-spin flex-shrink-0" />
+                <p className="font-mono text-[11px] text-ink-4">Starting import...</p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* ── Done ──────────────────────────────────────────────────────── */}
         {step === 'done' && importResult && (
-          <BlockStack gap="400">
-            <Banner title="Migration complete." tone="success">
-              <Text as="p">
-                {importResult.productsCreated} product{importResult.productsCreated !== 1 ? 's' : ''} and{' '}
-                {importResult.collectionsCreated} collection{importResult.collectionsCreated !== 1 ? 's' : ''} added to your Shopify store.
-                {importResult.productsFailed > 0 &&
-                  ` ${importResult.productsFailed} product${importResult.productsFailed !== 1 ? 's' : ''} failed — check your Shopify admin for details.`}
-              </Text>
-            </Banner>
+          <div>
+            <div className="flex items-center gap-2 text-mint-dark font-mono text-xs mb-5">
+              <IcoCheck /> Migration complete
+            </div>
 
-            <Card>
-              <BlockStack gap="500">
-                <InlineStack gap="600" wrap={false}>
-                  <BlockStack gap="100">
-                    <Text variant="heading2xl" as="p">{importResult.productsCreated}</Text>
-                    <Text tone="subdued" as="p">Imported</Text>
-                  </BlockStack>
-                  <BlockStack gap="100">
-                    <Text variant="heading2xl" as="p">{importResult.collectionsCreated}</Text>
-                    <Text tone="subdued" as="p">Collections</Text>
-                  </BlockStack>
-                  {importResult.productsFailed > 0 && (
-                    <BlockStack gap="100">
-                      <Text variant="heading2xl" as="p" tone="critical">{importResult.productsFailed}</Text>
-                      <Text tone="critical" as="p">Failed</Text>
-                    </BlockStack>
-                  )}
-                </InlineStack>
+            <h2 className="text-[1.8rem] font-semibold tracking-[-0.025em] text-ink leading-tight mb-9">
+              {importResult.productsCreated}{' '}
+              product{importResult.productsCreated !== 1 ? 's' : ''} in Shopify.
+            </h2>
 
-                <InlineStack gap="300">
-                  <Button
-                    variant="primary"
-                    url={shop ? `https://${shop}/admin/products` : '#'}
-                    external={!!shop}
-                  >
-                    View your products in Shopify
-                  </Button>
-                  <Button
-                    variant="plain"
-                    onClick={() => {
-                      setStep('url')
-                      setStoreUrl('')
-                      setReconData(null)
-                      setStoreData(null)
-                      setImportResult(null)
-                      setJobId(null)
-                      setImportStatus(null)
-                      setError(null)
-                      setTrialUsed(false)
-                      setTrialProductUrls([])
-                      setRemainingCount(0)
-                      setVerified(false)
-                      setVerifyCode('')
-                      setVerifyAttemptId(null)
-                      setVerifyError(null)
-                    }}
-                  >
-                    Migrate another store
-                  </Button>
-                </InlineStack>
+            {/* Stats */}
+            <div className="flex border border-wire rounded-xl overflow-hidden mb-8">
+              <div className="flex-1 px-5 py-4 bg-surface">
+                <p className="font-mono text-[1.9rem] font-medium text-mint-dark leading-none mb-1 tabular-nums">
+                  {importResult.productsCreated}
+                </p>
+                <p className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-ink-4">imported</p>
+              </div>
+              <div className="w-px bg-wire" />
+              <div className="flex-1 px-5 py-4 bg-surface">
+                <p className="font-mono text-[1.9rem] font-medium text-ink leading-none mb-1 tabular-nums">
+                  {importResult.collectionsCreated}
+                </p>
+                <p className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-ink-4">collections</p>
+              </div>
+              {importResult.productsFailed > 0 && (
+                <>
+                  <div className="w-px bg-wire" />
+                  <div className="flex-1 px-5 py-4 bg-surface">
+                    <p className="font-mono text-[1.9rem] font-medium text-red-500 leading-none mb-1 tabular-nums">
+                      {importResult.productsFailed}
+                    </p>
+                    <p className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-red-400">failed</p>
+                  </div>
+                </>
+              )}
+            </div>
 
-                {importResult.errors && importResult.errors.length > 0 && (
-                  <BlockStack gap="200">
-                    <Text tone="subdued" as="p" fontWeight="semibold">Import errors:</Text>
-                    {importResult.errors.slice(0, 5).map((e, i) => (
-                      <Text key={i} tone="critical" as="p">{e}</Text>
-                    ))}
-                  </BlockStack>
-                )}
-              </BlockStack>
-            </Card>
-          </BlockStack>
+            <div className="flex items-center gap-3 flex-wrap mb-8">
+              <LinkBtn href={shop ? `https://${shop}/admin/products` : '#'} external={!!shop} variant="primary">
+                View products in Shopify <IcoArrow />
+              </LinkBtn>
+              <Btn
+                variant="ghost"
+                onClick={() => {
+                  setStep('url'); setStoreUrl(''); setReconData(null); setStoreData(null)
+                  setImportResult(null); setJobId(null); setImportStatus(null); setError(null)
+                  setTrialUsed(false); setTrialProductUrls([]); setRemainingCount(0)
+                  setVerified(false); setVerifyCode(''); setVerifyAttemptId(null); setVerifyError(null)
+                }}
+              >
+                Migrate another store
+              </Btn>
+            </div>
+
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div className="border border-wire-subtle rounded-xl overflow-hidden divide-y divide-[#F4F4F4]">
+                <p className="px-5 py-3 font-mono text-[9.5px] uppercase tracking-[0.13em] text-ink-4">
+                  Import errors
+                </p>
+                {importResult.errors.slice(0, 5).map((e, i) => (
+                  <p key={i} className="px-5 py-2.5 font-mono text-[11px] text-red-400">{e}</p>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
-      </BlockStack>
+        {/* ── Footer ────────────────────────────────────────────────────── */}
+        <div className="mt-16 pt-5 border-t border-wire-subtle">
+          <div className="flex items-center gap-5 flex-wrap">
+            {[
+              { label: 'Terms',             href: 'https://shoprift.app/terms' },
+              { label: 'Privacy',           href: 'https://shoprift.app/privacy' },
+              { label: 'Refunds',           href: 'https://shoprift.app/refund-policy' },
+              { label: 'Grievance Officer', href: 'mailto:support@shoprift.app' },
+            ].map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                target={href.startsWith('http') ? '_blank' : undefined}
+                rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-ink-5 hover:text-ink-3 transition-colors"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+        </div>
 
-      <Box paddingBlockStart="800" paddingBlockEnd="400">
-        <InlineStack gap="400" align="center" wrap>
-          <Link url="https://shoprift.app/terms" target="_blank" removeUnderline>
-            <Text tone="subdued" as="span" variant="bodySm">Terms of Service</Text>
-          </Link>
-          <Text tone="subdued" as="span" variant="bodySm">·</Text>
-          <Link url="https://shoprift.app/privacy" target="_blank" removeUnderline>
-            <Text tone="subdued" as="span" variant="bodySm">Privacy Policy</Text>
-          </Link>
-          <Text tone="subdued" as="span" variant="bodySm">·</Text>
-          <Link url="https://shoprift.app/refund-policy" target="_blank" removeUnderline>
-            <Text tone="subdued" as="span" variant="bodySm">Refund Policy</Text>
-          </Link>
-          <Text tone="subdued" as="span" variant="bodySm">·</Text>
-          <Link url="mailto:support@shoprift.app" removeUnderline>
-            <Text tone="subdued" as="span" variant="bodySm">Grievance Officer</Text>
-          </Link>
-        </InlineStack>
-      </Box>
-
-    </Page>
+      </div>
+    </div>
   )
 }
 
-// ─── Root — AppProvider + Suspense boundary for useSearchParams ──────────────
+// ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function MigratePage() {
   return (
     <AppProvider i18n={enTranslations}>
       <Suspense
         fallback={
-          <Page title="Loading...">
-            <Box padding="800">
-              <InlineStack align="center">
-                <Spinner size="large" />
-              </InlineStack>
-            </Box>
-          </Page>
+          <div className="min-h-screen bg-page flex items-center justify-center">
+            <span className="w-4 h-4 border-[1.5px] border-wire border-t-mint rounded-full animate-spin" />
+          </div>
         }
       >
         <MigrateWizard />
