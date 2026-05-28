@@ -352,13 +352,24 @@ function MigrateWizard() {
   const [billingLoading,    setBillingLoading]    = useState(false)
   const [copied,            setCopied]            = useState(false)
 
-  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
-  const appBridgeRef = useRef<ReturnType<typeof createApp> | null>(null)
+  const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null)
+  const appBridgeRef    = useRef<ReturnType<typeof createApp> | null>(null)
+  const importStartRef  = useRef<number | null>(null)
 
   const clearPoll = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
   }, [])
   useEffect(() => () => clearPoll(), [clearPoll])
+
+  // Track when first product is received so we can compute import ETA
+  useEffect(() => {
+    if (importStatus && importStatus.current > 0 && importStartRef.current === null) {
+      importStartRef.current = Date.now()
+    }
+    if (!importStatus) {
+      importStartRef.current = null
+    }
+  }, [importStatus])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !host) return
@@ -672,6 +683,24 @@ function MigrateWizard() {
     ? Math.round((importStatus.current / importStatus.total) * 100) : 0
   const trialExtDone   = extractProgress != null && extractProgress.total > 0 && extractProgress.current >= extractProgress.total
   const showWarnBanner = step === 'extracting' || step === 'trialing' || step === 'importing'
+
+  let importEta: string | null = null
+  if (importStatus && importStatus.current > 0 && importStatus.total > 0 && importStartRef.current) {
+    const elapsed = Date.now() - importStartRef.current
+    if (elapsed >= 3000) {
+      const rate = importStatus.current / elapsed           // products per ms
+      const remaining = importStatus.total - importStatus.current
+      if (remaining > 0) {
+        const etaMs = remaining / rate
+        if (etaMs < 15000)      importEta = '< 15 sec'
+        else if (etaMs < 60000) importEta = `~${Math.round(etaMs / 1000)} sec`
+        else {
+          const mins = Math.round(etaMs / 60000)
+          importEta = `~${mins} min${mins !== 1 ? 's' : ''}`
+        }
+      }
+    }
+  }
 
   // suppress unused warning — verified is set to track auth state for other flows
   void verified
@@ -1080,7 +1109,12 @@ function MigrateWizard() {
                   <p className="font-mono text-[11px] text-ink-4">
                     {importStatus.message || `${importStatus.current} / ${importStatus.total} products`}
                   </p>
-                  <p className="font-mono text-[11px] text-ink-3">{importPercent}%</p>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <p className="font-mono text-[11px] text-ink-3">{importPercent}%</p>
+                    {importEta && (
+                      <p className="font-mono text-[11px] text-ink-4">· {importEta} remaining</p>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (
