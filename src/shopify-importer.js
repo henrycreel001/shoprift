@@ -20,15 +20,16 @@ function delay(ms) {
 }
 
 /**
- * Authenticated Shopify Admin REST call.
+ * Authenticated Shopify Admin REST call with 429 backoff.
  * @param {string} shop — e.g. "shoprift-dev.myshopify.com"
  * @param {string} accessToken
  * @param {string} method
  * @param {string} path — e.g. "products.json"
  * @param {object} [body]
+ * @param {number} [retries=3]
  * @returns {Promise<object>}
  */
-async function shopifyFetch(shop, accessToken, method, path, body) {
+async function shopifyFetch(shop, accessToken, method, path, body, retries = 3) {
   const url = `https://${shop}/admin/api/${API_VERSION}/${path}`;
   const res = await fetch(url, {
     method,
@@ -38,6 +39,12 @@ async function shopifyFetch(shop, accessToken, method, path, body) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  if (res.status === 429 && retries > 0) {
+    const retryAfterSec = parseFloat(res.headers.get('retry-after') ?? '2');
+    await delay(Math.ceil(retryAfterSec * 1000));
+    return shopifyFetch(shop, accessToken, method, path, body, retries - 1);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');

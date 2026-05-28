@@ -7,6 +7,16 @@
 
 ---
 
+## 2026-05-28 — Rate limit backoff + debug log cleanup
+
+**Files:** `src/shopify-importer.js`, `web/src/app/api/payment/billing/create/route.ts`
+
+**Changes:**
+- `shopifyFetch`: added 429 retry loop — reads `Retry-After` header, waits, retries up to 3×. Previously a 429 would count the product as `productsFailed`. Fixes silent mid-migration failures on large stores.
+- `billing/create`: removed `console.error('[billing/create] isTest: ...')` debug log added during billing fix session.
+
+---
+
 ## 2026-05-27 — T7 Shopify Billing API (AppPurchaseOneTime)
 
 **Trigger:** T7 task — wire payment before external users get access. "Pay ₹599" was calling `/api/import/start` directly with no charge.

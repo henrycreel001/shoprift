@@ -87,7 +87,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   const returnUrl = `${appUrl}/api/payment/billing/callback?jobId=${jobId}&shop=${encodeURIComponent(shop)}`;
   const chargeLabel = typeof planName === 'string' ? planName : 'Shoprift Migration';
   const isTest = process.env.NODE_ENV !== 'production' || process.env.SHOPIFY_BILLING_TEST === 'true';
-  console.error('[billing/create] isTest:', isTest, 'NODE_ENV:', process.env.NODE_ENV, 'BILLING_TEST:', process.env.SHOPIFY_BILLING_TEST);
 
   const mutation = `
     mutation CreateCharge($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
