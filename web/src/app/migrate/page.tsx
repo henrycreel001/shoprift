@@ -244,11 +244,12 @@ function StepTrack({ current }: { current: Step }) {
 
 function ProgressTrack({ percent }: { percent: number }) {
   const pct = Math.min(Math.max(percent, 0), 100)
+  const displayPct = pct === 0 ? 3 : pct  // fast-start: minimum fill so bar is never visibly empty
   return (
     <div className="relative h-[5px] bg-wire rounded-full overflow-hidden">
       <div
         className="absolute inset-y-0 left-0 bg-mint rounded-full transition-all duration-700 ease-out"
-        style={{ width: `${pct}%` }}
+        style={{ width: `${displayPct}%` }}
       />
       {pct > 2 && pct < 98 && (
         <div
