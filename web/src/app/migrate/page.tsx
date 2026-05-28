@@ -426,6 +426,7 @@ function MigrateWizard() {
           clearPoll()
           track('migration_failed', { shop, phase: 'import' })
           setError(d.error ?? 'Import failed. Contact support.')
+          setStep('url')
         }
       } catch { /* network blip */ }
     }
@@ -659,6 +660,7 @@ function MigrateWizard() {
               clearPoll()
               track('migration_failed', { shop, phase: 'import_free' })
               setError(d.error ?? 'Import failed. Contact support.')
+              setStep('results')
             }
           } catch { /* network blip */ }
         }
