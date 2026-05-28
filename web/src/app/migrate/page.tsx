@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense, Fragment } from 'react'
 import { useSearchParams } from 'next/navigation'
 import enTranslations from '@shopify/polaris/locales/en.json'
 import { AppProvider } from '@shopify/polaris'
@@ -195,49 +195,56 @@ function LinkBtn({ href, external, variant = 'secondary', size = 'md', className
 function StepTrack({ current }: { current: Step }) {
   const idx = stepIndex(current)
   return (
-    <div className="mb-10 select-none">
-      <div className="flex gap-[3px] mb-2">
+    <nav aria-label="Migration steps" className="mb-10 select-none">
+      <div className="flex items-start">
         {STEP_ORDER.map((s, i) => {
           const done   = i < idx
           const active = i === idx
           return (
-            <div key={s} className="flex-1">
-              <div className={[
-                'h-[2px] rounded-full transition-all duration-500 ease-out',
-                done   ? 'bg-mint/50' :
-                active ? 'bg-mint'    :
-                         'bg-wire',
-              ].join(' ')} />
-            </div>
+            <Fragment key={s}>
+              <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                <div className={[
+                  'w-[22px] h-[22px] rounded-full flex items-center justify-center transition-all duration-300',
+                  done   ? 'bg-emerald-50 border border-mint/40' :
+                  active ? 'bg-mint shadow-[0_0_0_3px_rgba(0,229,160,0.20)]' :
+                           'bg-wire-subtle border border-wire',
+                ].join(' ')}>
+                  {done ? (
+                    <span className="text-mint-dark flex items-center justify-center">
+                      <IcoCheck />
+                    </span>
+                  ) : (
+                    <span className={[
+                      'font-mono text-[9px] font-bold leading-none',
+                      active ? 'text-void' : 'text-ink-4',
+                    ].join(' ')}>{i + 1}</span>
+                  )}
+                </div>
+                <span className={[
+                  'font-mono text-[8px] tracking-[0.09em] uppercase transition-colors duration-300 whitespace-nowrap',
+                  active ? 'text-ink font-semibold' :
+                  done   ? 'text-ink-3' :
+                           'text-ink-5',
+                ].join(' ')}>{STEP_LABELS[s]}</span>
+              </div>
+              {i < STEP_ORDER.length - 1 && (
+                <div className={[
+                  'flex-1 h-px mt-[10px] mx-1 transition-colors duration-500',
+                  i < idx ? 'bg-mint/35' : 'bg-wire-strong',
+                ].join(' ')} />
+              )}
+            </Fragment>
           )
         })}
       </div>
-      <div className="flex">
-        {STEP_ORDER.map((s, i) => {
-          const done   = i < idx
-          const active = i === idx
-          return (
-            <div key={s} className="flex-1 text-center">
-              <span className={[
-                'font-mono text-[9px] tracking-[0.13em] uppercase transition-colors duration-300',
-                active ? 'text-mint-dark' :
-                done   ? 'text-ink-4'     :
-                         'text-ink-5',
-              ].join(' ')}>
-                {STEP_LABELS[s]}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    </nav>
   )
 }
 
 function ProgressTrack({ percent }: { percent: number }) {
   const pct = Math.min(Math.max(percent, 0), 100)
   return (
-    <div className="relative h-[2px] bg-wire rounded-full overflow-hidden">
+    <div className="relative h-[5px] bg-wire rounded-full overflow-hidden">
       <div
         className="absolute inset-y-0 left-0 bg-mint rounded-full transition-all duration-700 ease-out"
         style={{ width: `${pct}%` }}
@@ -972,7 +979,7 @@ function MigrateWizard() {
                   ? `${extractProgress.current} / ${extractProgress.total} products`
                   : 'Starting...'}
               </p>
-              <p className="font-mono text-[11px] text-ink-5">{extractPercent}%</p>
+              <p className="font-mono text-[11px] text-ink-3">{extractPercent}%</p>
             </div>
 
             {extractProgress?.message && (
@@ -1073,7 +1080,7 @@ function MigrateWizard() {
                   <p className="font-mono text-[11px] text-ink-4">
                     {importStatus.message || `${importStatus.current} / ${importStatus.total} products`}
                   </p>
-                  <p className="font-mono text-[11px] text-ink-5">{importPercent}%</p>
+                  <p className="font-mono text-[11px] text-ink-3">{importPercent}%</p>
                 </div>
               </>
             ) : (
@@ -1169,7 +1176,7 @@ function MigrateWizard() {
                 href={href}
                 target={href.startsWith('http') ? '_blank' : undefined}
                 rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-ink-5 hover:text-ink-3 transition-colors"
+                className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-4 hover:text-ink-2 transition-colors"
               >
                 {label}
               </a>
