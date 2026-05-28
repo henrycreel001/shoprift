@@ -193,22 +193,44 @@ function LinkBtn({ href, external, variant = 'secondary', size = 'md', className
   )
 }
 
-function StepTrack({ current }: { current: Step }) {
+// #7 — StepTrack is now interactive: completed steps that have a valid back-nav target are clickable
+interface StepTrackProps {
+  current: Step
+  navigableSteps?: Set<Step>
+  onStepClick?: (step: Step) => void
+}
+
+function StepTrack({ current, navigableSteps, onStepClick }: StepTrackProps) {
   const idx = stepIndex(current)
   return (
     <nav aria-label="Migration steps" className="mb-10 select-none">
       <div className="flex items-start">
         {STEP_ORDER.map((s, i) => {
-          const done   = i < idx
-          const active = i === idx
+          const done      = i < idx
+          const active    = i === idx
+          const clickable = done && !!onStepClick && (navigableSteps?.has(s) ?? false)
           return (
             <Fragment key={s}>
-              <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <div
+                className={[
+                  'flex flex-col items-center gap-1.5 flex-shrink-0',
+                  clickable ? 'cursor-pointer group' : '',
+                ].join(' ')}
+                onClick={clickable ? () => onStepClick!(s) : undefined}
+                role={clickable ? 'button' : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                aria-label={clickable ? `Go back to ${STEP_LABELS[s]}` : undefined}
+                onKeyDown={clickable ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStepClick!(s) }
+                } : undefined}
+              >
                 <div className={[
                   'w-[22px] h-[22px] rounded-full flex items-center justify-center transition-all duration-300',
-                  done   ? 'bg-emerald-50 border border-mint/40' :
-                  active ? 'bg-mint shadow-[0_0_0_3px_rgba(0,229,160,0.20)]' :
-                           'bg-wire-subtle border border-wire',
+                  done
+                    ? `bg-emerald-50 border border-mint/40${clickable ? ' group-hover:bg-mint/10 group-hover:border-mint/60' : ''}`
+                    : active
+                    ? 'bg-mint shadow-[0_0_0_3px_rgba(0,229,160,0.20)]'
+                    : 'bg-wire-subtle border border-wire',
                 ].join(' ')}>
                   {done ? (
                     <span className="text-mint-dark flex items-center justify-center">
@@ -223,9 +245,11 @@ function StepTrack({ current }: { current: Step }) {
                 </div>
                 <span className={[
                   'font-mono text-[8px] tracking-[0.09em] uppercase transition-colors duration-300 whitespace-nowrap',
-                  active ? 'text-ink font-semibold' :
-                  done   ? 'text-ink-3' :
-                           'text-ink-5',
+                  active
+                    ? 'text-ink font-semibold'
+                    : done
+                    ? `text-ink-3${clickable ? ' group-hover:text-ink' : ''}`
+                    : 'text-ink-5',
                 ].join(' ')}>{STEP_LABELS[s]}</span>
               </div>
               {i < STEP_ORDER.length - 1 && (
@@ -353,10 +377,20 @@ function MigrateWizard() {
   const [verifyLoading,     setVerifyLoading]     = useState(false)
   const [billingLoading,    setBillingLoading]    = useState(false)
   const [copied,            setCopied]            = useState(false)
+  // #11 — duplicate migration detection
+  const [hasPriorMigration, setHasPriorMigration] = useState(false)
+  // #12 — intermediate state between recon complete and step transition
+  const [checkingAccount,   setCheckingAccount]   = useState(false)
+  // #13 — verification code expiry countdown
+  const [verifySecsLeft,    setVerifySecsLeft]    = useState<number | null>(null)
 
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null)
   const appBridgeRef    = useRef<ReturnType<typeof createApp> | null>(null)
   const importStartRef  = useRef<number | null>(null)
+  // #17 — focus target for step transitions
+  const mainRef         = useRef<HTMLDivElement>(null)
+  // #13 — when the current verification code expires
+  const verifyExpRef    = useRef<number | null>(null)
 
   const clearPoll = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -372,6 +406,26 @@ function MigrateWizard() {
       importStartRef.current = null
     }
   }, [importStatus])
+
+  // #17 — shift keyboard focus to the content area on every step change
+  useEffect(() => {
+    mainRef.current?.focus()
+  }, [step])
+
+  // #13 — tick the verification code countdown every second while on the verifying step
+  useEffect(() => {
+    if (step !== 'verifying' || !verifyExpRef.current) {
+      setVerifySecsLeft(null)
+      return
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.round((verifyExpRef.current! - Date.now()) / 1000))
+      setVerifySecsLeft(left)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [step])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !host) return
@@ -440,6 +494,7 @@ function MigrateWizard() {
   async function handleCheckStore() {
     setUrlError(undefined)
     setError(null)
+    setHasPriorMigration(false)
     const url = storeUrl.trim()
     if (!isDm2buyUrl(url)) {
       setUrlError('Enter a valid dm2buy store URL — e.g. https://yourstore.dm2buy.com')
@@ -459,6 +514,9 @@ function MigrateWizard() {
       setReconData(data)
       track('recon_complete', { store_url: data.store_url, product_count: data.product_count, shop })
 
+      // #12 — recon complete; now doing account checks — show different label
+      setCheckingAccount(true)
+
       if (shop) {
         const supabase = createBrowserSupabaseClient()
         const { data: trialRow } = await supabase
@@ -476,6 +534,18 @@ function MigrateWizard() {
           setRemainingCount(Math.max(0, data.product_count - 5))
         }
 
+        // #11 — check for a prior completed full migration of this store
+        const { data: priorJob } = await supabase
+          .from('import_jobs')
+          .select('id')
+          .eq('account_id', shop)
+          .eq('store_url', data.store_url)
+          .eq('is_trial', false)
+          .eq('status', 'complete')
+          .maybeSingle()
+
+        if (priorJob) setHasPriorMigration(true)
+
         const { data: va } = await supabase
           .from('verification_attempts')
           .select('id, code')
@@ -483,6 +553,8 @@ function MigrateWizard() {
           .eq('store_url', data.store_url)
           .eq('status', 'verified')
           .maybeSingle()
+
+        setCheckingAccount(false)
 
         if (va) {
           setVerified(true)
@@ -498,13 +570,17 @@ function MigrateWizard() {
           if (!vRes.ok || !vData.code) throw new Error(vData.error ?? 'Failed to start verification.')
           setVerifyCode(vData.code)
           setVerifyAttemptId(vData.attemptId ?? null)
+          // #13 — record when this code expires (~15 min)
+          verifyExpRef.current = Date.now() + 15 * 60 * 1000
           setStep('verifying')
           track('verification_started', { store_url: data.store_url, shop })
         }
       } else {
+        setCheckingAccount(false)
         setStep('preview')
       }
     } catch (err) {
+      setCheckingAccount(false)
       setError(err instanceof Error ? err.message : 'Store scan failed. Check the URL and try again.')
       setStep('url')
     }
@@ -530,6 +606,9 @@ function MigrateWizard() {
         if (vData.code) {
           setVerifyCode(vData.code)
           setVerifyAttemptId(vData.attemptId ?? null)
+          // #13 — reset expiry timer for new code
+          verifyExpRef.current = Date.now() + 15 * 60 * 1000
+          setVerifySecsLeft(null) // will retrigger countdown effect via verifyExpRef update
           setVerifyError('Code expired. A new one is ready — add the new product name and try again.')
         }
         return
@@ -704,6 +783,12 @@ function MigrateWizard() {
     }
   }
 
+  // #7 — step back-navigation handler; only preview and results are safe destinations
+  function handleStepNav(s: Step) {
+    if (s === 'preview' && reconData) setStep('preview')
+    else if (s === 'results' && storeData) setStep('results')
+  }
+
   // ── Derived ─────────────────────────────────────────────────────────────────
 
   const tier           = reconData ? priceTier(reconData.product_count) : null
@@ -713,6 +798,17 @@ function MigrateWizard() {
     ? Math.round((importStatus.current / importStatus.total) * 100) : 0
   const trialExtDone   = extractProgress != null && extractProgress.total > 0 && extractProgress.current >= extractProgress.total
   const showWarnBanner = step === 'extracting' || step === 'trialing' || step === 'importing'
+
+  // #7 — steps that have a valid back-navigation target
+  const navigableSteps: Set<Step> = new Set([
+    ...(reconData ? ['preview' as Step] : []),
+    ...(storeData ? ['results' as Step] : []),
+  ])
+
+  // #13 — format countdown as M:SS
+  const verifyCountdown = verifySecsLeft != null
+    ? `${Math.floor(verifySecsLeft / 60)}:${String(verifySecsLeft % 60).padStart(2, '0')}`
+    : null
 
   let importEta: string | null = null
   if (importStatus && importStatus.current > 0 && importStatus.total > 0 && importStartRef.current) {
@@ -740,9 +836,14 @@ function MigrateWizard() {
 
   return (
     <div className="min-h-screen bg-page">
-      <div className="max-w-[592px] mx-auto px-6 py-8 pb-24">
+      {/* #17 — focus target; tabIndex=-1 allows focus() without showing a ring */}
+      <div
+        ref={mainRef}
+        tabIndex={-1}
+        className="outline-none max-w-[592px] mx-auto px-6 py-8 pb-24"
+      >
 
-        <StepTrack current={step} />
+        <StepTrack current={step} navigableSteps={navigableSteps} onStepClick={handleStepNav} />
 
         {/* Keep-window-open notice */}
         {showWarnBanner && (
@@ -806,7 +907,10 @@ function MigrateWizard() {
                 loading={step === 'reconning'}
                 className="w-full"
               >
-                {step === 'reconning' ? 'Scanning...' : <><span>Check store</span><IcoArrow /></>}
+                {/* #12 — differentiate "scanning store" from "checking your account" */}
+                {step === 'reconning'
+                  ? (checkingAccount ? 'Checking account...' : 'Scanning...')
+                  : <><span>Check store</span><IcoArrow /></>}
               </Btn>
             </form>
           </div>
@@ -863,9 +967,20 @@ function MigrateWizard() {
                   {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
-              <p className="mt-2 font-mono text-[10px] text-ink-5">
-                Product name must match exactly. Delete it after verification.
-              </p>
+              {/* #13 — show countdown; turns red when expired */}
+              <div className="mt-2 flex items-center justify-between">
+                <p className="font-mono text-[10px] text-ink-5">
+                  Product name must match exactly. Delete it after verification.
+                </p>
+                {verifyCountdown !== null && (
+                  <p className={[
+                    'font-mono text-[10px] flex-shrink-0 ml-3',
+                    verifySecsLeft === 0 ? 'text-red-400' : 'text-ink-5',
+                  ].join(' ')}>
+                    {verifySecsLeft === 0 ? 'Code expired' : `Expires ${verifyCountdown}`}
+                  </p>
+                )}
+              </div>
             </div>
 
             {verifyError && (
@@ -880,7 +995,7 @@ function MigrateWizard() {
               </Btn>
               <Btn
                 variant="ghost"
-                onClick={() => { setReconData(null); setVerifyCode(''); setVerifyAttemptId(null); setVerifyError(null); setStep('url') }}
+                onClick={() => { setReconData(null); setVerifyCode(''); setVerifyAttemptId(null); setVerifyError(null); verifyExpRef.current = null; setStep('url') }}
               >
                 Change URL
               </Btn>
@@ -898,6 +1013,13 @@ function MigrateWizard() {
               </h2>
               <p className="font-mono text-[11px] text-ink-4 mt-1">{reconData.store_url}</p>
             </div>
+
+            {/* #11 — warn if store was previously migrated */}
+            {hasPriorMigration && (
+              <AlertWarn>
+                This store was already migrated to this Shopify account. Importing again will create duplicate products.
+              </AlertWarn>
+            )}
 
             {/* Stats bar */}
             <div className="flex border border-wire rounded-xl overflow-hidden mb-7">
@@ -955,7 +1077,7 @@ function MigrateWizard() {
               )}
               <Btn
                 variant="ghost"
-                onClick={() => { setReconData(null); setTrialUsed(false); setTrialProductUrls([]); setVerified(false); setStep('url') }}
+                onClick={() => { setReconData(null); setTrialUsed(false); setTrialProductUrls([]); setVerified(false); setHasPriorMigration(false); setStep('url') }}
               >
                 Change URL
               </Btn>
@@ -1076,6 +1198,13 @@ function MigrateWizard() {
                 Your data is ready.
               </h2>
             </div>
+
+            {/* #11 — duplicate warning on results step too */}
+            {hasPriorMigration && (
+              <AlertWarn>
+                This store was already migrated to this Shopify account. Proceeding will create duplicate products.
+              </AlertWarn>
+            )}
 
             <div className="border border-wire rounded-xl overflow-hidden mb-5 divide-y divide-wire-subtle">
               <DataRow label="Products collected" value={String(storeData.products.length)} accent />
@@ -1228,10 +1357,16 @@ function MigrateWizard() {
               )}
             </div>
 
+            {/* #14 — link to both products and collections */}
             <div className="flex items-center gap-3 flex-wrap mb-8">
               <LinkBtn href={shop ? `https://${shop}/admin/products` : '#'} external={!!shop} variant="primary">
                 View products in Shopify <IcoArrow />
               </LinkBtn>
+              {importResult.collectionsCreated > 0 && (
+                <LinkBtn href={shop ? `https://${shop}/admin/collections` : '#'} external={!!shop} variant="secondary">
+                  View collections
+                </LinkBtn>
+              )}
               <Btn
                 variant="ghost"
                 onClick={() => {
@@ -1239,6 +1374,7 @@ function MigrateWizard() {
                   setImportResult(null); setJobId(null); setImportStatus(null); setError(null)
                   setTrialUsed(false); setTrialProductUrls([]); setRemainingCount(0)
                   setVerified(false); setVerifyCode(''); setVerifyAttemptId(null); setVerifyError(null)
+                  setHasPriorMigration(false); verifyExpRef.current = null
                 }}
               >
                 Migrate another store
