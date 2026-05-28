@@ -17,8 +17,8 @@
 ## LAST UPDATED
 
 - **Date:** 2026-05-28
-- **Session topic:** Phase 3 complete — Sentry on web app + Railway worker.
-- **Branch:** main (clean)
+- **Session topic:** Phase 5 in progress — PostHog (10 events), billing-update webhook, webhook dedup, shoprift.app domain live, email replaced in all legal docs.
+- **Branch:** main (uncommitted changes)
 
 ---
 
@@ -31,19 +31,20 @@
 | C — Web app | T1–T7 | ✅ Complete | Full flow incl. Shopify Billing (AppPurchaseOneTime). 9 products + 3 collections confirmed live in Shopify via paid test charge. |
 | D — Launch | Phase 1 | ✅ Complete | GDPR webhooks, App Bridge, JWT auth, GraphQL billing, dynamic CSP. |
 | D — Launch | Phase 2 | ✅ Complete | Rate limiting (3/hr on verify/start) + error response hardening (no raw messages in response bodies). |
-| D — Launch | Phase 3 | ✅ Complete | Sentry on web (@sentry/nextjs v10) + Railway worker (@sentry/node). onRequestError + global-error boundary. Needs SENTRY_DSN env vars set. |
-| D — Launch | Phase 4–6 | 🟡 In progress | Legal → Pre-submission ops → App Store submission. |
+| D — Launch | Phase 3 | ✅ Complete | Sentry on web (@sentry/nextjs v10) + Railway worker (@sentry/node). onRequestError + global-error boundary. SENTRY_DSN set in Vercel + Railway. |
+| D — Launch | Phase 4 | ✅ Complete | AUP + DMCA drafted. /terms /privacy /refund-policy pages live. Footer + pre-billing refund link in migrate UI. |
+| D — Launch | Phase 5 | 🟡 In progress | PostHog ✅, billing-update webhook ✅, webhook dedup ✅, domain ✅, email replaced ✅. Pending: migration 005, `shopify app deploy`, public distribution confirm, E2E test. |
+| D — Launch | Phase 6 | ⬜ Not started | App Store submission. |
 
 ---
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Phase 3 complete** — @sentry/nextjs (v10) wired: sentry.{client,server,edge}.config.ts + src/instrumentation.ts (onRequestError hook) + global-error.tsx boundary + withSentryConfig in next.config.ts. @sentry/node added to worker.js. Deployed to Vercel production. Needs SENTRY_DSN (server/worker) + NEXT_PUBLIC_SENTRY_DSN (client) env vars.
-2. **Phase 2 complete** — Rate limiting on verify/start (3 per shop per hour, 429 response). Error hardening: raw DB/worker error.message stripped from all response bodies across verify/start, verify/check, import/start, billing/create — full detail logged to console.error only. Deployed to Vercel production.
-2. **Phase 1 complete** — GDPR webhooks (compliance/route.ts + toml), App Bridge v3 (meta tag in layout + createApp/getSessionToken in migrate/page.tsx), JWT HS256 verification (lib/auth.ts applied to 5 routes + account_id guards), billing/callback REST→GraphQL, dynamic CSP middleware. Deployed to Vercel production.
-3. **Phase 0 complete** — Vercel production deploy, OAuth smoke test passed, Supabase migration 004 run. shoprift-4 active in Dev Dashboard at `https://project-pjqwm.vercel.app`.
-4. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0.
-5. **Billing flow confirmed E2E** — AppPurchaseOneTime wired, test charge approved, 9 products + 3 collections confirmed in Shopify.
+1. **Domain + email migration** — shoprift.app purchased, connected to Vercel. `support@shoprift.app` Cloudflare Email Routing → `001henrycreel@gmail.com`. All 26 occurrences of `001henrycreel@gmail.com` replaced with `support@shoprift.app` across 7 files (legal docs + migrate page mailto links).
+2. **Phase 5 partial** — PostHog analytics (10 events wired in migrate/page.tsx, lazy init, memory persistence, no autocapture). `APP_PURCHASES_ONE_TIME_UPDATE` webhook handler (billing-update/route.ts). Webhook deduplication (migration 005: charge_id column + webhook_idempotency table; all 3 webhook handlers dedup on X-Shopify-Webhook-Id). All URLs updated to shoprift.app.
+3. **Phase 4 complete** — `docs/legal/acceptable-use.md` + `docs/legal/dmca.md` drafted (IT Act §79 safe-harbour). Three legal pages created: `/terms`, `/privacy`, `/refund-policy`. Footer + pre-billing refund link in migrate UI. Deployed to Vercel production.
+4. **Phase 3 complete** — @sentry/nextjs (v10) wired: sentry.{client,server,edge}.config.ts + src/instrumentation.ts (onRequestError hook) + global-error.tsx boundary + withSentryConfig in next.config.ts. @sentry/node added to worker.js. SENTRY_DSN set in Vercel + Railway.
+5. **Phase 2 complete** — Rate limiting on verify/start (3 per shop per hour, 429 response). Error hardening: raw DB/worker error.message stripped from all response bodies. Full detail logged to console.error only.
 
 ---
 
@@ -51,24 +52,35 @@
 
 | Blocker | Blocks | Notes |
 |---------|--------|-------|
-| Domain not purchased | Legal / branding | All legal docs use personal email `001henrycreel@gmail.com`. Replace with domain email after purchase. 17 occurrences across 5 files. |
-| Sentry not installed | Observability | No error tracking. Phase 3. |
+| Migration 005 not run | Billing webhook + dedup | Run `supabase/migrations/005_charge_id_and_webhook_dedup.sql` in Supabase production SQL editor. |
+| `shopify app deploy` not run | Billing-update webhook registration | New webhook subscription in shopify.app.toml must be pushed to Shopify Partner API. |
 
 ---
 
 ## UNCOMMITTED CHANGES
 
-None.
+- `web/src/lib/analytics.ts` — PostHog wrapper (new)
+- `web/src/app/migrate/page.tsx` — 10 analytics events + email replaced
+- `web/src/app/api/payment/billing/create/route.ts` — stores charge_id GID after charge creation
+- `web/src/app/api/webhooks/billing-update/route.ts` — APP_PURCHASES_ONE_TIME_UPDATE handler (new)
+- `web/src/app/api/webhooks/compliance/route.ts` — deduplication added
+- `web/src/app/api/webhooks/app-uninstalled/route.ts` — deduplication added
+- `shopify.app.toml` — billing-update webhook subscription + URLs updated to shoprift.app
+- `supabase/migrations/005_charge_id_and_webhook_dedup.sql` — charge_id column + webhook_idempotency table (new, NOT YET RUN in production)
+- `docs/legal/*.md` — email replaced with support@shoprift.app (6 files)
+- `docs/CONTEXT.md` — updated
 
 ---
 
 ## NEXT TASKS (in priority order)
 
-1. **Set SENTRY_DSN env vars** — create Sentry project → get DSN → add `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel env vars; `SENTRY_DSN` to Railway env vars; then redeploy both
-2. **Phase 4 — Legal** — AUP + DMCA drafting (`/shoprift-legal`), refund policy link before billing step
-3. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
-4. **Phase 5 — Pre-submission ops** — PostHog analytics, billing-update webhook, webhook dedup table, production E2E test
-5. **Phase 6 — App Store submission** — listing assets, demo video, privacy page at /privacy, submit
+1. **Run migration 005** — execute `supabase/migrations/005_charge_id_and_webhook_dedup.sql` in Supabase production SQL editor
+2. **`shopify app deploy`** — push toml changes to register billing-update webhook with Shopify
+3. **Commit + deploy** — commit all Phase 5 changes, push to Vercel
+4. **Phase 5.4** — confirm distribution = Public in Partner Dashboard (irreversible — production app only)
+5. **Phase 5.5** — production E2E payment test (install → recon → verify → pay → import → complete)
+6. **Phase 6 — App Store submission** — listing assets (`/shoprift-content`), demo video (30–60s), test credentials for reviewers, submit
+7. **"Send mail as" in Gmail** — configure `support@shoprift.app` as send-from alias in Gmail SMTP settings (deferred by user)
 
 ---
 
@@ -99,6 +111,21 @@ None.
 - **dm2buy TLS cert expired** — All server-side API calls to `api.dm2buy.com` MUST use `axios + httpsAgent` with `rejectUnauthorized: false`. Pattern lives in `src/api.js`. Never use native `fetch` for dm2buy API calls from Node.js.
 - **Shopify Billing currency** — `AppPurchaseOneTime` created with `currencyCode: 'INR'`. Test mode: `isTest = NODE_ENV !== 'production'`.
 - **Razorpay scaffolded but unused** — `/api/payment/create` exists. Shopify Billing API (`AppPurchaseOneTime`) is the actual payment path for the embedded app.
+
+---
+
+## FUTURE WEBSITE / LANDING PAGE PLAN
+
+**When built, move legal pages there.** Currently `/terms`, `/privacy`, `/refund-policy` live on the Vercel app URL (temporary). Once a proper Shoprift website exists, these pages should live there instead and links in the app should point to the new domain.
+
+The future website should include:
+- Full interactive modern aesthetic landing page
+- Demos and screenshots of the migration flow
+- Documentation at a `docs.` subdomain
+- All legal pages (ToS, Privacy, Refund, AUP, DMCA, Grievance Officer)
+- Pricing section
+
+This is post-App Store submission scope. Do not build until app is live and generating revenue.
 
 ---
 

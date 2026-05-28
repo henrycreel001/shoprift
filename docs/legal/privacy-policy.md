@@ -23,7 +23,7 @@ If you are an EU resident, additional rights under GDPR apply (see Section 11). 
 
 **Data Fiduciary (Indian law) / Data Controller (GDPR):**  
 Mayank Malik, operating as Shoprift  
-Email: 001henrycreel@gmail.com  
+Email: support@shoprift.app  
 Grievance Officer: See Section 13 and `docs/legal/grievance-officer.md`
 
 ---
@@ -170,7 +170,7 @@ Under the Digital Personal Data Protection Act 2023, you have the right to:
 
 **10.5 Grievance redressal.** Raise a complaint with our Grievance Officer (see Section 13). If unresolved, you may approach the Data Protection Board of India once established.
 
-To exercise any right, email: 001henrycreel@gmail.com
+To exercise any right, email: support@shoprift.app
 
 We will respond within 30 days.
 
@@ -202,7 +202,7 @@ If you are a California resident, under the California Consumer Privacy Act:
 
 **12.4** You have the right to non-discrimination for exercising your CCPA rights.
 
-To exercise California rights, contact: 001henrycreel@gmail.com
+To exercise California rights, contact: support@shoprift.app
 
 ---
 
@@ -211,7 +211,7 @@ To exercise California rights, contact: 001henrycreel@gmail.com
 In accordance with IT (Intermediary Guidelines and Digital Media Ethics Code) Rules 2021, Rule 3(2):
 
 **Grievance Officer:** Mayank Malik  
-**Email:** 001henrycreel@gmail.com  
+**Email:** support@shoprift.app  
 **Acknowledgement:** Within 24 hours of receipt  
 **Resolution:** Within 15 days of receipt
 
@@ -249,7 +249,7 @@ We may update this Privacy Policy from time to time. Material changes will be no
 ## 17. Contact
 
 Mayank Malik | Shoprift  
-Email: 001henrycreel@gmail.com
+Email: support@shoprift.app
 
 ---
 

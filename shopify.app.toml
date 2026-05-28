@@ -2,7 +2,7 @@
 
 client_id = "09b414e0b4717bf7de0c61d5e7a90984"
 name = "Shoprift"
-application_url = "https://project-pjqwm.vercel.app"
+application_url = "https://shoprift.app"
 embedded = true
 
 [webhooks]
@@ -10,7 +10,11 @@ api_version = "2026-04"
 
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-uri = "https://project-pjqwm.vercel.app/api/webhooks/compliance"
+uri = "https://shoprift.app/api/webhooks/compliance"
+
+[[webhooks.subscriptions]]
+topics = ["app_purchases_one_time/update"]
+uri = "https://shoprift.app/api/webhooks/billing-update"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -18,7 +22,7 @@ scopes = "read_products,write_product_listings,write_products"
 
 [auth]
 redirect_urls = [
-  "https://project-pjqwm.vercel.app/api/auth/callback"
+  "https://shoprift.app/api/auth/callback"
 ]
 
 [pos]

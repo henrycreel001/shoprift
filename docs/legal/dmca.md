@@ -40,7 +40,7 @@
 
 > **Designated Copyright Agent / Grievance Officer**  
 > Name: Mayank Malik  
-> Email: 001henrycreel@gmail.com  
+> Email: support@shoprift.app  
 > Subject line: COPYRIGHT INFRINGEMENT NOTICE — [brief description]
 
 **3.2** Your notice must include all of the following to be valid and actionable:
@@ -123,7 +123,7 @@
 **8.1** For trade mark infringement, passing off, or other IP claims not covered by this policy, contact:
 
 > Mayank Malik  
-> Email: 001henrycreel@gmail.com  
+> Email: support@shoprift.app  
 > Subject line: IP CLAIM — [brief description]
 
 **8.2** Shoprift will review such claims on a case-by-case basis and respond within 15 days.
@@ -136,5 +136,5 @@
 
 ---
 
-*Shoprift — operated by Mayank Malik | 001henrycreel@gmail.com*  
-*Designated Copyright Agent / Grievance Officer: Mayank Malik | 001henrycreel@gmail.com*
+*Shoprift — operated by Mayank Malik | support@shoprift.app*  
+*Designated Copyright Agent / Grievance Officer: Mayank Malik | support@shoprift.app*

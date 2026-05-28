@@ -86,7 +86,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   const appUrl = requireEnv('SHOPIFY_APP_URL');
   const returnUrl = `${appUrl}/api/payment/billing/callback?jobId=${jobId}&shop=${encodeURIComponent(shop)}`;
   const chargeLabel = typeof planName === 'string' ? planName : 'Shoprift Migration';
-  const isTest = process.env.NODE_ENV !== 'production';
+  const isTest = process.env.NODE_ENV !== 'production' || process.env.SHOPIFY_BILLING_TEST === 'true';
+  console.error('[billing/create] isTest:', isTest, 'NODE_ENV:', process.env.NODE_ENV, 'BILLING_TEST:', process.env.SHOPIFY_BILLING_TEST);
 
   const mutation = `
     mutation CreateCharge($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
@@ -171,6 +172,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       .update({ status: 'failed', error: 'No confirmation URL from Shopify' })
       .eq('id', jobId);
     return NextResponse.json({ error: 'No confirmation URL from Shopify' }, { status: 500 });
+  }
+
+  // Store charge GID so APP_PURCHASES_ONE_TIME_UPDATE webhook can find this job
+  const chargeGid = result.appPurchaseOneTime?.id ?? null;
+  if (chargeGid) {
+    await supabase
+      .from('import_jobs')
+      .update({ charge_id: chargeGid })
+      .eq('id', jobId);
   }
 
   return NextResponse.json({ confirmationUrl, jobId });

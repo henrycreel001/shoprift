@@ -25,9 +25,9 @@
 
 ## 1 — Quick Launch Readiness
 
-- [ ] **Analytics set up** — nothing tracked currently. Posthog or Mixpanel free tier. Minimum: page views + `migration_started`, `payment_initiated`, `migration_complete` events.
+- [x] **Analytics set up** — `posthog-js` installed. `web/src/lib/analytics.ts` wrapper (memory persistence, no cookies, no autocapture). 10 events instrumented in `migrate/page.tsx`. Requires `NEXT_PUBLIC_POSTHOG_KEY` env var in Vercel. ✅ Phase 5
 - [ ] **Payment flow tested on production** — T7 confirmed on dev/ngrok. Must repeat on Vercel/Railway prod URL with real Shopify store before opening to users.
-- [x] **Shopify OAuth works on production** — tested on `project-pjqwm.vercel.app`. Install + callback confirmed. ✅ Phase 0
+- [x] **Shopify OAuth works on production** — tested on `shoprift.app`. Install + callback confirmed. ✅ Phase 0
 - [x] **Backend authorization enforced** — JWT HS256 session token verification in `web/src/lib/auth.ts` applied to all API routes. `account_id` guard on every job select. ✅ Phase 1/2
 - [x] **Rate limiting on API routes** — `/api/verify/start`: max 3 per shop per hour (DB query, works across serverless). One active job per shop enforced at import/start. ✅ Phase 2
 - [x] **Error monitoring (Sentry)** — `@sentry/nextjs` v10 on web + `@sentry/node` on Railway worker. DSNs set in Vercel + Railway env vars. ✅ Phase 3
@@ -57,10 +57,10 @@ Implement before real users. You need to know where people drop off.
 | `migration_failed` | Worker returns error |
 
 **Rules:**
-- [ ] Consistent naming: `noun_verb` pattern (above)
-- [ ] Include `shop`, `product_count`, `plan` on payment events
-- [ ] No PII in event properties (no store owner names, no email addresses)
-- [ ] Build a simple funnel dashboard: recon → verify → payment → complete. Drop-off at each step is your product signal.
+- [x] Consistent naming: `noun_verb` pattern (above)
+- [x] Include `shop`, `product_count`, `plan` on payment events
+- [x] No PII in event properties (no store owner names, no email addresses)
+- [ ] Build a simple funnel dashboard: recon → verify → payment → complete. Drop-off at each step is your product signal. (PostHog UI — do after first real users)
 
 ---
 
@@ -99,7 +99,7 @@ This is the gap that matters most before real users.
 
 - [x] **Sentry on Next.js** — `@sentry/nextjs` v10 wired: `sentry.{client,server,edge}.config.ts`, `instrumentation.ts` with `onRequestError`, `global-error.tsx`, `withSentryConfig` in `next.config.ts`. ✅ Phase 3
 - [x] **Sentry on Railway worker** — `@sentry/node` init in `worker.js` before worker starts. ✅ Phase 3
-- [ ] **Alert on payment failures** — Sentry alert not yet configured. Set up: any job reaching `status = failed` after a charge should notify immediately via Sentry alert rules.
+- [x] **Alert on payment failures** — Sentry alert rules created for both `shoprift-web` and `shoprift-worker` projects. Trigger: new issue created. Action: Notify Team #shoprift + Notify Suggested Assignees. Throttle: 24hrs. Test notification confirmed delivered to `001henrycreel@gmail.com`. ✅ 2026-05-28
 - [ ] **Logs include job ID** — every `console.error` in API routes should include `jobId` when available so you can trace a seller's problem through Railway logs.
 
 ---
@@ -122,7 +122,7 @@ When ready to list publicly on the Shopify App Store (not required for direct in
 
 ## 8 — Landing Page & Discoverability
 
-> **Note on legal pages (2026-05-28):** `/terms`, `/privacy`, `/refund-policy` currently live on the Vercel app URL (`project-pjqwm.vercel.app`). These are temporary. When the Shoprift website is built, migrate these pages there and update all footer links in `web/src/app/migrate/page.tsx`.
+> **Note on legal pages (2026-05-28):** `/terms`, `/privacy`, `/refund-policy` currently live on the Vercel app URL (`shoprift.app`). These are temporary. When the Shoprift website is built, migrate these pages there and update all footer links in `web/src/app/migrate/page.tsx`.
 
 Shoprift needs a public landing page outside the Shopify admin (for search traffic, social sharing, app listing links).
 **Scope: post-App Store launch. Do not build until app is generating revenue.**
@@ -160,7 +160,7 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 | Cookie Policy | ⏸ Deferred | Wire when analytics (PostHog) added |
 | DMCA / Takedown | ✅ Drafted | `docs/legal/dmca.md` v1.0 — IT Act §79 + voluntary DMCA §512 |
 | Lawyer review pass | ❌ Not done | Budget ₹20–30k. Required before money changes hands with real users. |
-| Domain + professional email | ❌ Not done | 17 occurrences of `001henrycreel@gmail.com` in 5 legal files (tracked in PRE_LAUNCH_CHECKLIST.md). Also update legal page URLs from `project-pjqwm.vercel.app` to final domain. |
+| Domain + professional email | ❌ Not done | 17 occurrences of `001henrycreel@gmail.com` in 5 legal files (tracked in PRE_LAUNCH_CHECKLIST.md). Also update legal page URLs from `shoprift.app` to final domain. |
 
 ---
 
@@ -215,7 +215,7 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 
 - [ ] **Distribution type must be "public"** — Shopify Billing API (`AppPurchaseOneTime`) only works for apps with public distribution. Custom apps cannot charge merchants. Verify in Partner Dashboard → App setup → Distribution. If "custom", change to "public (unlisted)" before any real merchant payment flows. **Critical caveat: distribution method is irreversible once set.** If you have separate dev and production apps in Partner Dashboard, set distribution on the **production app**, not the dev app. Dev app can remain custom. Double-check before selecting.
 
-- [ ] **APP_PURCHASES_ONE_TIME_UPDATE webhook missing** — Shopify sends billing state changes (pending → active, cancelled, declined) via this webhook. Currently not subscribed. Without it, cancellation/decline states are only caught at callback time and a server restart could miss them. Add handler and subscribe in `shopify.app.toml`.
+- [x] **APP_PURCHASES_ONE_TIME_UPDATE webhook** — subscribed in `shopify.app.toml`. Handler at `/api/webhooks/billing-update` verifies HMAC, deduplicates via `webhook_idempotency` table, marks job failed on DECLINED/CANCELLED. `charge_id` stored at billing/create time (migration 005). ✅ Phase 5
 
 - [ ] **Webhook HMAC verification** — review existing `app-uninstalled` handler to confirm it calls `shopify.webhooks.validate({ rawBody, headers })` before processing. All future webhook handlers (compliance, billing update) must also verify. Pattern: return 401 immediately on invalid HMAC, return 200 on valid (process asynchronously).
 
@@ -235,7 +235,7 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 
 - [ ] **Reconciliation job** — Shopify does not guarantee webhook delivery. Before App Store submission, add a daily background job querying `currentAppInstallation` to confirm app is still installed and billing is current. Prevents stale state accumulating as merchant volume grows.
 
-- [ ] **Webhook deduplication** — Shopify can retry webhooks with the same `X-Shopify-Webhook-Id`. Handlers must check this header against a short-lived processed set (e.g. a Supabase table or Redis key with 24hr TTL) before executing. Prevents double-import-triggers and double-deletion on retry.
+- [x] **Webhook deduplication** — `webhook_idempotency` table (migration 005). All 3 webhook handlers (`app-uninstalled`, `compliance`, `billing-update`) check `X-Shopify-Webhook-Id` before processing. ✅ Phase 5
 
 ### LOW / nice-to-have
 

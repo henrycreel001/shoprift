@@ -26,6 +26,7 @@ import { createBrowserSupabaseClient } from '@/lib/supabase'
 import type { ReconData, StoreData, ProgressEvent } from '@/lib/dm2buy/types'
 import createApp from '@shopify/app-bridge'
 import { getSessionToken } from '@shopify/app-bridge/utilities'
+import { track } from '@/lib/analytics'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -217,6 +218,7 @@ function MigrateWizard() {
     const id = billingJobId
     setJobId(id)
     setStep('importing')
+    track('payment_complete', { shop })
     const poll = async () => {
       try {
         const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
@@ -230,10 +232,13 @@ function MigrateWizard() {
         setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
         if (d.status === 'complete') {
           clearPoll()
-          setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+          const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
+          setImportResult(result)
+          track('migration_complete', { shop, products_created: result.productsCreated, collections_created: result.collectionsCreated })
           setStep('done')
         } else if (d.status === 'failed') {
           clearPoll()
+          track('migration_failed', { shop, phase: 'import' })
           setError(d.error ?? 'Import failed. Contact support.')
         }
       } catch {
@@ -254,10 +259,12 @@ function MigrateWizard() {
       setUrlError('Enter a valid dm2buy store URL, e.g. https://yourstore.dm2buy.com')
       return
     }
+    track('recon_started', { store_url: url, shop })
     setStep('reconning')
     try {
       const data = await runRecon(url)
       setReconData(data)
+      track('recon_complete', { store_url: data.store_url, product_count: data.product_count, shop })
 
       if (shop) {
         const supabase = createBrowserSupabaseClient()
@@ -306,6 +313,7 @@ function MigrateWizard() {
           setVerifyCode(vData.code)
           setVerifyAttemptId(vData.attemptId ?? null)
           setStep('verifying')
+          track('verification_started', { store_url: data.store_url, shop })
         }
       } else {
         // Dev mode without shop param — skip verification
@@ -346,6 +354,7 @@ function MigrateWizard() {
       }
       if (d.verified) {
         setVerified(true)
+        track('verification_complete', { store_url: reconData?.store_url, shop })
         setStep('preview')
       } else {
         setVerifyError('Product not found. Make sure the product name is exactly the code shown, then try again.')
@@ -361,6 +370,7 @@ function MigrateWizard() {
 
   async function handleTrialImport() {
     if (!reconData) return
+    track('trial_import_started', { store_url: reconData.store_url, product_count: reconData.product_count, shop })
     setStep('trialing')
     setExtractProgress(null)
     setImportStatus(null)
@@ -407,11 +417,14 @@ function MigrateWizard() {
           setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
           if (d.status === 'complete') {
             clearPoll()
-            setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+            const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
+            setImportResult(result)
             setTrialUsed(true)
+            track('trial_import_complete', { shop, products_created: result.productsCreated })
             setStep('trial_done')
           } else if (d.status === 'failed') {
             clearPoll()
+            track('migration_failed', { shop, phase: 'trial' })
             setError(d.error ?? 'Trial import failed. Contact support.')
             setStep('preview')
           }
@@ -487,10 +500,13 @@ function MigrateWizard() {
             setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
             if (d.status === 'complete') {
               clearPoll()
-              setImportResult(d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 })
+              const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
+              setImportResult(result)
+              track('migration_complete', { shop, products_created: result.productsCreated, collections_created: result.collectionsCreated })
               setStep('done')
             } else if (d.status === 'failed') {
               clearPoll()
+              track('migration_failed', { shop, phase: 'import_free' })
               setError(d.error ?? 'Import failed. Contact support.')
             }
           } catch {
@@ -508,6 +524,7 @@ function MigrateWizard() {
 
     // Paid tier — Shopify Billing API
     setBillingLoading(true)
+    track('payment_initiated', { shop, plan: tier.plan, price: tier.price, product_count: storeData.products.length })
     try {
       const amount = parseInt(tier.price.replace(/[₹,]/g, ''), 10)
       const res = await fetch('/api/payment/billing/create', {
@@ -594,7 +611,7 @@ function MigrateWizard() {
               <Text as="p">{error}</Text>
               <Text as="p" tone="subdued">
                 Need help?{' '}
-                <Link url="mailto:001henrycreel@gmail.com" removeUnderline={false}>
+                <Link url="mailto:support@shoprift.app" removeUnderline={false}>
                   Email support
                 </Link>
               </Text>
@@ -997,7 +1014,7 @@ function MigrateWizard() {
               <Text tone="subdued" as="p">
                 {tier.isFree
                   ? 'No charge for stores with 3 or fewer products.'
-                  : <>Payment via Shopify Billing · Full refund if import fails · <Link url="https://project-pjqwm.vercel.app/refund-policy" target="_blank" removeUnderline={false}>Refund policy</Link></>}
+                  : <>Payment via Shopify Billing · Full refund if import fails · <Link url="https://shoprift.app/refund-policy" target="_blank" removeUnderline={false}>Refund policy</Link></>}
               </Text>
             </BlockStack>
           </Card>
@@ -1106,19 +1123,19 @@ function MigrateWizard() {
 
       <Box paddingBlockStart="800" paddingBlockEnd="400">
         <InlineStack gap="400" align="center" wrap>
-          <Link url="https://project-pjqwm.vercel.app/terms" target="_blank" removeUnderline>
+          <Link url="https://shoprift.app/terms" target="_blank" removeUnderline>
             <Text tone="subdued" as="span" variant="bodySm">Terms of Service</Text>
           </Link>
           <Text tone="subdued" as="span" variant="bodySm">·</Text>
-          <Link url="https://project-pjqwm.vercel.app/privacy" target="_blank" removeUnderline>
+          <Link url="https://shoprift.app/privacy" target="_blank" removeUnderline>
             <Text tone="subdued" as="span" variant="bodySm">Privacy Policy</Text>
           </Link>
           <Text tone="subdued" as="span" variant="bodySm">·</Text>
-          <Link url="https://project-pjqwm.vercel.app/refund-policy" target="_blank" removeUnderline>
+          <Link url="https://shoprift.app/refund-policy" target="_blank" removeUnderline>
             <Text tone="subdued" as="span" variant="bodySm">Refund Policy</Text>
           </Link>
           <Text tone="subdued" as="span" variant="bodySm">·</Text>
-          <Link url="mailto:001henrycreel@gmail.com" removeUnderline>
+          <Link url="mailto:support@shoprift.app" removeUnderline>
             <Text tone="subdued" as="span" variant="bodySm">Grievance Officer</Text>
           </Link>
         </InlineStack>

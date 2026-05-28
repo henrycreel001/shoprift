@@ -16,14 +16,14 @@ In accordance with Rule 3(2)(b) of the Information Technology (Intermediary Guid
 | **Name** | Mayank Malik |
 | **Designation** | Grievance Officer |
 | **Organisation** | Shoprift |
-| **Email** | 001henrycreel@gmail.com |
+| **Email** | support@shoprift.app |
 | **Working hours** | Monday – Saturday, 10:00 AM – 6:00 PM IST |
 
 ---
 
 ## How to Submit a Grievance
 
-Send your grievance by email to **001henrycreel@gmail.com** with the subject line:
+Send your grievance by email to **support@shoprift.app** with the subject line:
 
 ```
 Grievance: [brief description] — [your store URL or order reference if applicable]
@@ -84,7 +84,7 @@ If you believe Shoprift's platform or any content delivered through it violates 
 ## Contact
 
 Mayank Malik | Shoprift  
-Email: 001henrycreel@gmail.com
+Email: support@shoprift.app
 
 ---
 

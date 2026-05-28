@@ -9,7 +9,7 @@
 
 ## 1. Definitions
 
-**1.1** "**Shoprift**" means the migration service operated by Mayank Malik (contact: 001henrycreel@gmail.com).
+**1.1** "**Shoprift**" means the migration service operated by Mayank Malik (contact: support@shoprift.app).
 
 **1.2** "**Service**" means the store data extraction, formatting, and delivery service provided by Shoprift, accessible via the Shoprift website and CLI tool.
 
@@ -110,7 +110,7 @@ The Seller must not use the Service to:
 
 **8.3 Refund method.** Refunds are issued to the original payment method via Razorpay within 7–10 business days of approval.
 
-**8.4 How to request.** Email 001henrycreel@gmail.com with subject "Refund Request — [store URL]" within 7 days of the extraction job date.
+**8.4 How to request.** Email support@shoprift.app with subject "Refund Request — [store URL]" within 7 days of the extraction job date.
 
 **8.5 No refund for dissatisfaction with Source Platform data.** Shoprift extracts what is present on the Source Platform. If the Source Platform's data is incomplete, low quality, or different from what the Seller expected, this is not grounds for a refund — Shoprift delivered what was there.
 
@@ -204,7 +204,7 @@ Shoprift's collection and use of personal data is governed by the Shoprift Priva
 In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules 2021:
 
 **Grievance Officer:** Mayank Malik  
-**Email:** 001henrycreel@gmail.com  
+**Email:** support@shoprift.app  
 **Response time:** Acknowledgement within 24 hours; resolution within 15 days.
 
 Full Grievance Officer notice: `docs/legal/grievance-officer.md`
@@ -214,7 +214,7 @@ Full Grievance Officer notice: `docs/legal/grievance-officer.md`
 ## 18. Contact
 
 Mayank Malik | Shoprift  
-Email: 001henrycreel@gmail.com
+Email: support@shoprift.app
 
 ---
 

@@ -22,7 +22,7 @@ This policy is part of the Agreements between the Seller and Shoprift. Defined t
 If the Seller's extraction job has not yet started at the time of cancellation request, a full refund will be issued. No questions asked.
 
 **2.2 How to cancel before extraction begins.**  
-Email 001henrycreel@gmail.com with the subject line: `Cancellation — [your store URL]`. Include your job ID if available.
+Email support@shoprift.app with the subject line: `Cancellation — [your store URL]`. Include your job ID if available.
 
 **2.3 What "not yet started" means.**  
 The extraction job is considered started when the Shoprift worker begins connecting to the Source Platform. For self-serve web app jobs, this typically occurs within minutes of payment confirmation. If you are unsure, email within 30 minutes of payment and we will check.
@@ -55,7 +55,7 @@ The Delivery Package is formatted according to Shoprift's published Shopify impo
 
 ## 4. How to Request a Refund
 
-**4.1** Email 001henrycreel@gmail.com with the subject line: `Refund Request — [your store URL]`
+**4.1** Email support@shoprift.app with the subject line: `Refund Request — [your store URL]`
 
 **4.2** Include:
 - Your store URL
@@ -101,7 +101,7 @@ No refund is issued in the following situations:
 If you are not satisfied with the outcome of a refund request, you may escalate to the Grievance Officer:
 
 **Grievance Officer:** Mayank Malik  
-**Email:** 001henrycreel@gmail.com  
+**Email:** support@shoprift.app  
 **Response:** Acknowledgement within 24 hours; resolution within 15 days.
 
 For unresolved disputes, see the Terms of Service, Clause 16 (Arbitration).
@@ -119,7 +119,7 @@ Shoprift may update this policy from time to time. The updated version will be p
 ## 9. Contact
 
 Mayank Malik | Shoprift  
-Email: 001henrycreel@gmail.com
+Email: support@shoprift.app
 
 ---
 

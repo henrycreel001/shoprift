@@ -11,12 +11,25 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getShopify, sessionStorage } from '@/lib/shopify';
+import { createServerSupabaseClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest): Promise<Response> {
   const shopify = getShopify();
 
   // Read raw body before any parsing — required for HMAC validation
   const rawBody = await request.text();
+  const webhookId = request.headers.get('x-shopify-webhook-id') ?? '';
+
+  // Deduplication
+  const supabase = createServerSupabaseClient();
+  if (webhookId) {
+    const { data: existing } = await supabase
+      .from('webhook_idempotency')
+      .select('webhook_id')
+      .eq('webhook_id', webhookId)
+      .maybeSingle();
+    if (existing) return NextResponse.json({ ok: true });
+  }
 
   let result;
   try {
@@ -28,6 +41,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (!result.valid) {
     return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+  }
+
+  if (webhookId) {
+    await supabase.from('webhook_idempotency').insert({ webhook_id: webhookId }).select().maybeSingle();
   }
 
   // result.domain is only present when result.valid === true (discriminated union)

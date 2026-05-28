@@ -17,7 +17,7 @@
 
 **1.2** "**Platform**" means the dm2buy store accessible at the URL provided by the Seller during onboarding, including all product listings, images, descriptions, pricing, collection structure, and store metadata associated with that URL.
 
-**1.3** "**Shoprift**" means the migration service operated by Mayank Malik (contact: 001henrycreel@gmail.com).
+**1.3** "**Shoprift**" means the migration service operated by Mayank Malik (contact: support@shoprift.app).
 
 **1.4** "**Seller**" means the individual or entity accepting this Agreement and initiating the migration.
 
@@ -144,7 +144,7 @@ By accepting this Agreement (checkbox on Shoprift web app, or written instructio
 ## Contact
 
 Mayank Malik | Shoprift  
-Email: 001henrycreel@gmail.com  
+Email: support@shoprift.app  
 Grievance Officer: See `docs/legal/grievance-officer.md`
 
 ---

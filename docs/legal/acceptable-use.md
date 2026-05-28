@@ -118,7 +118,7 @@ Sellers must not:
 **7.1** If you become aware of content or conduct on the Service that violates this AUP, report it to Shoprift's Grievance Officer:
 
 - **Name:** Mayank Malik  
-- **Email:** 001henrycreel@gmail.com  
+- **Email:** support@shoprift.app  
 - **Response:** Acknowledgement within 24 hours; resolution within 15 days
 
 **7.2** Reports should describe the nature of the violation, the store or job involved, and any supporting evidence. Anonymous reports are accepted.
@@ -143,5 +143,5 @@ Sellers must not:
 
 ---
 
-*Shoprift — operated by Mayank Malik | 001henrycreel@gmail.com*  
-*Grievance Officer: Mayank Malik | 001henrycreel@gmail.com | Response within 15 days*
+*Shoprift — operated by Mayank Malik | support@shoprift.app*  
+*Grievance Officer: Mayank Malik | support@shoprift.app | Response within 15 days*
