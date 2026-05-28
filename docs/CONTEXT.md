@@ -16,8 +16,8 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-05-27
-- **Session topic:** Phase 1 complete — GDPR webhooks, App Bridge, JWT auth, GraphQL billing, dynamic CSP.
+- **Date:** 2026-05-28
+- **Session topic:** Phase 2 complete — rate limiting + error response hardening.
 - **Branch:** main (clean)
 
 ---
@@ -29,15 +29,17 @@
 | A — Engine | 0–10 | ✅ Passing | kiwiishop: 25 products, 5 collections, 63 images ✅ |
 | B — CSV mapper | 11 | ✅ Complete | Shopify + generic preset shipped |
 | C — Web app | T1–T7 | ✅ Complete | Full flow incl. Shopify Billing (AppPurchaseOneTime). 9 products + 3 collections confirmed live in Shopify via paid test charge. |
-| D — Launch | 15 | 🟡 In progress | PRE_LAUNCH_CHECKLIST ✅ (except domain/email). Blocked on Vercel prod deploy + migration 004. |
+| D — Launch | Phase 1 | ✅ Complete | GDPR webhooks, App Bridge, JWT auth, GraphQL billing, dynamic CSP. |
+| D — Launch | Phase 2 | ✅ Complete | Rate limiting (3/hr on verify/start) + error response hardening (no raw messages in response bodies). |
+| D — Launch | Phase 3–6 | 🟡 In progress | Sentry → Legal → Pre-submission ops → App Store submission. |
 
 ---
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Phase 1 complete** — GDPR webhooks (compliance/route.ts + toml), App Bridge v3 (meta tag in layout + createApp/getSessionToken in migrate/page.tsx), JWT HS256 verification (lib/auth.ts applied to 5 routes + account_id guards), billing/callback REST→GraphQL, dynamic CSP middleware. Deployed to Vercel production.
-2. **Phase 0 complete** — Vercel production deploy, OAuth smoke test passed, Supabase migration 004 run. shoprift-4 active in Dev Dashboard at `https://project-pjqwm.vercel.app`.
-3. **Verification product bug fixed** — `.select('id, code')` + `setVerifyCode(va.code)` on short-circuit path in migrate/page.tsx.
+1. **Phase 2 complete** — Rate limiting on verify/start (3 per shop per hour, 429 response). Error hardening: raw DB/worker error.message stripped from all response bodies across verify/start, verify/check, import/start, billing/create — full detail logged to console.error only. Deployed to Vercel production.
+2. **Phase 1 complete** — GDPR webhooks (compliance/route.ts + toml), App Bridge v3 (meta tag in layout + createApp/getSessionToken in migrate/page.tsx), JWT HS256 verification (lib/auth.ts applied to 5 routes + account_id guards), billing/callback REST→GraphQL, dynamic CSP middleware. Deployed to Vercel production.
+3. **Phase 0 complete** — Vercel production deploy, OAuth smoke test passed, Supabase migration 004 run. shoprift-4 active in Dev Dashboard at `https://project-pjqwm.vercel.app`.
 4. **Refund & Cancellation Policy drafted** — `docs/legal/refund-policy.md` v1.0.
 5. **Billing flow confirmed E2E** — AppPurchaseOneTime wired, test charge approved, 9 products + 3 collections confirmed in Shopify.
 
@@ -48,8 +50,6 @@
 | Blocker | Blocks | Notes |
 |---------|--------|-------|
 | Domain not purchased | Legal / branding | All legal docs use personal email `001henrycreel@gmail.com`. Replace with domain email after purchase. 17 occurrences across 5 files. |
-| Rate limiting not implemented | Security | No per-shop cooldown on verify/start. Phase 2 Task 2.3. |
-| Error messages expose internals | Security | Some routes return raw `error.message`. Phase 2 Task 2.4. |
 | Sentry not installed | Observability | No error tracking. Phase 3. |
 
 ---
@@ -62,11 +62,11 @@ None.
 
 ## NEXT TASKS (in priority order)
 
-1. **Phase 2 — Rate limiting** — per-shop cooldown on `/api/verify/start` (max 3 per hour)
-2. **Phase 2 — Error response hardening** — replace raw error.message with generic messages across all routes
-3. **Phase 3 — Sentry** — `@sentry/nextjs` on web + `@sentry/node` on Railway worker
-4. **Phase 4 — Legal** — AUP + DMCA drafting (`/shoprift-legal`), refund policy link before billing step
-5. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
+1. **Phase 3 — Sentry** — `@sentry/nextjs` on web + `@sentry/node` on Railway worker; add `SENTRY_DSN` to Vercel + Railway env vars
+2. **Phase 4 — Legal** — AUP + DMCA drafting (`/shoprift-legal`), refund policy link before billing step
+3. **Buy domain** — replace `001henrycreel@gmail.com` in 5 legal files (17 occurrences)
+4. **Phase 5 — Pre-submission ops** — PostHog analytics, billing-update webhook, webhook dedup table, production E2E test
+5. **Phase 6 — App Store submission** — listing assets, demo video, privacy page at /privacy, submit
 
 ---
 
