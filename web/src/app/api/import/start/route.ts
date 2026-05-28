@@ -70,10 +70,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     .single();
 
   if (insertError || !jobRow) {
-    return NextResponse.json(
-      { error: `Failed to create job: ${insertError?.message ?? 'unknown'}` },
-      { status: 500 },
-    );
+    console.error({ phase: 'import/start', shop, error: insertError });
+    return NextResponse.json({ error: 'Failed to create import job' }, { status: 500 });
   }
 
   const jobId: string = jobRow.id;
@@ -104,19 +102,21 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (!workerRes.ok) {
       const errBody = await workerRes.json().catch(() => ({ error: 'Worker error' }));
       const errMsg = (errBody as { error?: string }).error ?? 'Worker error';
+      console.error({ phase: 'import/start', shop, jobId, workerError: errMsg });
       await supabase
         .from('import_jobs')
         .update({ status: 'failed', error: errMsg })
         .eq('id', jobId);
-      return NextResponse.json({ error: errMsg }, { status: 502 });
+      return NextResponse.json({ error: 'Import service error' }, { status: 502 });
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Worker unreachable';
+    console.error({ phase: 'import/start', shop, jobId, error: message });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: message })
       .eq('id', jobId);
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: 'Import service unreachable' }, { status: 502 });
   }
 
   return NextResponse.json({ jobId });

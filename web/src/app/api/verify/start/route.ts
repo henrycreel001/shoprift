@@ -40,6 +40,21 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const supabase = createServerSupabaseClient();
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count } = await supabase
+    .from('verification_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', shop)
+    .gte('created_at', oneHourAgo);
+
+  if ((count ?? 0) >= 3) {
+    return NextResponse.json(
+      { error: 'Too many verification attempts. Try again in an hour.' },
+      { status: 429 },
+    );
+  }
+
   const code = genCode();
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
@@ -50,10 +65,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     .single();
 
   if (error || !data) {
-    return NextResponse.json(
-      { error: error?.message ?? 'Failed to create verification attempt' },
-      { status: 500 },
-    );
+    console.error({ phase: 'verify/start', shop, error });
+    return NextResponse.json({ error: 'Failed to start verification' }, { status: 500 });
   }
 
   return NextResponse.json({ code, attemptId: data.id });

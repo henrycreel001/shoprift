@@ -78,10 +78,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     .single();
 
   if (insertError || !jobRow) {
-    return NextResponse.json(
-      { error: `Failed to create job: ${insertError?.message ?? 'unknown'}` },
-      { status: 500 },
-    );
+    console.error({ phase: 'billing/create', shop, error: insertError });
+    return NextResponse.json({ error: 'Failed to create import job' }, { status: 500 });
   }
 
   const jobId = jobRow.id;
@@ -129,11 +127,12 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!gqlRes.ok) {
     const errBody = await gqlRes.text().catch(() => '');
     const errMsg = `Shopify billing API error ${gqlRes.status}: ${errBody.slice(0, 300)}`;
+    console.error({ phase: 'billing/create', shop, jobId, shopifyError: errMsg });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: errMsg })
       .eq('id', jobId);
-    return NextResponse.json({ error: errMsg }, { status: 502 });
+    return NextResponse.json({ error: 'Payment service error' }, { status: 502 });
   }
 
   const gqlData = await gqlRes.json() as {
@@ -157,11 +156,12 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (result.userErrors?.length) {
     const errMsg = result.userErrors.map((e) => e.message).join('; ');
+    console.error({ phase: 'billing/create', shop, jobId, userErrors: errMsg });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: errMsg })
       .eq('id', jobId);
-    return NextResponse.json({ error: errMsg }, { status: 400 });
+    return NextResponse.json({ error: 'Payment service rejected request' }, { status: 400 });
   }
 
   const confirmationUrl = result.confirmationUrl;

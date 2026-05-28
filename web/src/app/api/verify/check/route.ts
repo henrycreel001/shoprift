@@ -80,8 +80,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     const d = await r.json() as { verified?: boolean; error?: string };
     verified = d.verified === true;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Worker unreachable';
-    return NextResponse.json({ error: msg, verified: false }, { status: 502 });
+    console.error({ phase: 'verify/check', shop, attemptId, error: err });
+    return NextResponse.json({ error: 'Verification check failed', verified: false }, { status: 502 });
   }
 
   if (verified) {
