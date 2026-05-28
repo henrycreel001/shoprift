@@ -449,6 +449,13 @@ function MigrateWizard() {
     setStep('reconning')
     try {
       const data = await runRecon(url)
+
+      if (data.product_count === 0) {
+        setError('This store has no products. Make sure the URL is correct and the store has published products.')
+        setStep('url')
+        return
+      }
+
       setReconData(data)
       track('recon_complete', { store_url: data.store_url, product_count: data.product_count, shop })
 
