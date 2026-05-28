@@ -553,6 +553,8 @@ function MigrateWizard() {
       const trialUrls     = trialProducts.map((p: any) => p.product_url as string)
       setTrialProductUrls(trialUrls)
       setRemainingCount(Math.max(0, realProducts.length - 5))
+      // Cache full filtered data so handleFullImport can skip re-extraction
+      setStoreData({ ...allData, products: realProducts })
 
       const res = await fetch('/api/import/start', {
         method: 'POST',
@@ -595,7 +597,11 @@ function MigrateWizard() {
 
   async function handleFullImport() {
     if (!reconData) return
-    const fallbackStep: Step = trialUsed ? 'trial_done' : 'preview'
+    // Trial already extracted and cached full data — skip re-extraction
+    if (storeData) {
+      setStep('results')
+      return
+    }
     setStep('extracting')
     setExtractProgress(null)
     setError(null)
@@ -607,7 +613,7 @@ function MigrateWizard() {
       setStep('results')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Extraction failed. Please try again.')
-      setStep(fallbackStep)
+      setStep(trialUsed ? 'trial_done' : 'preview')
     }
   }
 
