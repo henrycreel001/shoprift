@@ -615,6 +615,11 @@ function MigrateWizard() {
     if (!storeData || !reconData || !tier) return
     setError(null)
 
+    if (tier.plan === 'Enterprise') {
+      window.open('mailto:support@shoprift.app?subject=Enterprise%20Migration%20Enquiry', '_blank')
+      return
+    }
+
     if (tier.isFree) {
       setStep('importing')
       try {
@@ -909,14 +914,20 @@ function MigrateWizard() {
                   Try free — import 5 products first
                 </Btn>
               )}
-              <Btn variant="primary" size="lg" onClick={handleFullImport} className="w-full">
-                {trialUsed
-                  ? `Import ${remainingCount} remaining — ${tier.price}`
-                  : tier.isFree
-                  ? 'Import to Shopify — free'
-                  : `Import all — ${tier.price}`}
-                <IcoArrow />
-              </Btn>
+              {tier.plan === 'Enterprise' ? (
+                <LinkBtn href="mailto:support@shoprift.app?subject=Enterprise%20Migration%20Enquiry" variant="primary" size="lg" className="w-full">
+                  Contact us for Enterprise <IcoArrow />
+                </LinkBtn>
+              ) : (
+                <Btn variant="primary" size="lg" onClick={handleFullImport} className="w-full">
+                  {trialUsed
+                    ? `Import ${remainingCount} remaining — ${tier.price}`
+                    : tier.isFree
+                    ? 'Import to Shopify — free'
+                    : `Import all — ${tier.price}`}
+                  <IcoArrow />
+                </Btn>
+              )}
               <Btn
                 variant="ghost"
                 onClick={() => { setReconData(null); setTrialUsed(false); setTrialProductUrls([]); setVerified(false); setStep('url') }}
@@ -1063,20 +1074,26 @@ function MigrateWizard() {
               </div>
             </div>
 
-            <Btn
-              variant="primary"
-              size="lg"
-              onClick={handleImport}
-              loading={billingLoading}
-              className="w-full mb-3"
-            >
-              {tier.isFree
-                ? 'Import to Shopify — free'
-                : billingLoading
-                ? 'Redirecting to payment...'
-                : `Pay ${tier.price} and import`}
-              {!billingLoading && <IcoArrow />}
-            </Btn>
+            {tier.plan === 'Enterprise' ? (
+              <LinkBtn href="mailto:support@shoprift.app?subject=Enterprise%20Migration%20Enquiry" variant="primary" size="lg" className="w-full mb-3">
+                Contact us for Enterprise <IcoArrow />
+              </LinkBtn>
+            ) : (
+              <Btn
+                variant="primary"
+                size="lg"
+                onClick={handleImport}
+                loading={billingLoading}
+                className="w-full mb-3"
+              >
+                {tier.isFree
+                  ? 'Import to Shopify — free'
+                  : billingLoading
+                  ? 'Redirecting to payment...'
+                  : `Pay ${tier.price} and import`}
+                {!billingLoading && <IcoArrow />}
+              </Btn>
+            )}
 
             <p className="font-mono text-[10px] text-ink-5 text-center leading-relaxed">
               {tier.isFree
