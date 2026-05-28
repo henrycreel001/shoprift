@@ -27,13 +27,13 @@
 
 - [ ] **Analytics set up** — nothing tracked currently. Posthog or Mixpanel free tier. Minimum: page views + `migration_started`, `payment_initiated`, `migration_complete` events.
 - [ ] **Payment flow tested on production** — T7 confirmed on dev/ngrok. Must repeat on Vercel/Railway prod URL with real Shopify store before opening to users.
-- [ ] **Shopify OAuth works on production** — test full reinstall flow on prod URL (not just ngrok).
-- [ ] **Backend authorization enforced** — API routes validate `shop` param but do not verify the requesting shop *owns* the job. A shop could poll another shop's `jobId`. Needs a `WHERE account_id = shop` guard on every job fetch.
-- [ ] **Rate limiting on API routes** — no per-shop limits exist. At minimum: one active job per shop enforced at DB insert (intent exists in CLAUDE.md — verify it's actually in the insert logic). `/api/payment/billing/create` and `/api/verify/start` need per-shop rate guards.
-- [ ] **Error monitoring (Sentry)** — no observability. Add before real users. Free tier is sufficient. Wire to both Next.js and Railway worker.
-- [ ] **Privacy Policy + Terms of Service linked in app UI** — documents exist in `docs/legal/` but are not linked anywhere in the seller-facing UI.
-- [ ] **Refund Policy linked at checkout** — Consumer Protection (E-Commerce) Rules 2020 requires it to be visible *before* payment. Currently not linked from the billing step.
-- [ ] **Support contact visible in app** — sellers need somewhere to go when a job fails. Email address or a "Contact support" link on the error state.
+- [x] **Shopify OAuth works on production** — tested on `project-pjqwm.vercel.app`. Install + callback confirmed. ✅ Phase 0
+- [x] **Backend authorization enforced** — JWT HS256 session token verification in `web/src/lib/auth.ts` applied to all API routes. `account_id` guard on every job select. ✅ Phase 1/2
+- [x] **Rate limiting on API routes** — `/api/verify/start`: max 3 per shop per hour (DB query, works across serverless). One active job per shop enforced at import/start. ✅ Phase 2
+- [x] **Error monitoring (Sentry)** — `@sentry/nextjs` v10 on web + `@sentry/node` on Railway worker. DSNs set in Vercel + Railway env vars. ✅ Phase 3
+- [x] **Privacy Policy + Terms of Service linked in app UI** — footer in `migrate/page.tsx` links Terms · Privacy · Refund Policy · Grievance Officer. ✅ Phase 4
+- [x] **Refund Policy linked at checkout** — link to `/refund-policy` shown before billing button, per Consumer Protection Rules 2020. ✅ Phase 4
+- [x] **Support contact visible in app** — "Email support" mailto link in error banner (shown on any job failure or payment issue). ✅ 2026-05-28
 
 ---
 
@@ -79,9 +79,9 @@ Happy path (T7) is confirmed. These are the gaps:
 
 This is the gap that matters most before real users.
 
-- [ ] **Job ownership check** — `/api/import/status/[jobId]` fetches job by ID only. Any shop can poll any job ID if they know it. Fix: add `.eq('account_id', shop)` to every job select that takes a `jobId` param.
-- [ ] **Verify routes check shop** — `/api/verify/check` should confirm `attemptId` belongs to the `shop` in the request. Currently trusts the client to pass the right pair.
-- [ ] **Test unauthenticated API calls** — hit every `/api/*` route directly (curl, no Shopify session). Confirm they fail safely with 401/400, not 500 or leaked data.
+- [x] **Job ownership check** — `.eq('account_id', shop)` added to every job select in status route. Shop derived from verified JWT. ✅ Phase 1/2
+- [x] **Verify routes check shop** — `/api/verify/check` confirms `attemptId` belongs to verified `shop` from JWT. ✅ Phase 1/2
+- [x] **Test unauthenticated API calls** — all 5 JWT-protected routes return `401 {"error":"Unauthorized"}`. No stack traces, no DB data leaked. ✅ 2026-05-28
 
 ---
 
@@ -89,7 +89,7 @@ This is the gap that matters most before real users.
 
 - [ ] **No secrets in git** — `.env.local` is gitignored. Verify `.env.example` has no real values (it doesn't currently — confirm before each commit).
 - [ ] **NEXT_PUBLIC_ vars are client-exposed** — `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are intentionally public (Supabase anon key is designed to be). Confirm no service role key is accidentally prefixed `NEXT_PUBLIC_`.
-- [ ] **Error responses don't leak internals** — some API routes return raw `error.message` from Supabase or Shopify API. Replace with generic messages for user-facing errors; log full detail to server console / Sentry only.
+- [x] **Error responses don't leak internals** — all API routes hardened: generic messages in response body, full detail in `console.error({ phase, shop, error })` only. ✅ Phase 2
 - [ ] **Check browser console on prod** — before launch, open DevTools on the live app and confirm no stack traces, no API keys, no debug logs visible.
 - [ ] **SQL injection not a risk** — Supabase JS client uses parameterized queries. Not a manual SQL injection risk. Confirm no raw SQL strings are being built anywhere.
 
@@ -97,9 +97,9 @@ This is the gap that matters most before real users.
 
 ## 6 — Reliability & Observability
 
-- [ ] **Sentry on Next.js** — `@sentry/nextjs` package, 10 minutes to wire. Catches unhandled errors in API routes and client components. Free tier: 5k errors/month.
-- [ ] **Sentry on Railway worker** — `@sentry/node` in `worker.js`. Same free tier.
-- [ ] **Alert on payment failures** — Sentry can alert on `billing_error` events. Set up one alert: any job that reaches `status = failed` after a charge should notify you immediately.
+- [x] **Sentry on Next.js** — `@sentry/nextjs` v10 wired: `sentry.{client,server,edge}.config.ts`, `instrumentation.ts` with `onRequestError`, `global-error.tsx`, `withSentryConfig` in `next.config.ts`. ✅ Phase 3
+- [x] **Sentry on Railway worker** — `@sentry/node` init in `worker.js` before worker starts. ✅ Phase 3
+- [ ] **Alert on payment failures** — Sentry alert not yet configured. Set up: any job reaching `status = failed` after a charge should notify immediately via Sentry alert rules.
 - [ ] **Logs include job ID** — every `console.error` in API routes should include `jobId` when available so you can trace a seller's problem through Railway logs.
 
 ---
@@ -122,9 +122,15 @@ When ready to list publicly on the Shopify App Store (not required for direct in
 
 ## 8 — Landing Page & Discoverability
 
-Shoprift needs a public landing page outside the Shopify admin (for search traffic, social sharing, app listing links):
+> **Note on legal pages (2026-05-28):** `/terms`, `/privacy`, `/refund-policy` currently live on the Vercel app URL (`project-pjqwm.vercel.app`). These are temporary. When the Shoprift website is built, migrate these pages there and update all footer links in `web/src/app/migrate/page.tsx`.
 
-- [ ] Landing page live at root domain
+Shoprift needs a public landing page outside the Shopify admin (for search traffic, social sharing, app listing links).
+**Scope: post-App Store launch. Do not build until app is generating revenue.**
+
+- [ ] **Full Shoprift marketing website** — modern, interactive, aesthetic landing page at root domain. Showcases the migration flow, social proof, pricing.
+- [ ] **`docs.` subdomain** — documentation pages with step-by-step guides, screenshots, FAQ, and troubleshooting. Separate from app.
+- [ ] **Demo screenshots and video** embedded on landing page — show URL input → recon → verify → pay → products in Shopify.
+- [ ] **Legal pages migrated** — move `/terms`, `/privacy`, `/refund-policy`, AUP, DMCA, Grievance Officer from Vercel app URL to the marketing website. Update all footer links in the app.
 - [ ] HTTPS (handled by host)
 - [ ] Open Graph tags: `og:title`, `og:description`, `og:image`, `og:url`
 - [ ] Favicon
@@ -133,7 +139,6 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 - [ ] Google Search Console connected + sitemap submitted
 - [ ] Meta title + description set
 - [ ] Support / contact link visible
-- [ ] Privacy Policy + ToS linked in footer
 
 **Marketing assets (prepare before launch):**
 - [ ] High-quality screenshots of the migration wizard
@@ -151,11 +156,11 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 | Migration Consent | ✅ Drafted | Needs lawyer review |
 | Grievance Officer | ✅ Drafted | Needs UI link |
 | Refund Policy | ✅ Drafted | **Needs UI link at checkout** — Consumer Protection Rules 2020 |
-| Acceptable Use Policy | ❌ Not drafted | **Action:** Run `/shoprift-legal` to draft. Required for IT Act §79 safe-harbour. |
-| Cookie Policy | ⏸ Deferred | Wire when analytics added |
-| DMCA / Takedown | ❌ Not drafted | **Action:** Run `/shoprift-legal` to draft. Required for IT Act §79 safe-harbour before App Store submission. |
+| Acceptable Use Policy | ✅ Drafted | `docs/legal/acceptable-use.md` v1.0 — IT Act §79 aligned, 9 prohibited conduct categories |
+| Cookie Policy | ⏸ Deferred | Wire when analytics (PostHog) added |
+| DMCA / Takedown | ✅ Drafted | `docs/legal/dmca.md` v1.0 — IT Act §79 + voluntary DMCA §512 |
 | Lawyer review pass | ❌ Not done | Budget ₹20–30k. Required before money changes hands with real users. |
-| Domain + professional email | ❌ Not done | 17 occurrences of personal email in legal docs (tracked in PRE_LAUNCH_CHECKLIST.md) |
+| Domain + professional email | ❌ Not done | 17 occurrences of `001henrycreel@gmail.com` in 5 legal files (tracked in PRE_LAUNCH_CHECKLIST.md). Also update legal page URLs from `project-pjqwm.vercel.app` to final domain. |
 
 ---
 
@@ -196,27 +201,15 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 
 ### CRITICAL — blocks App Store listing
 
-- [ ] **GDPR compliance webhooks** — `customers/data_request`, `customers/redact`, `shop/redact` not subscribed anywhere. Mandatory for every app distributed through the App Store. Add to `shopify.app.toml`:
-  ```toml
-  [[webhooks.subscriptions]]
-  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-  uri = "https://shoprift.vercel.app/api/webhooks/compliance"
-  ```
-  Create handler at `/api/webhooks/compliance`. Verify HMAC; return 401 on invalid header. Respond 200 immediately; complete data action within 30 days. Shoprift processes no customer order data, so `customers/data_request` and `customers/redact` handlers can respond 200 + no-op with a comment. `shop/redact` must delete all Supabase rows for that `shop_id` (sessions, jobs, verification_attempts).
+- [x] **GDPR compliance webhooks** — `customers/data_request`, `customers/redact`, `shop/redact` subscribed in `shopify.app.toml`. Handler at `/api/webhooks/compliance` verifies HMAC, `shop/redact` deletes all Supabase rows for shop. ✅ Phase 1
 
-- [ ] **Session token (JWT) authentication on all API routes** — every `/api/*` route trusts `shop` from request body/query string with no cryptographic check. App Bridge sends a session token (HS256 JWT, 1-minute TTL) as `Authorization: Bearer <token>`. Backend must decode and verify: `exp` in future, `nbf` in past, `iss`/`dest` top-level domains match, `aud` == `SHOPIFY_API_KEY`, HS256 signature using `SHOPIFY_API_SECRET`. Use `shopify.session.decodeSessionToken(token)` from `@shopify/shopify-api` v13. Extract `dest` as the verified shop domain — never trust `shop` from the request body again.
+- [x] **Session token (JWT) authentication on all API routes** — `web/src/lib/auth.ts` verifies HS256 JWT (`exp`, `aud`, `iss`/`dest`, signature). Applied to all 5 API routes. Shop always sourced from verified `dest`, never from request body. ✅ Phase 1
 
-- [ ] **App Bridge not installed** — `@shopify/app-bridge` absent from `web/package.json`. Required for session token flow and any admin-embedded feature. Install: `npm install @shopify/app-bridge`. Add `<meta name="shopify-api-key" content={process.env.NEXT_PUBLIC_SHOPIFY_API_KEY}>` to app root layout. Frontend must call `getSessionToken(app)` before every API call and pass token as `Authorization: Bearer`. This has been required for App Store listing since March 13, 2024. **Note on versions:** Current approach (npm package + meta tag) uses App Bridge v3. Shopify's newer Web Components App Bridge uses `<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js">` in `<head>` and is required for Built for Shopify status. For initial App Store listing, v3 is acceptable. Plan migration to Web Components App Bridge post-launch when targeting BFS.
+- [x] **App Bridge installed** — `@shopify/app-bridge` v3 installed. `<meta name="shopify-api-key">` in `layout.tsx`. `createApp` + `getSessionToken` in `migrate/page.tsx` — token passed as `Authorization: Bearer` before every API call. ✅ Phase 1 — **Note:** Web Components App Bridge required for Built for Shopify (post-launch target — see Section 11).
 
-- [ ] **Billing callback uses REST — violates rule 2.2.4** — `GET /api/payment/billing/callback` calls REST `application_charges/{chargeId}.json`. As of April 1, 2025 all new public apps must use GraphQL exclusively. Replace with:
-  ```graphql
-  query { node(id: "gid://shopify/AppPurchaseOneTime/{chargeId}") {
-    ... on AppPurchaseOneTime { status }
-  }}
-  ```
-  Use `shopify.clients.Graphql` from `@shopify/shopify-api`.
+- [x] **Billing callback uses GraphQL** — `billing/callback` route replaced REST `application_charges/{id}.json` with `AppPurchaseOneTime` GraphQL query via `shopify.clients.Graphql`. ✅ Phase 1
 
-- [ ] **iframe CSP must be dynamic per shop** — static or wildcard `*.myshopify.com` in `Content-Security-Policy: frame-ancestors` is a clickjacking risk and App Store rejection trigger. Must be set per-request: `frame-ancestors https://{shop}.myshopify.com https://admin.shopify.com`. After JWT auth is wired, the verified `dest` field provides the correct shop domain for each request. Shopify SDK sets this correctly if using standard middleware — verify no static CSP middleware is overriding it.
+- [x] **iframe CSP dynamic per shop** — `web/src/middleware.ts` reads `shop` query param per request, sets `frame-ancestors https://{shop}.myshopify.com https://admin.shopify.com`. Falls back to broad allowlist for direct browser hits. ✅ Phase 1
 
 ### HIGH — required before charging real merchants
 

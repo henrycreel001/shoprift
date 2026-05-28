@@ -590,7 +590,15 @@ function MigrateWizard() {
         {/* Error banner */}
         {error && (
           <Banner title="Something went wrong" tone="critical" onDismiss={() => setError(null)}>
-            <Text as="p">{error}</Text>
+            <BlockStack gap="100">
+              <Text as="p">{error}</Text>
+              <Text as="p" tone="subdued">
+                Need help?{' '}
+                <Link url="mailto:001henrycreel@gmail.com" removeUnderline={false}>
+                  Email support
+                </Link>
+              </Text>
+            </BlockStack>
           </Banner>
         )}
 
