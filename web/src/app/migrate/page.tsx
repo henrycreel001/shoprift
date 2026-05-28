@@ -1121,6 +1121,12 @@ function MigrateWizard() {
                     </a>
                   </>}
             </p>
+
+            <div className="mt-4 flex justify-center">
+              <Btn variant="ghost" onClick={() => setStep('preview')}>
+                Back to preview
+              </Btn>
+            </div>
           </div>
         )}
 
