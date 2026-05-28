@@ -977,6 +977,14 @@ function MigrateWizard() {
                 {trialExtDone ? importPercent : extractPercent}%
               </p>
             </div>
+
+            {!trialExtDone && (
+              <div className="mt-6 flex justify-center">
+                <Btn variant="ghost" onClick={() => { clearPoll(); setExtractProgress(null); setImportStatus(null); setStep('preview') }}>
+                  Cancel
+                </Btn>
+              </div>
+            )}
           </div>
         )}
 
@@ -1040,6 +1048,12 @@ function MigrateWizard() {
             {extractProgress?.message && (
               <p className="mt-2 font-mono text-[10px] text-ink-5">{extractProgress.message}</p>
             )}
+
+            <div className="mt-6 flex justify-center">
+              <Btn variant="ghost" onClick={() => { setExtractProgress(null); setStep('preview') }}>
+                Cancel
+              </Btn>
+            </div>
           </div>
         )}
 
