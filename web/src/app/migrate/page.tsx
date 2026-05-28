@@ -429,6 +429,7 @@ function MigrateWizard() {
       } catch { /* network blip */ }
     }
     poll()
+    clearPoll()
     pollRef.current = setInterval(poll, 3000)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -589,6 +590,7 @@ function MigrateWizard() {
         } catch { /* network blip */ }
       }
       poll()
+      clearPoll()
       pollRef.current = setInterval(poll, 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Trial import failed. Please try again.')
@@ -660,6 +662,7 @@ function MigrateWizard() {
           } catch { /* network blip */ }
         }
         poll()
+        clearPoll()
         pollRef.current = setInterval(poll, 3000)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to start import.')
