@@ -11,11 +11,14 @@ const DM2BUY_API = 'https://api.dm2buy.com';
 
 async function apiFetch<T>(url: string, params?: Record<string, string>): Promise<T> {
   const fullUrl = params ? `${url}?${new URLSearchParams(params)}` : url;
-  const res = await fetch(fullUrl, {
-    headers: { Accept: 'application/json' },
-  });
+  let res: Response;
+  try {
+    res = await fetch(fullUrl, { headers: { Accept: 'application/json' } });
+  } catch {
+    throw new Error('dm2buy is unreachable right now. Wait a moment and try again.');
+  }
   if (!res.ok) {
-    const err = new Error(`dm2buy API error: ${res.status} ${res.statusText} — ${fullUrl}`);
+    const err = new Error(`dm2buy API error: ${res.status} — ${fullUrl.split('?')[0]}`);
     if (res.status === 404 || res.status === 401 || res.status === 403) {
       (err as Error & { permanent: boolean }).permanent = true;
     }
