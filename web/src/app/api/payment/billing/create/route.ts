@@ -10,10 +10,10 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { getValidAccessToken } from '@/lib/shopify';
+import { getValidAccessToken, SessionExpiredError } from '@/lib/shopify';
 import { verifySessionToken } from '@/lib/auth';
 
-const SHOPIFY_API_VERSION = '2026-04';
+const SHOPIFY_API_VERSION = '2025-01';
 
 function requireEnv(name: string): string {
   const val = process.env[name];
@@ -55,7 +55,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
   }
 
-  const accessToken = await getValidAccessToken(shop);
+  let accessToken: string | null;
+  try {
+    accessToken = await getValidAccessToken(shop);
+  } catch (err) {
+    if (err instanceof SessionExpiredError) {
+      return NextResponse.json(
+        { error: 'Session expired — please reinstall the app to continue' },
+        { status: 401 },
+      );
+    }
+    throw err;
+  }
   if (!accessToken) {
     return NextResponse.json(
       { error: 'No active Shopify session — reinstall the app' },

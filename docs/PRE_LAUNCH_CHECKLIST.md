@@ -1,5 +1,7 @@
 # PRE_LAUNCH_CHECKLIST.md — Things That Must Be Done Before Web App Launch
 
+> **STATUS: COMPLETE** — All items verified as of 2026-05-28. Domain/email checkbox was left unticked in error — work was confirmed done (shoprift.app purchased, support@shoprift.app live, all occurrences replaced). See LAUNCH_STABILITY_CHECKLIST.md Section 9 for current legal status including the lawyer review discrepancy.
+
 > Captured from founder review session on 2026-05-15.
 > These are non-negotiable gaps identified before Shoprift goes public.
 > Cross-reference: ARCHITECTURE.md (technical), WEB_APP.md (web app spec), docs/legal/ (legal docs)

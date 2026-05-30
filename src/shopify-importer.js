@@ -7,7 +7,7 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 
-const API_VERSION = '2024-04';
+const API_VERSION = '2025-01';
 const RATE_DELAY_MS = 550; // 2 req/s Shopify REST limit; 550ms gives headroom
 
 const supabase = createClient(

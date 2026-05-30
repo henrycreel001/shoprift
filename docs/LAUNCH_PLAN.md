@@ -192,6 +192,18 @@ Razorpay can still be used for concierge (off-app payments).
 | T8.5 | Billing flow test: test charge, decline, refund | [ ] |
 | T8.6 | Shopify App Store requirements audit — run through official checklist | [ ] |
 | T8.7 | Performance: extraction + import for 10-product store should complete in <2 min | [ ] |
+| | **— Code hardening (Claude — complete before manual QA runs) —** | |
+| T8.8 | **Billing callback idempotency** — if `charge_id` already `active` and job already `pending`, callback must not re-trigger worker. Add status check before enqueue call. | [x] |
+| T8.9 | **Billing decline/cancel message** — verify seller sees clear message (not generic error) when charge status is `declined` or `cancelled`. Fix if broken. | [x] |
+| T8.10 | **Double-charge protection** — verify `setBillingLoading(true)` actually disables the billing button after first click in `migrate/page.tsx`. | [x] |
+| T8.11 | **Webhook HMAC on app-uninstalled** — confirm handler calls `shopify.webhooks.validate({ rawBody, headers })` before processing. All webhook handlers must verify before acting. | [x] |
+| T8.12 | **GraphQL rate limit backoff in worker** — after each mutation response, check `extensions.cost.throttleStatus.currentlyAvailable`; if `< 50`, `await sleep(1000)` before next batch. Large stores will hit `THROTTLED` errors without this. | [x] |
+| T8.13 | **Offline token 90-day expiry** — catch `shopify.auth.refreshToken()` throw specifically → redirect to `/api/auth?shop={shop}` with clear "Re-install required" message instead of generic 500. | [x] |
+| T8.14 | **`jobId` in `console.error`** — all API routes include `jobId` in structured log object when available so failures are traceable through Railway logs. | [x] |
+| T8.15 | **GraphQL mutation batching** — verify worker splits product lists into ≤250-item chunks (Shopify max array input size). | [x] |
+| T8.16 | **`api_version` → `2025-01`** — update `shopify.app.toml` from `2026-04` to current stable `2025-01`. Prevents deprecation warnings. | [x] |
+| T8.17 | **`NEXT_PUBLIC_` audit** — confirm `SUPABASE_SERVICE_KEY` and all other private keys have no `NEXT_PUBLIC_` prefix in Vercel env vars. One-time verify. | [x] |
+| T8.18 | **Browser console check** — open DevTools on live Vercel app. Confirm zero stack traces, API keys, debug logs visible. *(Manual — Mayank)* | [ ] |
 
 ---
 
@@ -202,15 +214,18 @@ Razorpay can still be used for concierge (off-app payments).
 
 | # | Task | Done |
 |---|------|------|
-| T9.1 | App listing copy — name, tagline, description, feature bullets — use `/shoprift-content` | [ ] |
+| T9.1 | App listing copy — name, tagline, description, feature bullets — use `/shoprift-content` | [x] |
 | T9.2 | App icon — 1200×1200 PNG, simple, recognisable at 50px | [ ] |
 | T9.3 | Screenshots — 5 screenshots showing the migration flow (required by Shopify) | [ ] |
 | T9.4 | Demo video — 30-60s screen recording of full migration (optional but boosts approval speed) | [ ] |
-| T9.5 | Privacy policy URL — host at `shoprift.com/privacy` or Vercel deploy | [ ] |
+| T9.5 | Privacy policy URL — `shoprift.app/privacy` live | [x] |
 | T9.6 | Fill in Partner dashboard app listing form — categories: Store management, Migration | [ ] |
 | T9.7 | Submit for Shopify review | [ ] |
 | T9.8 | Respond to review feedback (typically 1-2 rounds) | [ ] |
-| T9.9 | Launch post — Instagram + Reddit `r/shopify` — use `/shoprift-content` | [ ] |
+| T9.9 | Launch post — Instagram + Reddit `r/shopify` — use `/shoprift-content` | [x] |
+| T9.10 | **Emergency developer contact** — set `support@shoprift.app` in Partner Dashboard → App setup → Emergency developer contact. Required by Shopify before submission. | [x] |
+| T9.11 | **Test credentials for reviewers** — prepare `mmshop.dm2buy.com` (or dedicated reviewer store) + written step-by-step instructions for Shopify reviewers to test the migration flow. | [x] |
+| T9.12 | **Listing language — rule 1.1.13** — audit all listing copy (title, short description, long description) to confirm it says "your dm2buy store" not "any store." Shopify rule 1.1.13 prohibits "import from any store" framing. | [x] |
 
 **Shopify review SLA:** 5-7 business days. Submit as soon as T9.7 is ready.
 Run concierge jobs during review window for revenue + feedback.
@@ -280,4 +295,4 @@ Day 19-21  Approved + live (estimated)
 
 ---
 
-*Created: 2026-05-21 | Updated: 2026-05-27 | Owner: Mayank Malik | T1–T7 complete. Next: T8 QA + T9 App Store submission.*
+*Created: 2026-05-21 | Updated: 2026-05-30 | Owner: Mayank Malik | T1–T7 complete. T8 code hardening (T8.8–T8.17) ✅ done. T8 manual QA (T8.1–T8.7, T8.18) pending — Mayank. T9 partial: T9.1 ✅ T9.5 ✅ T9.9 ✅ T9.11 ✅ T9.12 ✅. Remaining T9: T9.2 T9.6 T9.7 T9.10 manual — Mayank. T9.3 T9.4 T9.8 still pending.*

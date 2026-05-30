@@ -9,9 +9,9 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { getValidAccessToken } from '@/lib/shopify';
+import { getValidAccessToken, SessionExpiredError } from '@/lib/shopify';
 
-const SHOPIFY_API_VERSION = '2026-04';
+const SHOPIFY_API_VERSION = '2025-01';
 
 function adminRedirect(shop: string, params: Record<string, string>): Response {
   const qs = new URLSearchParams(params).toString();
@@ -40,11 +40,34 @@ export async function GET(request: NextRequest): Promise<Response> {
     .single();
 
   if (!job) {
+    console.error({ phase: 'billing/callback', shop, jobId, error: 'job_not_found' });
     return adminRedirect(shop, { billing_error: 'job_not_found' });
   }
 
-  const accessToken = await getValidAccessToken(shop);
+  // T8.8: Idempotency — if already beyond pending_payment, worker was already triggered
+  if (job.status !== 'pending_payment') {
+    if (['pending', 'importing', 'complete', 'failed'].includes(job.status)) {
+      return adminRedirect(shop, { billing_job_id: jobId });
+    }
+  }
+
+  let accessToken: string | null;
+  try {
+    accessToken = await getValidAccessToken(shop);
+  } catch (err) {
+    if (err instanceof SessionExpiredError) {
+      console.error({ phase: 'billing/callback', shop, jobId, error: 'session_expired' });
+      await supabase
+        .from('import_jobs')
+        .update({ status: 'failed', error: 'Session expired — re-install required' })
+        .eq('id', jobId);
+      return adminRedirect(shop, { billing_error: 'session_expired' });
+    }
+    throw err;
+  }
+
   if (!accessToken) {
+    console.error({ phase: 'billing/callback', shop, jobId, error: 'no_session' });
     return adminRedirect(shop, { billing_error: 'no_session' });
   }
 
@@ -74,11 +97,19 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   if (!charge || charge.status !== 'active') {
+    // T8.9: Specific codes for declined/cancelled so the UI shows a clear message
+    const chargeStatus = charge?.status ?? 'unknown';
+    let billingError: string;
+    if (chargeStatus === 'declined') billingError = 'charge_declined';
+    else if (chargeStatus === 'cancelled') billingError = 'charge_cancelled';
+    else billingError = 'charge_not_active';
+
+    console.error({ phase: 'billing/callback', shop, jobId, chargeStatus, error: billingError });
     await supabase
       .from('import_jobs')
-      .update({ status: 'failed', error: `Charge not active: ${charge?.status ?? 'unknown'}` })
+      .update({ status: 'failed', error: `Charge not active: ${chargeStatus}` })
       .eq('id', jobId);
-    return adminRedirect(shop, { billing_error: 'charge_not_active' });
+    return adminRedirect(shop, { billing_error: billingError });
   }
 
   // Charge confirmed — update job to pending and trigger import
@@ -89,6 +120,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const workerUrl = process.env.RAILWAY_WORKER_URL;
   if (!workerUrl) {
+    console.error({ phase: 'billing/callback', shop, jobId, error: 'RAILWAY_WORKER_URL not configured' });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: 'RAILWAY_WORKER_URL not configured' })
@@ -109,14 +141,17 @@ export async function GET(request: NextRequest): Promise<Response> {
     });
     if (!workerRes.ok) {
       const err = await workerRes.json().catch(() => ({ error: 'Worker error' })) as { error?: string };
+      const errMsg = err.error ?? 'Worker error';
+      console.error({ phase: 'billing/callback', shop, jobId, error: errMsg });
       await supabase
         .from('import_jobs')
-        .update({ status: 'failed', error: err.error ?? 'Worker error' })
+        .update({ status: 'failed', error: errMsg })
         .eq('id', jobId);
       return adminRedirect(shop, { billing_error: 'worker_failed' });
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Worker unreachable';
+    console.error({ phase: 'billing/callback', shop, jobId, error: msg });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: msg })

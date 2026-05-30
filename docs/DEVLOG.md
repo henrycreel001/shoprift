@@ -7,6 +7,56 @@
 
 ---
 
+## 2026-05-30 — T8.1 QA — dm2buy API outage error handling
+
+**Files:**
+- `web/src/lib/dm2buy/recon.ts` (edit)
+- `web/src/lib/dm2buy/extractor.ts` (edit)
+
+**Changes:**
+- Wrapped bare `fetch()` in try/catch in `apiFetch` in both files. When dm2buy API is unreachable (CORS failure, DNS failure, or infrastructure outage returning non-CORS 502), browser throws `TypeError: Failed to fetch` with no useful detail. Now caught and rethrown as: `"dm2buy is unreachable right now. Wait a moment and try again."` — user-visible in error banner.
+- Root cause of T8.1 blocker: dm2buy API full outage (Azure App Gateway 502 on all endpoints, storefront 200). Not detection/blocking — pure infrastructure failure on dm2buy's end. Test store data is client-side fetched so sellers' stores also show no products during the outage.
+
+---
+
+## 2026-05-30 — T9 pre-submission content (T9.9, T9.11, T9.12)
+
+**Files:**
+- `output/content/app-store-listing.md` (edit)
+- `output/content/reviewer-instructions.md` (new)
+- `output/content/launch-posts.md` (new)
+
+**Changes:**
+- **T9.12 — Listing rule 1.1.13 fix**: Key features bullet "Migrates all products…from dm2buy" → "Migrates all your dm2buy products…" — all copy now says "your" not "any".
+- **T9.11 — Reviewer instructions**: Full step-by-step doc for Shopify reviewers using `mmshop.dm2buy.com` as test store. Covers recon → verify → trial → billing → full import. Mayank must fill in dm2buy credentials before submitting.
+- **T9.9 — Launch posts drafted**: `@shoprift` IG, `@mayankmalikx` IG, `r/IndianStartups` Reddit post, `r/shopify` Reddit post. Launch mode (post after App Store approval only).
+
+---
+
+## 2026-05-30 — T8 code hardening (T8.8–T8.17)
+
+**Files:**
+- `shopify.app.toml`
+- `web/src/lib/shopify.ts`
+- `web/src/app/api/payment/billing/callback/route.ts`
+- `web/src/app/api/payment/billing/create/route.ts`
+- `src/shopify-importer.js`
+- `web/src/app/migrate/page.tsx`
+
+**Changes:**
+- **T8.8 — Billing callback idempotency**: If `job.status !== 'pending_payment'`, skip re-triggering the worker — Shopify occasionally fires the callback twice. Returns idempotent billing_job_id redirect.
+- **T8.9 — Decline/cancel messages**: Billing callback maps charge status `declined`/`cancelled` to distinct error codes. Migrate page shows human-readable messages per code.
+- **T8.10 — Already correct**: `Btn` has `disabled={disabled || loading}`.
+- **T8.11 — Already correct**: `app-uninstalled` webhook validates HMAC before acting.
+- **T8.12 — N/A**: Importer uses REST with 429 backoff already in place.
+- **T8.13 — Session expiry**: `getValidAccessToken` throws `SessionExpiredError` on token refresh failure. Both billing routes catch it and return a clear "reinstall required" message.
+- **T8.14 — jobId in logs**: All error paths in `billing/callback` log `{ phase, shop, jobId, error }`.
+- **T8.15 — N/A**: No GraphQL batch mutations in import flow.
+- **T8.16 — api_version**: All 5 version occurrences updated to `2025-01`.
+- **T8.17 — NEXT_PUBLIC_ audit**: Clean — only safe public keys prefixed.
+
+---
+
 ## 2026-05-28 — Rate limit backoff + debug log cleanup
 
 **Files:** `src/shopify-importer.js`, `web/src/app/api/payment/billing/create/route.ts`

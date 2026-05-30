@@ -159,8 +159,8 @@ Shoprift needs a public landing page outside the Shopify admin (for search traff
 | Acceptable Use Policy | ✅ Drafted | `docs/legal/acceptable-use.md` v1.0 — IT Act §79 aligned, 9 prohibited conduct categories |
 | Cookie Policy | ⏸ Deferred | Wire when analytics (PostHog) added |
 | DMCA / Takedown | ✅ Drafted | `docs/legal/dmca.md` v1.0 — IT Act §79 + voluntary DMCA §512 |
-| Lawyer review pass | ❌ Not done | Budget ₹20–30k. Required before money changes hands with real users. |
-| Domain + professional email | ❌ Not done | 17 occurrences of `001henrycreel@gmail.com` in 5 legal files (tracked in PRE_LAUNCH_CHECKLIST.md). Also update legal page URLs from `shoprift.app` to final domain. |
+| Lawyer review pass | ❌ Not done | Confirmed 2026-05-29. Budget ₹20–30k. Required before real merchants pay. PRE_LAUNCH_CHECKLIST.md checkbox was incorrect — ignore it. |
+| Domain + professional email | ✅ Done | shoprift.app purchased. support@shoprift.app live via Cloudflare Email Routing. All 26 occurrences replaced across 7 files (2026-05-28). Emergency developer contact in Partner Dashboard still needed — see T9.10 in LAUNCH_PLAN.md. |
 
 ---
 

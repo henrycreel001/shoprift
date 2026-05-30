@@ -8,6 +8,13 @@ import '@shopify/shopify-api/adapters/web-api';
 import { shopifyApi, ApiVersion } from '@shopify/shopify-api';
 import { SupabaseSessionStorage } from './shopify-session';
 
+export class SessionExpiredError extends Error {
+  constructor(shop: string) {
+    super(`Session expired for ${shop}. Re-install required.`);
+    this.name = 'SessionExpiredError';
+  }
+}
+
 function requireEnv(name: string): string {
   const val = process.env[name];
   if (!val) throw new Error(`Missing required env var: ${name}`);
@@ -32,7 +39,7 @@ export function getShopify() {
     apiSecretKey: requireEnv('SHOPIFY_API_SECRET'),
     scopes: requireEnv('SHOPIFY_SCOPES').split(',').map(s => s.trim()),
     hostName: requireEnv('SHOPIFY_APP_URL').replace(/^https?:\/\//, ''),
-    apiVersion: ApiVersion.April26,
+    apiVersion: ApiVersion.January25,
     isEmbeddedApp: true,
     sessionStorage,
   });
@@ -59,6 +66,6 @@ export async function getValidAccessToken(shop: string): Promise<string | null> 
     await sessionStorage.storeSession(refreshed);
     return refreshed.accessToken ?? null;
   } catch {
-    return null;
+    throw new SessionExpiredError(shop);
   }
 }

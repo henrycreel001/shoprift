@@ -452,7 +452,14 @@ function MigrateWizard() {
   // ── Return from Shopify billing ────────────────────────────────────────────
   useEffect(() => {
     if (billingError) {
-      setError(`Payment issue: ${billingError.replace(/_/g, ' ')}. Try again or contact support.`)
+      const billingErrorMessages: Record<string, string> = {
+        charge_declined:   'Payment was declined. Please try a different payment method or contact your bank.',
+        charge_cancelled:  'Payment was cancelled. Click below to try again.',
+        session_expired:   'Your session expired. Please reinstall the app to continue.',
+        no_session:        'Session not found. Please reinstall the app.',
+        charge_not_active: 'Payment was not completed. Please try again or contact support@shoprift.app.',
+      }
+      setError(billingErrorMessages[billingError] ?? `Payment issue: ${billingError.replace(/_/g, ' ')}. Try again or contact support@shoprift.app.`)
     }
     if (!billingJobId) return
     const id = billingJobId
