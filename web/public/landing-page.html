@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shoprift — dm2buy to Shopify, in minutes.</title>
+<meta name="description" content="Move your dm2buy store to Shopify. Products, images, and collections imported directly into Shopify admin — no CSV, no manual listing, no agency fees.">
+<meta name="theme-color" content="#0A0B0F">
+<meta property="og:title" content="Shoprift — dm2buy to Shopify, in minutes.">
+<meta property="og:description" content="Move your entire dm2buy store to Shopify. Products, images, and collections land directly in your Shopify admin. Try free — 5 products imported before you pay.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     SHOPRIFT LANDING v4
+     Brand-system aligned. Mobile-first. Single self-contained file.
+     Color, type, voice all derived from Brand Guidelines v1.0.
+     ========================================================= */
+
+  :root {
+    --bg: #0A0B0F;
+    --bg-elev: #11131A;
+    --bg-elev-2: #15171F;
+    --bg-elev-3: #1A1D26;
+    --line: rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --line-stronger: rgba(255,255,255,0.18);
+    --text: #F4F5F7;
+    --text-dim: #8A8E9B;
+    --text-mute: #4F535E;
+    --accent: #00E5A0;
+    --accent-deep: #00B380;
+    --accent-2: #6B8AFF;
+    --grid: rgba(255,255,255,0.025);
+    --danger: #FF4444;
+    --warn: #FFB020;
+
+    /* fluid spacing */
+    --gutter: clamp(20px, 4vw, 40px);
+    --section-pad: clamp(72px, 11vw, 128px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    line-height: 1.55;
+    font-size: 16px;
+  }
+
+  /* Grid background — locked to brand guide */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  img, svg { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ============ STATUS BAR ============ */
+  .status-bar {
+    position: relative;
+    z-index: 10;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
+    overflow: hidden;
+  }
+  .status-track {
+    display: flex;
+    gap: 48px;
+    white-space: nowrap;
+    animation: scroll 42s linear infinite;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .status-track span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-track .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .status-track .dot.warn {
+    background: var(--warn);
+    box-shadow: 0 0 10px var(--warn);
+  }
+  .status-track .sep { color: var(--text-mute); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .status-track { animation: none; }
+    .status-track .dot { animation: none; }
+  }
+
+  /* ============ NAV ============ */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10, 11, 15, 0.85);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 16px var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Geist', sans-serif;
+    font-weight: 900;
+    font-size: 19px;
+    letter-spacing: -0.045em;
+    color: var(--text);
+  }
+  .nav-logo .mark {
+    width: 26px;
+    height: 26px;
+  }
+  .nav-links {
+    display: none;
+    gap: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .nav-links a {
+    transition: color 0.18s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -0.005em;
+    transition: background 0.18s, transform 0.18s;
+  }
+  .nav-cta:hover { background: #00ffb3; transform: translateY(-1px); }
+  @media (min-width: 880px) {
+    .nav-links { display: flex; }
+  }
+
+  /* ============ WRAP ============ */
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+
+  /* ============ HERO ============ */
+  .hero {
+    position: relative;
+    padding: clamp(64px, 12vw, 128px) 0 clamp(64px, 10vw, 96px);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0 -20% -20% -20%;
+    background:
+      radial-gradient(ellipse at 25% 35%, rgba(0,229,160,0.08), transparent 55%),
+      radial-gradient(ellipse at 75% 65%, rgba(107,138,255,0.06), transparent 55%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    padding: 6px 12px;
+    border: 1px solid rgba(0,229,160,0.2);
+    background: rgba(0,229,160,0.04);
+    border-radius: 4px;
+  }
+  .eyebrow .pulse {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .hero h1 {
+    font-size: clamp(48px, 9vw, 112px);
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -0.05em;
+    margin-bottom: 32px;
+    max-width: 1000px;
+  }
+  .hero h1 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.02em;
+  }
+  .hero-sub {
+    font-size: clamp(17px, 2vw, 21px);
+    color: var(--text-dim);
+    max-width: 580px;
+    line-height: 1.55;
+    margin-bottom: 40px;
+  }
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 56px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-family: 'Geist', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    transition: background 0.18s, transform 0.18s, border-color 0.18s, color 0.18s;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover {
+    background: #00ffb3;
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--line-strong);
+  }
+  .btn-ghost:hover {
+    border-color: var(--line-stronger);
+    background: var(--bg-elev);
+  }
+  .btn .arrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+  }
+  .hero-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    max-width: 720px;
+  }
+  .hero-meta .cell {
+    background: var(--bg-elev);
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .hero-meta .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .hero-meta .value {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .hero-meta .icon {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  @media (min-width: 720px) {
+    .hero-meta { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* ============ THE NEW URGENCY ============ */
+  .section {
+    padding: var(--section-pad) 0;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .section-head {
+    margin-bottom: 56px;
+    max-width: 760px;
+  }
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: inline-block;
+  }
+  .section-head h2 {
+    font-size: clamp(32px, 5.5vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.02;
+    margin-bottom: 20px;
+  }
+  .section-head h2 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .section-head p {
+    font-size: 17px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .urgency-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .urgency-cell {
+    background: var(--bg-elev);
+    padding: 36px 32px;
+  }
+  .urgency-cell .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.2em;
+    margin-bottom: 18px;
+  }
+  .urgency-cell .big {
+    font-size: clamp(22px, 2.4vw, 28px);
+    font-weight: 600;
+    line-height: 1.22;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .urgency-cell .small {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  @media (min-width: 720px) {
+    .urgency-grid { grid-template-columns: repeat(3, 1fr); }
+    .urgency-grid.two { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ============ WHAT MOVES ============ */
+  .moves-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .moves-col {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .moves-col header {
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .moves-col header h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .moves-col.yes header h3 { color: var(--accent); }
+  .moves-col.no header h3 { color: var(--text-dim); }
+  .moves-col header .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+  }
+  .moves-col ul {
+    list-style: none;
+    padding: 8px 0;
+  }
+  .moves-col li {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .moves-col li:last-child { border-bottom: none; }
+  .moves-col li .mark {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    flex-shrink: 0;
+    width: 16px;
+  }
+  .moves-col.yes li .mark { color: var(--accent); }
+  .moves-col.no li .mark { color: var(--text-mute); }
+  .moves-col li .label {
+    color: var(--text);
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+  }
+  .moves-col li .desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .moves-col.no li .label { color: var(--text-dim); }
+  @media (min-width: 880px) {
+    .moves-grid { grid-template-columns: 1.6fr 1fr; gap: 24px; }
+  }
+
+  /* ============ HOW IT WORKS ============ */
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .step {
+    background: var(--bg-elev);
+    padding: 36px 32px;
+    position: relative;
+  }
+  .step .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    margin-bottom: 20px;
+  }
+  .step h3 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .step p {
+    font-size: 14.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .step p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--accent);
+    background: rgba(0,229,160,0.08);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  @media (min-width: 720px) {
+    .steps { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1100px) {
+    .steps { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* ============ TERMINAL / LIVE STATUS ============ */
+  .terminal {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 880px;
+    margin: 0 auto;
+    box-shadow: 0 24px 80px -20px rgba(0,0,0,0.5);
+  }
+  .terminal-head {
+    background: var(--bg-elev-2);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .terminal-dots { display: flex; gap: 6px; }
+  .terminal-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--line-stronger);
+  }
+  .terminal-dots span:nth-child(1) { background: #FF5F57; }
+  .terminal-dots span:nth-child(2) { background: #FEBC2E; }
+  .terminal-dots span:nth-child(3) { background: #28C840; }
+  .terminal-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  .terminal-body {
+    padding: 28px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.95;
+    color: var(--text);
+  }
+  .terminal-body .prompt { color: var(--accent); margin-right: 8px; }
+  .terminal-body .muted { color: var(--text-mute); }
+  .terminal-body .dim { color: var(--text-dim); }
+  .terminal-body .ok { color: var(--accent); }
+  .terminal-body .progress {
+    display: inline-block;
+    width: 180px;
+    height: 6px;
+    background: var(--bg-elev-3);
+    border-radius: 3px;
+    margin: 0 8px;
+    vertical-align: middle;
+    overflow: hidden;
+    position: relative;
+  }
+  .terminal-body .progress::after {
+    content: '';
+    position: absolute;
+    inset: 0 22% 0 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: 3px;
+    animation: bar 2.4s ease-in-out infinite;
+  }
+  @keyframes bar {
+    0% { inset: 0 100% 0 0; }
+    50% { inset: 0 22% 0 0; }
+    100% { inset: 0 0 0 0; }
+  }
+  .terminal-body .success-line {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(0,229,160,0.08);
+    border-left: 2px solid var(--accent);
+    color: var(--text);
+    font-weight: 500;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .terminal-body .progress::after { animation: none; inset: 0 22% 0 0; }
+  }
+
+  /* ============ PRICING ============ */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  .price-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 36px 32px;
+    position: relative;
+  }
+  .price-card.featured {
+    border-color: rgba(0,229,160,0.35);
+    background: linear-gradient(180deg, var(--bg-elev) 0%, rgba(0,229,160,0.03) 100%);
+  }
+  .price-card .tier {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .price-card.featured .tier { color: var(--accent); }
+  .price-card .price {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .price-card .price .currency {
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-right: 4px;
+  }
+  .price-card .price .per {
+    font-size: 14px;
+    color: var(--text-dim);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .price-card .price.contact {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .price-card .price-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+  }
+  .price-card ul {
+    list-style: none;
+    margin-bottom: 32px;
+  }
+  .price-card ul li {
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .price-card ul li:first-child { border-top: none; padding-top: 0; }
+  .price-card ul li::before {
+    content: '+';
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+  .price-card .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .price-tag {
+    position: absolute;
+    top: -10px;
+    right: 20px;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 3px;
+  }
+  @media (min-width: 720px) {
+    .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ============ FAQ ============ */
+  .faq {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  details {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: background 0.18s;
+  }
+  details[open] {
+    background: var(--bg-elev-2);
+    border-color: var(--line-strong);
+  }
+  details summary {
+    padding: 22px 28px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    letter-spacing: -0.015em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    list-style: none;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after {
+    content: '+';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    color: var(--text-dim);
+    font-weight: 300;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  details[open] summary::after {
+    content: '−';
+    color: var(--accent);
+    transform: rotate(0);
+  }
+  details .answer {
+    padding: 0 28px 24px;
+    color: var(--text-dim);
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+  details .answer p { margin-bottom: 10px; }
+  details .answer p:last-child { margin-bottom: 0; }
+  details .answer code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--accent);
+    background: rgba(0,229,160,0.08);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  /* ============ FINAL CTA ============ */
+  .final-cta {
+    padding: var(--section-pad) 0;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .final-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(0,229,160,0.07), transparent 55%);
+    pointer-events: none;
+  }
+  .final-cta-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .final-cta h2 {
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+    margin-bottom: 24px;
+  }
+  .final-cta h2 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .final-cta p {
+    font-size: 17px;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .final-cta .btn { font-size: 16px; padding: 16px 28px; }
+  .final-cta .secondary-link {
+    display: inline-block;
+    margin-top: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px dashed var(--text-mute);
+    padding-bottom: 2px;
+    transition: color 0.18s, border-color 0.18s;
+  }
+  .final-cta .secondary-link:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ============ FOOTER ============ */
+  footer {
+    padding: 64px 0 32px;
+    position: relative;
+  }
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    margin-bottom: 56px;
+  }
+  .footer-brand .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: -0.045em;
+    margin-bottom: 14px;
+  }
+  .footer-brand .logo .mark { width: 28px; height: 28px; }
+  .footer-brand .tagline {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    max-width: 320px;
+  }
+  .footer-col h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-bottom: 18px;
+    font-weight: 500;
+  }
+  .footer-col ul { list-style: none; }
+  .footer-col li {
+    margin-bottom: 10px;
+  }
+  .footer-col li a {
+    font-size: 14px;
+    color: var(--text-dim);
+    transition: color 0.18s;
+  }
+  .footer-col li a:hover { color: var(--text); }
+  .footer-bottom {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px var(--gutter) 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  @media (min-width: 720px) {
+    .footer-inner {
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    }
+    .footer-bottom {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  /* ============ RESPONSIVE TWEAKS ============ */
+  @media (max-width: 720px) {
+    .hero h1 { line-height: 0.96; }
+    .section-head p { font-size: 16px; }
+    .urgency-cell { padding: 28px 24px; }
+    .step { padding: 28px 24px; }
+    .price-card { padding: 28px 24px; }
+    details summary { padding: 18px 22px; font-size: 15px; }
+    details .answer { padding: 0 22px 20px; }
+    .terminal-body { padding: 20px 16px; font-size: 12px; line-height: 1.9; }
+    .terminal-body .progress { width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ REUSABLE LOGO SYMBOL ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5A0" />
+      <stop offset="100%" stop-color="#6B8AFF" />
+    </linearGradient>
+    <symbol id="mark" viewBox="0 0 120 120">
+      <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#mg)" />
+      <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#mg)" />
+      <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#mg)" opacity="0.6" />
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ STATUS BAR ============ -->
+<div class="status-bar" aria-label="Site status">
+  <div class="status-track">
+    <span><span class="dot"></span>shoprift · live</span>
+    <span class="sep">/</span>
+    <span>dm2buy → shopify · products, images, collections · direct import</span>
+    <span class="sep">/</span>
+    <span><span class="dot"></span>moving sellers in minutes, not days</span>
+    <span class="sep">/</span>
+    <span>migrate now →</span>
+    <span class="sep">/</span>
+    <span><span class="dot"></span>shoprift · live</span>
+    <span class="sep">/</span>
+    <span>dm2buy → shopify · products, images, collections · direct import</span>
+    <span class="sep">/</span>
+    <span><span class="dot"></span>moving sellers in minutes, not days</span>
+    <span class="sep">/</span>
+    <span>migrate now →</span>
+  </div>
+</div>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <svg class="mark"><use href="#mark"/></svg>
+      shoprift
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a href="https://shoprift.app" class="nav-cta">Migrate now <span class="arrow">→</span></a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">
+      <span class="pulse"></span>
+      // migration tool · dm2buy → shopify
+    </div>
+    <h1>dm2buy to Shopify,<br>in <em>minutes</em>.</h1>
+    <p class="hero-sub">Move your entire store — products, images, and collections — directly into Shopify admin. Drop in your URL, verify ownership, and your catalog lands in Shopify. No CSV. No manual work.</p>
+    <div class="hero-ctas">
+      <a href="https://shoprift.app" class="btn btn-primary">Migrate now <span class="arrow">→</span></a>
+      <a href="#how" class="btn btn-ghost">See how it works</a>
+    </div>
+    <div class="hero-meta">
+      <div class="cell">
+        <span class="icon">~</span>
+        <div>
+          <div class="label">Speed</div>
+          <div class="value">3 min per 100 products</div>
+        </div>
+      </div>
+      <div class="cell">
+        <span class="icon">✓</span>
+        <div>
+          <div class="label">Coverage</div>
+          <div class="value">Every image preserved</div>
+        </div>
+      </div>
+      <div class="cell">
+        <span class="icon">↓</span>
+        <div>
+          <div class="label">Output</div>
+          <div class="value">Direct to Shopify admin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ TWO KINDS OF SELLERS MOVE ============ -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">/ 01 — who moves</span>
+      <h2>Two kinds of sellers <em>migrate</em>.</h2>
+      <p>You don't have to wait for something to break. The best time to own a clean copy of your catalog is when your store is running fine — not after.</p>
+    </div>
+    <div class="urgency-grid two">
+      <div class="urgency-cell">
+        <div class="num">/ 01 — scaling up</div>
+        <div class="big">You've outgrown the basics.</div>
+        <div class="small">100+ products. Real monthly revenue. You want Shopify's apps, international payments, the storefront customization dm2buy doesn't ship. Migration shouldn't be the thing that holds you back from leveling up — that's exactly what Shoprift removes.</div>
+      </div>
+      <div class="urgency-cell">
+        <div class="num">/ 02 — moving while things are good</div>
+        <div class="big">You want to be on Shopify.</div>
+        <div class="small">Your store is running fine on dm2buy. You just want Shopify's ecosystem — better checkout, more apps, international payments — without the chaos of migrating under pressure. Not because dm2buy is broken. Because Shopify is where you want to grow.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHAT MOVES ============ -->
+<section class="section" id="what-moves">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">/ 02 — what gets moved</span>
+      <h2>Every product. Every image. Every collection.</h2>
+      <p>Shoprift pulls your full catalog from dm2buy and imports every product, image, and collection directly into your Shopify admin. No CSV. No copy-paste. Here's what crosses the rift, and what doesn't.</p>
+    </div>
+    <div class="moves-grid">
+      <div class="moves-col yes">
+        <header>
+          <h3>// Migrated</h3>
+          <span class="count">7 fields</span>
+        </header>
+        <ul>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">Products</div>
+              <div class="desc">Titles, descriptions, SKUs, status. Every product in your catalog.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">Images</div>
+              <div class="desc">Downloaded from dm2buy's CDN and uploaded directly to Shopify — attached to the right products automatically.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">Variants</div>
+              <div class="desc">Sizes, colors, materials. Stock levels per variant. Variant-specific prices.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">Collections</div>
+              <div class="desc">Full collection structure. Products tagged into the same buckets they live in today.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">Prices &amp; inventory</div>
+              <div class="desc">Current selling price, compare-at price, stock counts. Mapped to Shopify's columns.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">SEO slugs</div>
+              <div class="desc">Product handles preserved where your new platform allows. Old URLs documented for redirect setup.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">+</span>
+            <div>
+              <div class="label">Migration report</div>
+              <div class="desc">A clean markdown summary of what moved, what skipped, and why.</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="moves-col no">
+        <header>
+          <h3>// Not migrated</h3>
+          <span class="count">be honest</span>
+        </header>
+        <ul>
+          <li>
+            <span class="mark">−</span>
+            <div>
+              <div class="label">Past orders</div>
+              <div class="desc">Order history stays on dm2buy. Export it from your dashboard separately.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">−</span>
+            <div>
+              <div class="label">Customer data</div>
+              <div class="desc">Email lists and customer records aren't transferred. Re-import via your new platform directly.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">−</span>
+            <div>
+              <div class="label">Custom domain</div>
+              <div class="desc">Domain DNS is your job. Point it at your new platform after the import completes.</div>
+            </div>
+          </li>
+          <li>
+            <span class="mark">−</span>
+            <div>
+              <div class="label">Reviews &amp; ratings</div>
+              <div class="desc">Most review apps need their own export. Talk to your review provider.</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">/ 03 — how it works</span>
+      <h2>Four steps. <em>Direct import</em>.</h2>
+      <p>No setup. No code. No bullshit. Drop in your URL, prove the store is yours, and your catalog lands directly in Shopify admin — no downloading, no importing.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">/ step 01</div>
+        <h3>Drop your URL</h3>
+        <p>Paste your dm2buy store URL — looks like <code>yourstore.dm2buy.com</code>. Shoprift scans the storefront and counts what's there.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">/ step 02</div>
+        <h3>Verify ownership</h3>
+        <p>Post a one-time code to your Instagram story. Takes 30 seconds. Confirms the store is yours before we extract a thing.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">/ step 03</div>
+        <h3>We extract</h3>
+        <p>Products, images, variants, collections — all pulled and queued for import. Live progress in your Shopify app as each product lands.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">/ step 04</div>
+        <h3>Done. Check Shopify.</h3>
+        <p>Your products, images, and collections land directly in your Shopify admin. Open Products — they're already there.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIVE STATUS DEMO ============ -->
+<section class="section" id="demo">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto;">
+      <span class="section-tag">/ 04 — live status</span>
+      <h2>What it looks like, in flight.</h2>
+      <p style="margin-left:auto; margin-right:auto;">No spinners that lie. No "please wait" with no progress. The product talks to you the way an engineer would — what's happening, how many left, when it'll be done.</p>
+    </div>
+    <div class="terminal" role="img" aria-label="Example migration output">
+      <div class="terminal-head">
+        <div class="terminal-dots"><span></span><span></span><span></span></div>
+        <div class="terminal-title">shoprift · migrating kiwiishop.dm2buy.com</div>
+      </div>
+      <div class="terminal-body">
+        <div><span class="prompt">→</span>Scanning storefront… <span class="ok">done</span> <span class="muted">(213 products, 18 collections)</span></div>
+        <div><span class="prompt">→</span>Verifying ownership… <span class="ok">verified</span> <span class="muted">via @kiwiishop</span></div>
+        <div><span class="prompt">→</span>Extracting products… <span class="dim">147 of 213</span><span class="progress"></span><span class="dim">69%</span></div>
+        <div><span class="prompt">→</span>Downloading images… <span class="dim">412 of 638</span></div>
+        <div><span class="prompt">→</span>Mapping collections… <span class="ok">done</span></div>
+        <div><span class="prompt">→</span>Importing to Shopify admin…</div>
+        <div class="success-line">✓ 213 products imported to Shopify. Took 2m 47s.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto;">
+      <span class="section-tag">/ 05 — pricing</span>
+      <h2>One migration.<br><em>One charge.</em> No subscription.</h2>
+      <p style="margin-left:auto; margin-right:auto;">No monthly fee. No per-product caps. Pay once, migrate everything — after your first 5 products land in Shopify for free.</p>
+    </div>
+    <div style="max-width: 560px; margin: 0 auto;">
+      <div class="price-card featured">
+        <div class="tier">/ One-time · charged via Shopify Billing</div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); margin: 28px 0;">
+          <div style="padding: 20px; background: var(--bg-elev-3);">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">preview · ≤ 3 products</div>
+            <div style="font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: var(--accent);">Free</div>
+          </div>
+          <div style="padding: 20px; background: var(--bg-elev-3);">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">starter · ≤ 25 products</div>
+            <div style="font-size: 32px; font-weight: 800; letter-spacing: -0.04em;">₹599</div>
+          </div>
+          <div style="padding: 20px; background: var(--bg-elev-3);">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">standard · ≤ 100 products</div>
+            <div style="font-size: 32px; font-weight: 800; letter-spacing: -0.04em;">₹999</div>
+          </div>
+          <div style="padding: 20px; background: var(--bg-elev-3);">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">pro · ≤ 500 products</div>
+            <div style="font-size: 32px; font-weight: 800; letter-spacing: -0.04em;">₹1,999</div>
+          </div>
+        </div>
+        <ul>
+          <li>All products, images, and collections imported directly to Shopify</li>
+          <li>First 5 products imported free — see them live before you pay</li>
+          <li>Payment via Shopify Billing — no card details entered outside Shopify</li>
+          <li>Full refund if the import fails</li>
+        </ul>
+        <a href="https://shoprift.app" class="btn btn-primary">Install on Shopify <span class="arrow">→</span></a>
+        <div class="price-sub" style="margin-top: 16px;">Price is set by your product count at migration time. Preview tier (≤ 3 products) is always free.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">/ 06 — questions</span>
+      <h2>The straight answers.</h2>
+      <p>What sellers actually ask before they migrate. If yours isn't here, DM the founder.</p>
+    </div>
+    <div class="faq">
+
+      <details open>
+        <summary>Why migrate if my dm2buy store works fine?</summary>
+        <div class="answer">
+          <p>Two reasons sellers actually move:</p>
+          <p><strong>One — they're scaling.</strong> They want Shopify's app ecosystem, international payments, or a more customizable storefront. dm2buy is great for getting started; it's not always where you finish.</p>
+          <p><strong>Two — they want options.</strong> Moving to Shopify while the store is healthy is cleaner than doing it under pressure. Your catalog in Shopify is yours on better infrastructure.</p>
+          <p>Either reason is good enough. You don't need a crisis to want your store somewhere better.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>How long does a migration take?</summary>
+        <div class="answer">
+          <p>About <strong>3 minutes per 100 products</strong>, including image downloads. A 500-SKU store finishes in roughly 15 minutes. You don't have to keep the tab open — the import keeps running and the products appear in Shopify admin when it's done.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What happens to my dm2buy store after I migrate?</summary>
+        <div class="answer">
+          <p>Nothing. Shoprift only reads from dm2buy — it doesn't modify or delete anything. Your store keeps running until you decide to take it offline. Most sellers keep both live for a week or two while they redirect their domain.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Is my store data safe?</summary>
+        <div class="answer">
+          <p>The only thing we keep is your migration job record (URL, timestamps, product count) for support purposes. Products and images are imported directly into your Shopify admin — nothing is stored on our servers long-term. Nothing is shared, nothing is sold.</p>
+          <p>Ownership is verified via Instagram before any extraction — you can't migrate a store you don't own.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What if some products don't extract cleanly?</summary>
+        <div class="answer">
+          <p>The migration report lists every product that came through and every one that didn't, with the reason. If less than 95% of your catalog migrates due to an issue on our side, the migration is free — you don't pay for partial work.</p>
+          <p>Most failures are platform-side: an image expired on dm2buy's CDN, a product was removed from public view, etc. We document each one so you know what to re-add manually.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Does this only work with Shopify?</summary>
+        <div class="answer">
+          <p>Yes — Shoprift imports directly into Shopify admin via the Shopify API. Products land in your catalog without any CSV step. No downloading, no separate import flow.</p>
+          <p>If you're moving to WooCommerce, Wix, or another platform, Shoprift isn't the right fit today. Shopify-first was a deliberate choice — it lets us go deeper on import quality instead of spreading thin across platforms.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Do you support source platforms other than dm2buy?</summary>
+        <div class="answer">
+          <p>Right now, dm2buy is the only source — that's the rift we're solving first. We import directly into Shopify, so the destination is fixed for now.</p>
+          <p>Other Indian D2C platforms as sources are on the roadmap. DM the founder if you're on a different platform and want to move to Shopify.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="final-cta" id="migrate">
+  <div class="final-cta-inner">
+    <h2>Move your store.<br>In <em>minutes</em>.</h2>
+    <p>Install on Shopify, paste your dm2buy URL, and your products land directly in Shopify admin.</p>
+    <a href="https://shoprift.app" class="btn btn-primary">Install on Shopify <span class="arrow">→</span></a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="#" class="logo">
+        <svg class="mark"><use href="#mark"/></svg>
+        shoprift
+      </a>
+      <div class="tagline">The rift between storefronts. Built solo for Indian D2C sellers ready to move.</div>
+    </div>
+    <div class="footer-col">
+      <h4>// Product</h4>
+      <ul>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#what-moves">What moves</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>// Founder</h4>
+      <ul>
+        <li><a href="https://x.com/mayankmalikx" target="_blank" rel="noopener">X / Twitter</a></li>
+        <li><a href="https://instagram.com/mayankmalikx" target="_blank" rel="noopener">Instagram</a></li>
+        <li><a href="https://ig.me/m/mayankmalikx" target="_blank" rel="noopener">DM the founder</a></li>
+        <li><a href="mailto:support@shoprift.app">Email</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>// Legal</h4>
+      <ul>
+        <li><a href="https://shoprift.app/terms">Terms</a></li>
+        <li><a href="https://shoprift.app/privacy">Privacy</a></li>
+        <li><a href="https://shoprift.app/refund-policy">Refunds</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>© 2026 shoprift · made in india</div>
+    <div>v5.0 · shipped may 2026</div>
+  </div>
+</footer>
+
+</body>
+</html>
