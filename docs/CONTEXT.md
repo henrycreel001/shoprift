@@ -16,9 +16,9 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-05-29
-- **Session topic:** Full publishing status audit — read all 4 planning docs, reconciled stale checkboxes, added T8.8-T8.18 + T9.10-T9.12 to LAUNCH_PLAN.md, fixed LAUNCH_STABILITY_CHECKLIST.md Section 9, marked PRE_LAUNCH_CHECKLIST.md complete, slimmed CONTEXT.md NEXT TASKS to point at LAUNCH_PLAN.md.
-- **Branch:** main — clean (last commit: `315308e`)
+- **Date:** 2026-05-31
+- **Session topic:** T8 code hardening committed · T8.6 App Store audit (scope fix) · T9.10/T9.11/T9.12/T9.9 complete · Phase 5 deploys confirmed · dm2buy API outage investigation · error message fix in recon.ts + extractor.ts.
+- **Branch:** main — 4 commits ahead of origin/main (last commit: `f4e9b0d`)
 
 ---
 
@@ -33,8 +33,8 @@
 | D — Launch | Phase 2 | ✅ Complete | Rate limiting (3/hr on verify/start) + error response hardening. |
 | D — Launch | Phase 3 | ✅ Complete | Sentry on web (@sentry/nextjs v10) + Railway worker (@sentry/node). SENTRY_DSN set in Vercel + Railway. |
 | D — Launch | Phase 4 | ✅ Complete | AUP + DMCA drafted. /terms /privacy /refund-policy pages live. Footer + pre-billing refund link in migrate UI. |
-| D — Launch | Phase 5 | 🟡 Code done, 2 manual deploys pending | PostHog ✅, billing-update webhook ✅, webhook dedup ✅, domain ✅, email replaced ✅. See Active Blockers. |
-| D — Launch | Phase 6 | ⬜ Not started | App Store submission — all manual tasks. |
+| D — Launch | Phase 5 | ✅ Complete | PostHog ✅, billing-update webhook ✅, webhook dedup ✅, domain ✅, email replaced ✅. Migration 005 + shopify app deploy → shoprift-7 both done. |
+| D — Launch | Phase 6 | 🟡 In progress | T8 code hardening ✅. T8 manual QA blocked on dm2buy API outage. T9 pre-submission partial. |
 | UI quality | Pre-launch review | ✅ Complete | All 17 issues resolved and committed. |
 | PRE_LAUNCH_CHECKLIST | All items | ✅ Complete | Anti-detection ✅, scaling ✅, legal ✅, domain/email replaced ✅ |
 
@@ -42,45 +42,49 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Pre-launch review — 6 remaining fixes** — `web/src/app/migrate/page.tsx` commit `315308e`: #7 step back-navigation (completed steps clickable), #11 duplicate migration warning, #12 "Checking account…" button state, #13 verification code countdown timer, #14 "View collections" button in done step, #17 focus management on step transitions.
-2. **Pre-launch review — first 9 fixes** — same file: error banner, zero-product guard, progress fast-start, cancel buttons, import error dismissal fix, back-nav on results, poll cleanup, App Bridge redirect for billing, trial→full extraction dedup.
-3. **In-app UI redesign** — `web/src/app/migrate/page.tsx` full rewrite: custom Tailwind dark-theme (`bg-void #0A0B0F`), Geist + Geist Mono, custom Btn/StepTrack/ProgressTrack/Alert components, inline SVGs. `tailwind.config.ts`, `globals.css`, `layout.tsx` updated with brand tokens.
-4. **Landing page content overhaul** — `shoprift-landing-v5.html`: 15 edits — CSV→direct import model, `Dm2buy`→`dm2buy` casing, hero/steps/FAQs rewritten. All CTA/pricing/email/legal link/handle fixes already done prior session.
-5. **Phase 5 + domain migration** — PostHog analytics (10 events), billing-update webhook, webhook dedup (migration 005 written), all URLs → shoprift.app, support@shoprift.app routing live, all 26 occurrences replaced across 7 files.
+1. **T8.6 App Store requirements audit** — `shopify.app.toml` scope fix: removed `write_product_listings` (unnecessary — only `write_products` needed). Commit `f4e9b0d`. Requires `shopify app deploy` to push to Shopify.
+2. **T8 code hardening committed** — commit `a143722`: T8.8 billing callback idempotency, T8.9 decline/cancel error codes + UI messages, T8.13 `SessionExpiredError` for token refresh failure, T8.16 api_version → 2025-01 across 5 files.
+3. **recon.ts + extractor.ts error fix** — commit `33e430d`: wrapped `apiFetch` fetch() in try/catch; dm2buy unreachable now shows "dm2buy is unreachable right now. Wait a moment and try again." instead of raw "Failed to fetch". Root cause of T8.1 block: dm2buy API full infrastructure outage (Azure App Gateway 502 on all endpoints).
+4. **T9.9 / T9.11 / T9.12** — `output/content/app-store-listing.md` T9.12 fix; `output/content/reviewer-instructions.md` created; `output/content/launch-posts.md` (4 posts, post-approval only).
+5. **Phase 5 deploys + T9.10** — migration 005 ran in Supabase production, shopify app deploy → shoprift-7, emergency contact set in Partner Dashboard.
 
 ---
 
 ## ACTIVE BLOCKERS
 
-None. Phase 5 deploys completed 2026-05-30 (migration 005 + shopify app deploy → shoprift-7).
+**dm2buy API outage** — `api.dm2buy.com` returning 502 Bad Gateway (Azure App Gateway) on all endpoints since 2026-05-30. Storefront (`kiwiishop.dm2buy.com`) returns 200 but product data is client-side fetched from the same API — so dm2buy's own users also see no products. This is NOT an IP ban or detection. Pure infrastructure failure. Blocks: T8.1, T8.2, T8.3, T8.4 (partial), T8.5, T8.7, T8.18 (browser runtime check).
 
 ---
 
 ## UNCOMMITTED CHANGES
 
-None. Working tree clean as of `315308e`.
+None. Working tree clean as of `f4e9b0d`.
 
 ---
 
 ## NEXT TASKS
 
-**All remaining work is tracked in `docs/LAUNCH_PLAN.md` (T8 + T9). This section shows only the immediate next actions.**
+**All remaining work tracked in `docs/LAUNCH_PLAN.md` (T8 + T9). Immediate next actions:**
 
-### 1 — Phase 5 deploys (Mayank — unblock everything else)
-1. Run `supabase/migrations/005_charge_id_and_webhook_dedup.sql` in Supabase production SQL editor
-2. Run `shopify app deploy` from project root
+### 1 — When dm2buy API recovers (Mayank — manual QA)
+- Run `shopify app deploy` first (scope change from T8.6 must reach Shopify before QA)
+- T8.1 kiwiishop E2E · T8.2 mmshop E2E · T8.3 large store test
+- T8.4 error scenarios (invalid URL, non-existent subdomain, 0-product store)
+- T8.5 billing flow (test charge, decline, confirm)
+- T8.7 performance (10-product store < 2 min)
+- T8.18 browser console check (DevTools open during full flow — look for red errors, API key leaks, hydration warnings)
 
-### 2 — T8 code hardening (Claude — next coding session, after deploys)
-T8.8 billing callback idempotency · T8.9 decline message · T8.10 double-charge button · T8.11 webhook HMAC · T8.12 GraphQL rate limit backoff · T8.13 offline token expiry · T8.14 jobId in logs · T8.15 mutation batching verify · T8.16 api_version · T8.17 NEXT_PUBLIC_ audit
+### 2 — T9 manual tasks (Mayank — can do now, don't need dm2buy)
+- T9.2 app icon — 1200×1200 PNG, Shoprift mark on `#0A0B0F` bg (Canva)
+- T9.3 screenshots — 5 screens per plan in `output/content/app-store-listing.md`
+- T9.4 demo video — 30–60s screen recording
+- T9.6 fill Partner Dashboard listing form
 
-### 3 — T8 manual QA (Mayank — after code hardening committed)
-T8.1 kiwiishop E2E · T8.2 mmshop E2E · T8.3 large store test · T8.4 error scenarios · T8.5 billing flow · T8.7 perf test · T8.18 browser console check
+### 3 — Submit (after all QA passes)
+Confirm distribution = Public (**IRREVERSIBLE**) → T9.7 submit → T9.8 respond to review
 
-### 4 — T9 pre-submission (Mayank — can do in parallel with QA)
-T9.2 app icon · T9.3 screenshots · T9.4 demo video · T9.10 emergency contact in Partner Dashboard · T9.11 test credentials for reviewers · T9.12 listing language rule 1.1.13 audit
-
-### 5 — Submit
-Confirm distribution = Public (**IRREVERSIBLE — only after QA passes**) → T9.6 fill listing form → T9.7 submit
+### 4 — Verify in Partner Dashboard
+`app/uninstalled` webhook URL must be `https://shoprift.app/api/webhooks/app-uninstalled` in Partner Dashboard → App setup → Webhooks.
 
 ---
 
@@ -106,7 +110,7 @@ These were explicitly saved for later — not blockers for submission, but queue
 | `SHOPIFY_API_KEY` | Shopify Partner dashboard → App setup |
 | `SHOPIFY_API_SECRET` | Shopify Partner dashboard → App setup |
 | `SHOPIFY_APP_URL` | `https://shoprift.app` |
-| `SHOPIFY_SCOPES` | `read_products,write_products` (+ others per toml) |
+| `SHOPIFY_SCOPES` | `read_products,write_products` |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project → Settings → API |
 | `SUPABASE_SERVICE_KEY` | Supabase project → Settings → API (service_role) |
@@ -122,12 +126,13 @@ These were explicitly saved for later — not blockers for submission, but queue
 - **Extraction: client-side** — seller's browser runs extraction against dm2buy API (CORS open). Server only handles Shopify Admin API import. No proxy rotation needed.
 - **Shopify app embedded** — loads inside Shopify admin iframe. `shop` param arrives via URL query string (`?shop=shoprift-dev.myshopify.com`). CSP `frame-ancestors` set.
 - **Trial detection architecture** — `is_trial` and `trial_product_urls` are top-level DB columns set at job INSERT time, never written by the Railway worker. Worker only writes `recon_data` (import results), `progress`, `status`, `error`.
-- **Verification method** — Method B: dm2buy product injection. User adds a product named `SHR-XXXX-XXXXXX` to their dm2buy store. Railway worker checks via dm2buy public API (paginated, axios+httpsAgent for expired TLS cert bypass). One verified record per (shop, store_url) pair — stays verified permanently.
+- **Verification method** — Method B: dm2buy product injection. User adds a product named `SHR-XXXX-XXXXXX` to their dm2buy store. Railway worker checks via dm2buy public API (paginated, axios+httpsAgent). One verified record per (shop, store_url) pair — stays verified permanently.
 - **RAILWAY_WORKER_URL** — `https://shoprift-production.up.railway.app` (production + local .env.local). Must be set in Vercel env vars.
-- **dm2buy TLS cert expired** — All server-side API calls to `api.dm2buy.com` MUST use `axios + httpsAgent` with `rejectUnauthorized: false`. Pattern in `src/api.js`. Never use native `fetch` for dm2buy API calls from Node.js.
+- **dm2buy server-side TLS** — All server-side API calls to `api.dm2buy.com` MUST use `axios + httpsAgent` with `rejectUnauthorized: false`. Pattern in `src/api.js`. Never use native `fetch` for dm2buy API calls from Node.js. (Client-side browser fetch is fine — uses browser's TLS stack.)
 - **Shopify Billing currency** — `AppPurchaseOneTime` created with `currencyCode: 'INR'`. Test mode: `isTest = NODE_ENV !== 'production'`.
 - **Razorpay scaffolded but unused** — `/api/payment/create` exists. Shopify Billing API is the actual payment path.
 - **PRE_LAUNCH_CHECKLIST** — effectively complete. The domain/email checkbox was left unticked but work was done (domain purchased, all 26 email occurrences replaced).
+- **dm2buy API outage pattern** — when API returns non-CORS 502, browser throws `TypeError: Failed to fetch` (CORS check fails before HTTP error is surfaced). Both `recon.ts` and `extractor.ts` catch this and show "dm2buy is unreachable right now." The outage is NOT detection/IP blocking — it's infrastructure. The storefront uses the same client-side API; if our extraction fails, the storefront also shows no products for real sellers.
 
 ---
 

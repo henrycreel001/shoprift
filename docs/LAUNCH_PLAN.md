@@ -190,7 +190,7 @@ Razorpay can still be used for concierge (off-app payments).
 | T8.3 | Large store test: find a dm2buy store with 20+ products. Test full flow. | [ ] |
 | T8.4 | Error scenarios: invalid URL, private store, store with 0 products, network drop mid-extraction | [ ] |
 | T8.5 | Billing flow test: test charge, decline, refund | [ ] |
-| T8.6 | Shopify App Store requirements audit — run through official checklist | [ ] |
+| T8.6 | Shopify App Store requirements audit — run through official checklist | [x] |
 | T8.7 | Performance: extraction + import for 10-product store should complete in <2 min | [ ] |
 | | **— Code hardening (Claude — complete before manual QA runs) —** | |
 | T8.8 | **Billing callback idempotency** — if `charge_id` already `active` and job already `pending`, callback must not re-trigger worker. Add status check before enqueue call. | [x] |
@@ -295,4 +295,4 @@ Day 19-21  Approved + live (estimated)
 
 ---
 
-*Created: 2026-05-21 | Updated: 2026-05-30 | Owner: Mayank Malik | T1–T7 complete. T8 code hardening (T8.8–T8.17) ✅ done. T8 manual QA (T8.1–T8.7, T8.18) pending — Mayank. T9 partial: T9.1 ✅ T9.5 ✅ T9.9 ✅ T9.11 ✅ T9.12 ✅. Remaining T9: T9.2 T9.6 T9.7 T9.10 manual — Mayank. T9.3 T9.4 T9.8 still pending.*
+*Created: 2026-05-21 | Updated: 2026-05-31 | Owner: Mayank Malik | T1–T7 complete. T8 code hardening (T8.8–T8.17) ✅ done. T8.6 ✅ done (scope fix: removed write_product_listings). T8 manual QA (T8.1–T8.5, T8.7, T8.18) blocked — dm2buy API down (502). T9 partial: T9.1 ✅ T9.5 ✅ T9.9 ✅ T9.10 ✅ T9.11 ✅ T9.12 ✅. Remaining: T9.2 T9.3 T9.4 T9.6 T9.7 T9.8 manual — Mayank. shopify app deploy needed after scope fix.*
