@@ -187,11 +187,11 @@ Razorpay can still be used for concierge (off-app payments).
 |---|------|------|
 | T8.1 | Full e2e: install app on dev store → migrate kiwiishop → confirm 4 products in Shopify admin | [ ] |
 | T8.2 | Full e2e: migrate mmshop (5 products, 0 collections) | [ ] |
-| T8.3 | Large store test: find a dm2buy store with 20+ products. Test full flow. | [ ] |
-| T8.4 | Error scenarios: invalid URL, private store, store with 0 products, network drop mid-extraction | [ ] |
+| T8.3 | Large store test: find a dm2buy store with 20+ products. Test full flow. | [x] |
+| T8.4 | Error scenarios: invalid URL, private store, store with 0 products, network drop mid-extraction | [x] |
 | T8.5 | Billing flow test: test charge, decline, refund | [ ] |
 | T8.6 | Shopify App Store requirements audit — run through official checklist | [x] |
-| T8.7 | Performance: extraction + import for 10-product store should complete in <2 min | [ ] |
+| T8.7 | Performance: extraction + import for 10-product store should complete in <2 min | [x] |
 | | **— Code hardening (Claude — complete before manual QA runs) —** | |
 | T8.8 | **Billing callback idempotency** — if `charge_id` already `active` and job already `pending`, callback must not re-trigger worker. Add status check before enqueue call. | [x] |
 | T8.9 | **Billing decline/cancel message** — verify seller sees clear message (not generic error) when charge status is `declined` or `cancelled`. Fix if broken. | [x] |
@@ -295,4 +295,4 @@ Day 19-21  Approved + live (estimated)
 
 ---
 
-*Created: 2026-05-21 | Updated: 2026-05-31 | Owner: Mayank Malik | T1–T7 complete. T8 code hardening (T8.8–T8.17) ✅ done. T8.6 ✅ done (scope fix: removed write_product_listings). T8 manual QA (T8.1–T8.5, T8.7, T8.18) blocked — dm2buy API down (502). T9 partial: T9.1 ✅ T9.5 ✅ T9.9 ✅ T9.10 ✅ T9.11 ✅ T9.12 ✅. Remaining: T9.2 T9.3 T9.4 T9.6 T9.7 T9.8 manual — Mayank. shopify app deploy needed after scope fix.*
+*Created: 2026-05-21 | Updated: 2026-06-01 | Owner: Mayank Malik | T1–T7 complete. T8 code hardening (T8.8–T8.17) ✅ done. T8.3 ✅ (kiwiishop 25 products, 63 images, 2m31s). T8.4 ✅ (error handling fixed + committed 8bd008b). T8.6 ✅ scope fix. T8.7 ✅ (13 products in 45s CLI; web app ~25s). shopify app deploy → shoprift-8 ✅ done. Remaining: T8.1 T8.2 T8.5 T8.18 manual QA (Mayank — browser). T9 remaining: T9.2 T9.3 T9.4 T9.6 T9.7 T9.8 manual — Mayank.*
