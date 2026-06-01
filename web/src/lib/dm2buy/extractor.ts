@@ -183,12 +183,22 @@ function extractStoreMeta(storeData: Record<string, unknown>): StoreMeta {
 
 async function fetchStoreMeta(subdomain: string): Promise<Record<string, unknown>> {
   return withRetry(async () => {
-    const data = await apiFetch<{ success: boolean; data: Record<string, unknown> }>(
-      `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
-      { select: 'internationalPayment,proplan,legalInfo' },
-    );
+    let data: { success: boolean; data: Record<string, unknown> };
+    try {
+      data = await apiFetch<{ success: boolean; data: Record<string, unknown> }>(
+        `${DM2BUY_API}/v4/store/get-by-subdomain/${subdomain}`,
+        { select: 'internationalPayment,proplan,legalInfo' },
+      );
+    } catch (err) {
+      if ((err as { permanent?: boolean }).permanent) {
+        const e = new Error(`Store not found. Check the URL and try again.`);
+        (e as Error & { permanent: boolean }).permanent = true;
+        throw e;
+      }
+      throw err;
+    }
     if (!data.success) {
-      const err = new Error(`[extractor] Store not found: ${subdomain}`);
+      const err = new Error(`Store not found. Check the URL and try again.`);
       (err as Error & { permanent: boolean }).permanent = true;
       throw err;
     }
