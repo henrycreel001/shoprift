@@ -386,6 +386,7 @@ function MigrateWizard() {
 
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null)
   const appBridgeRef    = useRef<ReturnType<typeof createApp> | null>(null)
+  const tokenPromiseRef = useRef<Promise<string> | null>(null)
   const importStartRef  = useRef<number | null>(null)
   // #17 — focus target for step transitions
   const mainRef         = useRef<HTMLDivElement>(null)
@@ -431,14 +432,26 @@ function MigrateWizard() {
     if (typeof window === 'undefined' || !host) return
     try {
       const apiKey = document.querySelector<HTMLMetaElement>('meta[name="shopify-api-key"]')?.content ?? ''
-      if (apiKey) appBridgeRef.current = createApp({ apiKey, host })
+      if (apiKey) {
+        const app = createApp({ apiKey, host })
+        appBridgeRef.current = app
+        // Pre-warm: start fetching session token immediately so it's ready by the time
+        // verify/start is called (~6s later after recon + Supabase queries complete).
+        tokenPromiseRef.current = getSessionToken(app).catch(() => '')
+      }
     } catch { /* not in Shopify context */ }
   }, [host])
 
   async function authHeaders(): Promise<Record<string, string>> {
     if (!appBridgeRef.current) return {}
     try {
-      const token = await getSessionToken(appBridgeRef.current)
+      const tokenPromise = tokenPromiseRef.current ?? getSessionToken(appBridgeRef.current)
+      tokenPromiseRef.current = null
+      const token = await Promise.race([
+        tokenPromise,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+      ])
+      if (!token) throw new Error('empty token')
       return { Authorization: `Bearer ${token}` }
     } catch { return {} }
   }
@@ -561,9 +574,8 @@ function MigrateWizard() {
           .eq('status', 'verified')
           .maybeSingle()
 
-        setCheckingAccount(false)
-
         if (va) {
+          setCheckingAccount(false)
           setVerified(true)
           if (va.code) setVerifyCode(va.code)
           setStep('preview')
@@ -573,8 +585,14 @@ function MigrateWizard() {
             headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
             body: JSON.stringify({ storeUrl: data.store_url }),
           })
+          setCheckingAccount(false)
           const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
-          if (!vRes.ok || !vData.code) throw new Error(vData.error ?? 'Failed to start verification.')
+          if (!vRes.ok || !vData.code) {
+            const msg = vRes.status === 401
+              ? 'Session error. Please refresh the page and try again.'
+              : vData.error ?? 'Failed to start verification.'
+            throw new Error(msg)
+          }
           setVerifyCode(vData.code)
           setVerifyAttemptId(vData.attemptId ?? null)
           // #13 — record when this code expires (~15 min)
