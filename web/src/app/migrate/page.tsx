@@ -31,6 +31,8 @@ interface ImportStatus {
   current: number
   total: number
   message: string
+  phase?: string
+  collectionsTotal?: number
 }
 
 interface ImportResult {
@@ -491,12 +493,12 @@ function MigrateWizard() {
         const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
         const d = await r.json() as {
           status: string
-          progress?: { current: number; total: number; message: string }
+          progress?: { current: number; total: number; message: string; phase?: string; collections_total?: number }
           error?: string
           result?: ImportResult
         }
         const prog = d.progress ?? { current: 0, total: 0, message: '' }
-        setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+        setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message, phase: prog.phase, collectionsTotal: prog.collections_total })
         if (d.status === 'complete') {
           clearPoll()
           const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
@@ -1369,17 +1371,90 @@ function MigrateWizard() {
             {importStatus && importStatus.total > 0 ? (
               <>
                 <ProgressTrack percent={importPercent} />
-                <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center justify-between mt-2 mb-6">
                   <p className="font-mono text-[11px] text-ink-4">
-                    {importStatus.message || `${importStatus.current} / ${importStatus.total} products`}
+                    {importStatus.current > 0 ? `${importStatus.current} / ${importStatus.total} products` : 'Starting...'}
                   </p>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <p className="font-mono text-[11px] text-ink-3">{importPercent}%</p>
-                    {importEta && (
-                      <p className="font-mono text-[11px] text-ink-4">· {importEta} remaining</p>
-                    )}
-                  </div>
+                  <p className="font-mono text-[11px] text-ink-3">{importPercent}%</p>
                 </div>
+
+                {/* Checklist */}
+                {(() => {
+                  const PHASES = ['products', 'images', 'collections', 'assigns']
+                  const curPhase = importStatus.phase ?? 'products'
+                  const curIdx = PHASES.indexOf(curPhase)
+                  const isComplete = importStatus.status === 'complete'
+
+                  function stepState(id: string): 'done' | 'active' | 'pending' {
+                    if (isComplete) return 'done'
+                    const idx = PHASES.indexOf(id)
+                    if (idx < curIdx) return 'done'
+                    if (idx === curIdx) return 'active'
+                    return 'pending'
+                  }
+
+                  const prodTotal = importStatus.total
+                  const colTotal = importStatus.collectionsTotal ?? 0
+
+                  const items = [
+                    {
+                      id: 'products',
+                      label: 'Products created',
+                      detail: stepState('products') === 'active'
+                        ? `${importStatus.current} / ${prodTotal}`
+                        : `${prodTotal} done`,
+                    },
+                    {
+                      id: 'images',
+                      label: 'Images uploaded',
+                      detail: stepState('images') === 'active' ? 'uploading...' : stepState('images') === 'done' ? 'done' : '—',
+                    },
+                    {
+                      id: 'collections',
+                      label: 'Collections created',
+                      detail: stepState('collections') === 'active'
+                        ? `0 / ${colTotal}`
+                        : stepState('collections') === 'done' && colTotal > 0 ? `${colTotal} done` : colTotal > 0 ? `${colTotal} pending` : '—',
+                    },
+                    {
+                      id: 'assigns',
+                      label: 'Assigned to collections',
+                      detail: stepState('assigns') === 'active' ? 'assigning...' : stepState('assigns') === 'done' ? 'done' : '—',
+                    },
+                  ]
+
+                  return (
+                    <div className="space-y-3 border border-wire rounded-xl px-5 py-4 bg-surface">
+                      {items.map(({ id, label, detail }) => {
+                        const state = stepState(id)
+                        return (
+                          <div key={id} className="flex items-center gap-3">
+                            <span className="flex-shrink-0 w-4">
+                              {state === 'done' && (
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-mint-dark">
+                                  <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeOpacity="0.3"/>
+                                  <path d="M4.5 7L6.5 9L9.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                              {state === 'active' && (
+                                <span className="block w-3.5 h-3.5 border-[1.5px] border-wire border-t-mint rounded-full animate-spin" />
+                              )}
+                              {state === 'pending' && (
+                                <span className="block w-3 h-3 rounded-full border border-wire/60 mx-auto" />
+                              )}
+                            </span>
+                            <span className={`font-mono text-[11px] flex-1 ${state === 'pending' ? 'text-ink-4' : 'text-ink'}`}>
+                              {label}
+                            </span>
+                            <span className={`font-mono text-[11px] flex-shrink-0 ${state === 'done' ? 'text-mint-dark' : 'text-ink-4'}`}>
+                              {detail}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
               </>
             ) : (
               <div className="flex items-center gap-3">

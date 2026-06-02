@@ -139,11 +139,11 @@ async function addToCollection(shop, accessToken, collectionId, productId) {
   });
 }
 
-async function updateProgress(jobId, current, total, message) {
+async function updateProgress(jobId, current, total, message, phase = 'products', extra = {}) {
   await supabase
     .from('import_jobs')
     .update({
-      progress: { current, total, phase: 'importing', message },
+      progress: { current, total, phase, message, ...extra },
       updated_at: new Date().toISOString(),
     })
     .eq('id', jobId);
@@ -174,10 +174,10 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
   let productsFailed = 0;
   let collectionsCreated = 0;
 
+  const collectionsMeta = { collections_total: categories.length };
+
   // Phase 1: Create products in concurrent batches (no images — fast ~300ms each).
-  // Images are attached in Phase 1b to avoid Shopify blocking the response on
-  // slow dm2buy CDN image downloads.
-  await updateProgress(jobId, 0, products.length, `Creating ${products.length} products...`);
+  await updateProgress(jobId, 0, products.length, `Creating ${products.length} products...`, 'products', collectionsMeta);
   for (let i = 0; i < products.length; i += BATCH_SIZE) {
     const batch = products.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(async (p) => {
@@ -190,17 +190,16 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
         productsFailed++;
       }
     }));
-    // Update progress every batch (not every product — reduces Supabase writes).
     const done = Math.min(i + BATCH_SIZE, products.length);
-    await updateProgress(jobId, done, products.length, `Created ${done}/${products.length} products`);
+    await updateProgress(jobId, done, products.length, `Created ${done}/${products.length} products`, 'products', collectionsMeta);
     if (i + BATCH_SIZE < products.length) await delay(BATCH_DELAY_MS);
   }
 
-  // Phase 1b: Attach images in concurrent batches. Fires after all products exist.
+  // Phase 1b: Attach images in concurrent batches (separate pass so product create isn't blocked by image downloads).
+  await updateProgress(jobId, products.length, products.length, `Uploading images...`, 'images', collectionsMeta);
   const imageJobs = products
     .filter(p => productIdMap[p.id] && p.images_cdn?.length > 0)
     .map(p => ({ shopifyId: productIdMap[p.id], urls: p.images_cdn }));
-
   for (let i = 0; i < imageJobs.length; i += BATCH_SIZE) {
     const batch = imageJobs.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(({ shopifyId, urls }) =>
@@ -211,8 +210,8 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
     if (i + BATCH_SIZE < imageJobs.length) await delay(BATCH_DELAY_MS);
   }
 
-  // Phase 2: Create collections (small count — sequential is fine).
-  await updateProgress(jobId, products.length, products.length, `Creating ${categories.length} collections...`);
+  // Phase 2: Create collections.
+  await updateProgress(jobId, products.length, products.length, `Creating ${categories.length} collections...`, 'collections', collectionsMeta);
   for (const cat of categories) {
     try {
       const sc = await createCollection(shop, accessToken, cat);
@@ -224,7 +223,8 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
     await delay(BATCH_DELAY_MS);
   }
 
-  // Phase 3: Assign products to collections in concurrent batches.
+  // Phase 3: Assign products to collections.
+  await updateProgress(jobId, products.length, products.length, `Assigning to collections...`, 'assigns', collectionsMeta);
   const assigns = [];
   for (const p of products) {
     for (const catName of p.all_categories) {
