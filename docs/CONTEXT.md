@@ -16,9 +16,9 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-06-01
-- **Session topic:** dm2buy API back up · shopify app deploy → shoprift-8 · T8.3 kiwiishop 25-product CLI test ✅ · T8.4 error handling fix (user-friendly 404 message in recon.ts + extractor.ts) · T8.7 performance confirmed ✅ · LAUNCH_PLAN.md ticked.
-- **Branch:** main — 7 commits ahead of origin/main (last commit: `8bd008b`)
+- **Date:** 2026-06-02
+- **Session topic:** Full pre-launch audit (security, reliability, UX) — 14 files changed, commit `f04100c`. See DEVLOG.md for full list of changes.
+- **Branch:** main (last commit: `f04100c`)
 
 ---
 
@@ -42,11 +42,11 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **T8.4 error handling fix** — commit `8bd008b`: `fetchStoreMeta` in both `recon.ts` and `extractor.ts` now catches permanent 404 errors and rethrows `"Store not found. Check the URL and try again."` instead of leaking raw API URL to UI. TS clean.
-2. **T8.7 performance confirmed** — mmshop (13 products, 13 images) in 45s CLI. Web app (no image download) ~25s for 10 products. ✅ under 2 min.
-3. **T8.3 large store test** — kiwiishop CLI: 25 products, 5 collections, 63 images, 0 failures, 2m31s (includes image download). ✅
-4. **shopify app deploy → shoprift-8** — scope change (`write_product_listings` removed) now live in Shopify Partner dashboard. Deploy completed successfully.
-5. **dm2buy API recovered** — API back up (2026-06-01). `api.dm2buy.com/v4/...` returns 200. Previous outage was Azure App Gateway 502.
+1. **Pre-launch audit hardening** — commit `f04100c`: deleted dead Razorpay routes, wired recon stub to Railway, storeUrl validation fix, token expiry fix, billing/callback ownership, AbortSignal timeouts, webhook 500→200, idempotency duplicate key check, user-facing error cleanup, frontend state reset + expired code CTA, security headers.
+2. **Session token timeout cut** — commit `2c4b8e4`: App Bridge v3 token warmup timeout cut from 12s to 500ms, eliminating 10s+ delay on every request.
+3. **Session-based auth fallback** — commit `5c7d9ee`: `verifyRequest()` dual-auth (JWT first, then Supabase session check). Fixed "Session error" on all API routes. App Bridge v3 `getSessionToken()` permanently fails in current Shopify admin — session fallback is the live auth path.
+4. **T8.4 error handling fix** — commit `8bd008b`: `fetchStoreMeta` now shows "Store not found. Check the URL and try again." instead of leaking raw API URL.
+5. **T8.7 performance confirmed** — mmshop 45s CLI, web app ~25s for 10 products. ✅ under 2 min.
 
 ---
 
@@ -128,7 +128,7 @@ These were explicitly saved for later — not blockers for submission, but queue
 - **RAILWAY_WORKER_URL** — `https://shoprift-production.up.railway.app` (production + local .env.local). Must be set in Vercel env vars.
 - **dm2buy server-side TLS** — All server-side API calls to `api.dm2buy.com` MUST use `axios + httpsAgent` with `rejectUnauthorized: false`. Pattern in `src/api.js`. Never use native `fetch` for dm2buy API calls from Node.js. (Client-side browser fetch is fine — uses browser's TLS stack.)
 - **Shopify Billing currency** — `AppPurchaseOneTime` created with `currencyCode: 'INR'`. Test mode: `isTest = NODE_ENV !== 'production'`.
-- **Razorpay scaffolded but unused** — `/api/payment/create` exists. Shopify Billing API is the actual payment path.
+- **Razorpay routes deleted** — `/api/payment/create` and `/api/payment/verify` deleted (commit `f04100c`). Were dead code after switch to Shopify Billing. Remove `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` env vars from Vercel if not needed for other purposes.
 - **PRE_LAUNCH_CHECKLIST** — effectively complete. The domain/email checkbox was left unticked but work was done (domain purchased, all 26 email occurrences replaced).
 - **dm2buy API outage pattern** — when API returns non-CORS 502, browser throws `TypeError: Failed to fetch` (CORS check fails before HTTP error is surfaced). Both `recon.ts` and `extractor.ts` catch this and show "dm2buy is unreachable right now." The outage is NOT detection/IP blocking — it's infrastructure. The storefront uses the same client-side API; if our extraction fails, the storefront also shows no products for real sellers.
 - **Non-existent store error** — `recon.ts` and `extractor.ts` both catch 404 in `fetchStoreMeta` and show "Store not found. Check the URL and try again." Raw API URL no longer leaked to UI (fixed commit `8bd008b`).

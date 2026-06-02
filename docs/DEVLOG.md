@@ -7,6 +7,45 @@
 
 ---
 
+## 2026-06-02 — Pre-launch audit: security + reliability + UX hardening (commit f04100c)
+
+**Files:**
+- `web/src/app/api/payment/create/route.ts` (deleted)
+- `web/src/app/api/payment/verify/route.ts` (deleted)
+- `web/src/app/api/recon/route.ts` (rewrite)
+- `web/src/app/api/verify/start/route.ts` (edit)
+- `web/src/app/api/verify/check/route.ts` (edit)
+- `web/src/app/api/import/start/route.ts` (edit)
+- `web/src/app/api/payment/billing/create/route.ts` (edit)
+- `web/src/app/api/payment/billing/callback/route.ts` (edit)
+- `web/src/app/api/webhooks/billing-update/route.ts` (edit)
+- `web/src/app/api/webhooks/compliance/route.ts` (edit)
+- `web/src/app/api/webhooks/app-uninstalled/route.ts` (edit)
+- `web/src/app/migrate/page.tsx` (edit)
+- `web/src/lib/auth.ts` (edit)
+- `web/src/middleware.ts` (edit)
+
+**Changes:**
+- **Deleted dead Razorpay routes** (`payment/create`, `payment/verify`) — unused after switch to Shopify Billing, were unauthenticated attack surface
+- **Wired /api/recon** to Railway worker — was returning mock stub data `{storeName: 'Kiwii Shop (stub)'}` on every call. Note: current frontend doesn't call this route (uses `runRecon` lib directly), but route is now correct
+- **storeUrl validation** — replaced `storeUrl.includes('dm2buy.com')` with proper URL.hostname check (`hostname.endsWith('.dm2buy.com')`) across all 4 routes that accept storeUrl
+- **Token expiry fix** — `payload.exp < now` → `payload.exp <= now` (off-by-one allowed 1-second window for expired tokens)
+- **billing/callback ownership** — added `.eq('account_id', shop)` to job lookup (was fetching by jobId only)
+- **AbortSignal.timeout** — added 8s timeout to all Railway worker fetch calls, 10s to Shopify GQL billing call. Prevents Vercel function hangs when worker is slow/down
+- **Webhook HMAC handling** — all 3 webhooks now return 200 for invalid signature / validate() error (was returning 500/401 which caused Shopify retry loops)
+- **Webhook idempotency** — insert now checks for error code 23505 (unique constraint = concurrent delivery already processed) and returns 200 immediately
+- **User-facing errors** — all API routes now return simple, non-technical messages. Internal detail logged with structured `console.error({ phase, shop, error })`. Auth 401 no longer leaks `err.message` to response body
+- **Frontend auth error** — removed `"Auth failed: Missing session token"` debug message. Now shows `"Session expired. Please refresh the page and try again."`
+- **Change URL state reset** — both Change URL handlers (verifying step + preview step) now fully reset: verifyCode, verifyAttemptId, verifyError, verifyLoading, verifySecsLeft, trialUsed, trialProductUrls, verifyExpRef
+- **Expired code CTA** — "Code expired" static text replaced with clickable button `"Code expired — get new code"` that calls new `handleRefreshCode()` function
+- **Security headers** — added `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(), camera=(), microphone=()` to middleware
+
+**Known deferred / not changed:**
+- Auth bypass via session fallback (B1) — architectural, deferred to post-launch. Session fallback is what keeps the app working without App Bridge v3 JWT. Mitigation: Shopify's OAuth install ensures only installed shops have sessions; the `shop` parameter is validated against `.myshopify.com` format.
+- Supabase DB type generation — `npx supabase gen types typescript` not yet run; operations remain untyped
+
+---
+
 ## 2026-05-30 — T8.1 QA — dm2buy API outage error handling
 
 **Files:**
