@@ -8,7 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 
 const API_VERSION = '2025-01';
-const RATE_DELAY_MS = 550; // 2 req/s Shopify REST limit; 550ms gives headroom
+const BATCH_SIZE = 5;      // concurrent Shopify API calls per batch
+const BATCH_DELAY_MS = 600; // pause between batches — stays under 2 req/s sustained
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -93,6 +94,9 @@ function buildShopifyVariants(variants, price, originalPrice) {
   return { options: [{ name: 'Option' }], variants: other.map(o => ({ ...base, option1: o })) };
 }
 
+// Create product metadata only — no images. Shopify blocks the response while
+// downloading remote image URLs (especially slow on dm2buy CDN). Images are
+// attached in a separate pass so product creation completes in ~300ms.
 async function createProduct(shop, accessToken, product, storeName) {
   const { options, variants } = buildShopifyVariants(
     product.variants,
@@ -105,13 +109,21 @@ async function createProduct(shop, accessToken, product, storeName) {
       body_html: product.description ? `<p>${product.description}</p>` : '',
       vendor: storeName,
       status: 'active',
-      images: product.images_cdn.slice(0, 20).map(src => ({ src })),
       ...(options ? { options } : {}),
       variants,
     },
   };
   const data = await shopifyFetch(shop, accessToken, 'POST', 'products.json', body);
   return data.product;
+}
+
+// Attach images to an already-created product. Shopify downloads URLs async.
+async function attachImages(shop, accessToken, shopifyProductId, imageUrls) {
+  if (!imageUrls || imageUrls.length === 0) return;
+  const images = imageUrls.slice(0, 20).map(src => ({ src }));
+  await shopifyFetch(shop, accessToken, 'PUT', `products/${shopifyProductId}.json`, {
+    product: { id: shopifyProductId, images },
+  });
 }
 
 async function createCollection(shop, accessToken, category) {
@@ -162,33 +174,46 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
   let productsFailed = 0;
   let collectionsCreated = 0;
 
-  const totalSteps = products.length + categories.length;
-
-  // Phase 1: Create products
-  for (let i = 0; i < products.length; i++) {
-    const p = products[i];
-    await updateProgress(jobId, i + 1, totalSteps, `Creating product ${i + 1}/${products.length}: ${p.name}`);
-    await delay(RATE_DELAY_MS);
-    try {
-      const sp = await createProduct(shop, accessToken, p, store_meta.name);
-      productIdMap[p.id] = sp.id;
-      productsCreated++;
-    } catch (err) {
-      errors.push(`Product "${p.name}": ${err.message}`);
-      productsFailed++;
-    }
+  // Phase 1: Create products in concurrent batches (no images — fast ~300ms each).
+  // Images are attached in Phase 1b to avoid Shopify blocking the response on
+  // slow dm2buy CDN image downloads.
+  await updateProgress(jobId, 0, products.length, `Creating ${products.length} products...`);
+  for (let i = 0; i < products.length; i += BATCH_SIZE) {
+    const batch = products.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(async (p) => {
+      try {
+        const sp = await createProduct(shop, accessToken, p, store_meta.name);
+        productIdMap[p.id] = sp.id;
+        productsCreated++;
+      } catch (err) {
+        errors.push(`Product "${p.name}": ${err.message}`);
+        productsFailed++;
+      }
+    }));
+    // Update progress every batch (not every product — reduces Supabase writes).
+    const done = Math.min(i + BATCH_SIZE, products.length);
+    await updateProgress(jobId, done, products.length, `Created ${done}/${products.length} products`);
+    if (i + BATCH_SIZE < products.length) await delay(BATCH_DELAY_MS);
   }
 
-  // Phase 2: Create collections
-  for (let i = 0; i < categories.length; i++) {
-    const cat = categories[i];
-    await updateProgress(
-      jobId,
-      products.length + i + 1,
-      totalSteps,
-      `Creating collection ${i + 1}/${categories.length}: ${cat.name}`,
-    );
-    await delay(RATE_DELAY_MS);
+  // Phase 1b: Attach images in concurrent batches. Fires after all products exist.
+  const imageJobs = products
+    .filter(p => productIdMap[p.id] && p.images_cdn?.length > 0)
+    .map(p => ({ shopifyId: productIdMap[p.id], urls: p.images_cdn }));
+
+  for (let i = 0; i < imageJobs.length; i += BATCH_SIZE) {
+    const batch = imageJobs.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(({ shopifyId, urls }) =>
+      attachImages(shop, accessToken, shopifyId, urls).catch(err =>
+        errors.push(`Images for product ${shopifyId}: ${err.message}`)
+      )
+    ));
+    if (i + BATCH_SIZE < imageJobs.length) await delay(BATCH_DELAY_MS);
+  }
+
+  // Phase 2: Create collections (small count — sequential is fine).
+  await updateProgress(jobId, products.length, products.length, `Creating ${categories.length} collections...`);
+  for (const cat of categories) {
     try {
       const sc = await createCollection(shop, accessToken, cat);
       collectionIdMap[cat.name] = sc.id;
@@ -196,21 +221,26 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
     } catch (err) {
       errors.push(`Collection "${cat.name}": ${err.message}`);
     }
+    await delay(BATCH_DELAY_MS);
   }
 
-  // Phase 3: Assign products to collections
+  // Phase 3: Assign products to collections in concurrent batches.
+  const assigns = [];
   for (const p of products) {
     for (const catName of p.all_categories) {
       const colId = collectionIdMap[catName];
       const prodId = productIdMap[p.id];
-      if (!colId || !prodId) continue;
-      await delay(RATE_DELAY_MS);
-      try {
-        await addToCollection(shop, accessToken, colId, prodId);
-      } catch (err) {
-        errors.push(`Collect "${p.name}" → "${catName}": ${err.message}`);
-      }
+      if (colId && prodId) assigns.push({ p, catName, colId, prodId });
     }
+  }
+  for (let i = 0; i < assigns.length; i += BATCH_SIZE) {
+    const batch = assigns.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(({ p, catName, colId, prodId }) =>
+      addToCollection(shop, accessToken, colId, prodId).catch(err =>
+        errors.push(`Collect "${p.name}" → "${catName}": ${err.message}`)
+      )
+    ));
+    if (i + BATCH_SIZE < assigns.length) await delay(BATCH_DELAY_MS);
   }
 
   return { productsCreated, productsFailed, collectionsCreated, errors };

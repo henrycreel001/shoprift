@@ -7,6 +7,20 @@
 
 ---
 
+## 2026-06-03 — perf(importer): batch concurrency + decouple image uploads
+
+**Files:**
+- `src/shopify-importer.js` (edit)
+
+**Changes:**
+- **Root cause:** product creation was passing image URLs inline → Shopify blocks the API response while downloading remote images from dm2buy CDN (slow/expired TLS). Each product create took 5–10s instead of ~300ms. 25 products = 6–7 minutes.
+- **Fix 1:** Split product creation into two phases: create metadata first (no images, ~300ms), then attach images in a separate PUT pass (Shopify handles async).
+- **Fix 2:** Batch concurrency — `BATCH_SIZE=5`. Products, image attachments, and collection assignments now run 5 at a time instead of sequentially.
+- **Fix 3:** Progress updates reduced from every item to every batch — cuts Supabase writes from ~55 to ~11 per import.
+- **Expected result:** 25 products: 6–7 min → ~30–60s. 100 products: ~24 min → ~2 min.
+
+---
+
 ## 2026-06-02 — Fix: payment redirect stuck forever (billing T8.5 bug)
 
 **Files:**
