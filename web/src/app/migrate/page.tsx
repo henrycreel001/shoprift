@@ -10,7 +10,6 @@ import { createBrowserSupabaseClient } from '@/lib/supabase'
 import type { ReconData, StoreData, ProgressEvent } from '@/lib/dm2buy/types'
 import createApp from '@shopify/app-bridge'
 import { getSessionToken } from '@shopify/app-bridge/utilities'
-import { Redirect } from '@shopify/app-bridge/actions'
 import { track } from '@/lib/analytics'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -827,12 +826,8 @@ function MigrateWizard() {
       })
       const d = await res.json() as { confirmationUrl?: string; error?: string }
       if (!res.ok) throw new Error(d.error ?? 'Failed to create payment.')
-      if (appBridgeRef.current) {
-        const redirect = Redirect.create(appBridgeRef.current)
-        redirect.dispatch(Redirect.Action.REMOTE, d.confirmationUrl!)
-      } else {
-        window.top!.location.href = d.confirmationUrl!
-      }
+      // App Bridge Redirect uses postMessage which is unreliable in current Shopify admin.
+      window.top!.location.href = d.confirmationUrl!
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment setup failed. Try again.')
       setBillingLoading(false)

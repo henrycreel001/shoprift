@@ -7,6 +7,18 @@
 
 ---
 
+## 2026-06-02 — Fix: payment redirect stuck forever (billing T8.5 bug)
+
+**Files:**
+- `web/src/app/migrate/page.tsx` (edit)
+
+**Changes:**
+- **Removed App Bridge `Redirect.Action.REMOTE`** from payment flow — uses postMessage channel, which is permanently broken in current Shopify admin (same root cause as `getSessionToken()` failure). `Redirect.dispatch()` fired silently with no effect, `setBillingLoading(false)` never called → button stuck on "Redirecting to payment..." forever.
+- **Fix:** `window.top!.location.href = d.confirmationUrl!` directly. Works in embedded (navigates parent iframe) and standalone.
+- **Removed** unused `import { Redirect } from '@shopify/app-bridge/actions'`
+
+---
+
 ## 2026-06-02 — Pre-launch audit: security + reliability + UX hardening (commit f04100c)
 
 **Files:**
