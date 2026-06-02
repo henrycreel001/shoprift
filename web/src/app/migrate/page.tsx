@@ -386,6 +386,8 @@ function MigrateWizard() {
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null)
   const appBridgeRef    = useRef<ReturnType<typeof createApp> | null>(null)
   const tokenPromiseRef = useRef<Promise<string> | null>(null)
+  // Once we confirm App Bridge token never works, skip the 500ms wait on all future calls.
+  const appBridgeDeadRef = useRef<boolean>(false)
   const importStartRef  = useRef<number | null>(null)
   // #17 — focus target for step transitions
   const mainRef         = useRef<HTMLDivElement>(null)
@@ -434,17 +436,19 @@ function MigrateWizard() {
       if (apiKey) {
         const app = createApp({ apiKey, host })
         appBridgeRef.current = app
-        // Pre-warm once with short timeout — session-based auth is the reliable path.
-        tokenPromiseRef.current = Promise.race([
+        // Pre-warm once. If token is empty, mark App Bridge dead so future calls skip the wait.
+        const warmup = Promise.race([
           getSessionToken(app),
           new Promise<string>(r => setTimeout(() => r(''), 500)),
         ])
+        warmup.then(t => { if (!t) appBridgeDeadRef.current = true })
+        tokenPromiseRef.current = warmup
       }
     } catch { /* not in Shopify context */ }
   }, [host])
 
   async function authHeaders(): Promise<Record<string, string>> {
-    if (!appBridgeRef.current) return {}
+    if (!appBridgeRef.current || appBridgeDeadRef.current) return {}
     try {
       // Use pre-warmed promise if still pending; otherwise get a fresh token.
       // Tokens are short-lived — always get a fresh one after the first use.
@@ -454,7 +458,7 @@ function MigrateWizard() {
         tokenPromise,
         new Promise<string>(r => setTimeout(() => r(''), 500)),
       ])
-      if (!token) throw new Error('empty token')
+      if (!token) { appBridgeDeadRef.current = true; throw new Error('empty token') }
       return { Authorization: `Bearer ${token}` }
     } catch { return {} }
   }
