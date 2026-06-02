@@ -24,7 +24,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     shop = await verifySessionToken(request);
   } catch (err) {
     const status = (err as { status?: number }).status ?? 401;
-    return NextResponse.json({ error: 'Unauthorized' }, { status });
+    const detail = (err as Error).message ?? 'Unauthorized';
+    return NextResponse.json({ error: detail }, { status });
   }
 
   let body: { storeUrl?: unknown };

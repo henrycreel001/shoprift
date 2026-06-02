@@ -435,9 +435,21 @@ function MigrateWizard() {
       if (apiKey) {
         const app = createApp({ apiKey, host })
         appBridgeRef.current = app
-        // Pre-warm: start fetching session token immediately so it's ready by the time
-        // verify/start is called (~6s later after recon + Supabase queries complete).
-        tokenPromiseRef.current = getSessionToken(app).catch(() => '')
+        // Pre-warm with retries: App Bridge channel establishment can take 1-3s.
+        // Retry getSessionToken until a non-empty token is returned.
+        tokenPromiseRef.current = (async () => {
+          for (let i = 0; i < 8; i++) {
+            try {
+              const t = await Promise.race([
+                getSessionToken(app),
+                new Promise<never>((_, r) => setTimeout(() => r(new Error('t/o')), 4000)),
+              ])
+              if (t) return t
+            } catch {}
+            await new Promise(r => setTimeout(r, 1000))
+          }
+          return ''
+        })()
       }
     } catch { /* not in Shopify context */ }
   }, [host])
@@ -445,11 +457,13 @@ function MigrateWizard() {
   async function authHeaders(): Promise<Record<string, string>> {
     if (!appBridgeRef.current) return {}
     try {
+      // Use pre-warmed promise if still pending; otherwise get a fresh token.
+      // Tokens are short-lived — always get a fresh one after the first use.
       const tokenPromise = tokenPromiseRef.current ?? getSessionToken(appBridgeRef.current)
       tokenPromiseRef.current = null
       const token = await Promise.race([
         tokenPromise,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000)),
       ])
       if (!token) throw new Error('empty token')
       return { Authorization: `Bearer ${token}` }
@@ -589,7 +603,7 @@ function MigrateWizard() {
           const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
           if (!vRes.ok || !vData.code) {
             const msg = vRes.status === 401
-              ? 'Session error. Please refresh the page and try again.'
+              ? `Auth failed: ${vData.error ?? 'no token'}. Refresh and try again.`
               : vData.error ?? 'Failed to start verification.'
             throw new Error(msg)
           }
