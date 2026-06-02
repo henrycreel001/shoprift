@@ -151,9 +151,10 @@ async function updateProgress(jobId, current, total, message, phase = 'products'
 
 /**
  * Imports a full StoreData into a Shopify store.
- * Phase 1: products → Phase 2: collections → Phase 3: collection assignments.
+ * Phase 1: products → Phase 1b: images → Phase 2: collections → Phase 3: assigns.
  * Each item's error is isolated — one failure does not abort the rest.
- * Updates import_jobs.progress after each step.
+ * Progress JSONB includes per-phase counters so the frontend can render
+ * individual mini progress bars for each phase.
  *
  * @param {object} p
  * @param {string} p.jobId
@@ -173,11 +174,26 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
   let productsCreated = 0;
   let productsFailed = 0;
   let collectionsCreated = 0;
+  let imagesDone = 0;
+  let imagesTotal = 0;
+  let assignsDone = 0;
+  let assignsTotal = 0;
 
-  const collectionsMeta = { collections_total: categories.length };
+  // Full progress snapshot included in every updateProgress call so the
+  // frontend always has all four phase counters and can derive weighted %.
+  function allProgress() {
+    return {
+      collections_total: categories.length,
+      images_total: imagesTotal,
+      images_current: imagesDone,
+      collections_current: collectionsCreated,
+      assigns_total: assignsTotal,
+      assigns_current: assignsDone,
+    };
+  }
 
   // Phase 1: Create products in concurrent batches (no images — fast ~300ms each).
-  await updateProgress(jobId, 0, products.length, `Creating ${products.length} products...`, 'products', collectionsMeta);
+  await updateProgress(jobId, 0, products.length, `Creating ${products.length} products...`, 'products', allProgress());
   for (let i = 0; i < products.length; i += BATCH_SIZE) {
     const batch = products.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(async (p) => {
@@ -191,15 +207,17 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
       }
     }));
     const done = Math.min(i + BATCH_SIZE, products.length);
-    await updateProgress(jobId, done, products.length, `Created ${done}/${products.length} products`, 'products', collectionsMeta);
+    await updateProgress(jobId, done, products.length, `Created ${done}/${products.length} products`, 'products', allProgress());
     if (i + BATCH_SIZE < products.length) await delay(BATCH_DELAY_MS);
   }
 
-  // Phase 1b: Attach images in concurrent batches (separate pass so product create isn't blocked by image downloads).
-  await updateProgress(jobId, products.length, products.length, `Uploading images...`, 'images', collectionsMeta);
+  // Phase 1b: Attach images in concurrent batches. Separate pass so product
+  // creation isn't blocked by image downloads from the dm2buy CDN.
   const imageJobs = products
     .filter(p => productIdMap[p.id] && p.images_cdn?.length > 0)
     .map(p => ({ shopifyId: productIdMap[p.id], urls: p.images_cdn }));
+  imagesTotal = imageJobs.length;
+  await updateProgress(jobId, products.length, products.length, `Uploading ${imagesTotal} images...`, 'images', allProgress());
   for (let i = 0; i < imageJobs.length; i += BATCH_SIZE) {
     const batch = imageJobs.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(({ shopifyId, urls }) =>
@@ -207,11 +225,16 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
         errors.push(`Images for product ${shopifyId}: ${err.message}`)
       )
     ));
-    if (i + BATCH_SIZE < imageJobs.length) await delay(BATCH_DELAY_MS);
+    imagesDone = Math.min(i + BATCH_SIZE, imageJobs.length);
+    if (i + BATCH_SIZE < imageJobs.length) {
+      await updateProgress(jobId, products.length, products.length, `Uploading images...`, 'images', allProgress());
+      await delay(BATCH_DELAY_MS);
+    }
   }
+  imagesDone = imagesTotal; // mark complete even if last batch had no delay
 
   // Phase 2: Create collections.
-  await updateProgress(jobId, products.length, products.length, `Creating ${categories.length} collections...`, 'collections', collectionsMeta);
+  await updateProgress(jobId, products.length, products.length, `Creating ${categories.length} collections...`, 'collections', allProgress());
   for (const cat of categories) {
     try {
       const sc = await createCollection(shop, accessToken, cat);
@@ -220,11 +243,11 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
     } catch (err) {
       errors.push(`Collection "${cat.name}": ${err.message}`);
     }
+    await updateProgress(jobId, products.length, products.length, `Created ${collectionsCreated}/${categories.length} collections`, 'collections', allProgress());
     await delay(BATCH_DELAY_MS);
   }
 
   // Phase 3: Assign products to collections.
-  await updateProgress(jobId, products.length, products.length, `Assigning to collections...`, 'assigns', collectionsMeta);
   const assigns = [];
   for (const p of products) {
     for (const catName of p.all_categories) {
@@ -233,6 +256,8 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
       if (colId && prodId) assigns.push({ p, catName, colId, prodId });
     }
   }
+  assignsTotal = assigns.length;
+  await updateProgress(jobId, products.length, products.length, `Assigning to collections...`, 'assigns', allProgress());
   for (let i = 0; i < assigns.length; i += BATCH_SIZE) {
     const batch = assigns.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(({ p, catName, colId, prodId }) =>
@@ -240,7 +265,11 @@ export async function importStore({ jobId, shop, accessToken, storeData, skipUrl
         errors.push(`Collect "${p.name}" → "${catName}": ${err.message}`)
       )
     ));
-    if (i + BATCH_SIZE < assigns.length) await delay(BATCH_DELAY_MS);
+    assignsDone = Math.min(i + BATCH_SIZE, assigns.length);
+    if (i + BATCH_SIZE < assigns.length) {
+      await updateProgress(jobId, products.length, products.length, `Assigning to collections...`, 'assigns', allProgress());
+      await delay(BATCH_DELAY_MS);
+    }
   }
 
   return { productsCreated, productsFailed, collectionsCreated, errors };

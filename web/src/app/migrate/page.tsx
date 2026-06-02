@@ -33,6 +33,11 @@ interface ImportStatus {
   message: string
   phase?: string
   collectionsTotal?: number
+  collectionsCurrent?: number
+  imagesTotal?: number
+  imagesCurrent?: number
+  assignsTotal?: number
+  assignsCurrent?: number
 }
 
 interface ImportResult {
@@ -50,6 +55,22 @@ function priceTier(count: number) {
   if (count <= 100) return { plan: 'Standard',   price: '₹999',      isFree: false }
   if (count <= 500) return { plan: 'Pro',         price: '₹1,999',   isFree: false }
   return                    { plan: 'Enterprise', price: 'Contact us', isFree: false }
+}
+
+// Weighted composite progress across all 4 import phases.
+// Products 25% · Images 40% · Collections 15% · Assigns 20%.
+// Caps at 99 until status === 'complete' so bar never lies.
+function calcImportProgress(s: ImportStatus): number {
+  if (s.status === 'complete') return 100
+  const pProd = s.total > 0 ? s.current / s.total : 0
+  const imgTotal = s.imagesTotal ?? 0
+  const pImg  = imgTotal > 0 ? (s.imagesCurrent ?? 0) / imgTotal : pProd
+  const colTotal = s.collectionsTotal ?? 0
+  const pCol  = colTotal > 0 ? (s.collectionsCurrent ?? 0) / colTotal : pProd
+  const asgnTotal = s.assignsTotal ?? 0
+  const pAsgn = asgnTotal > 0 ? (s.assignsCurrent ?? 0) / asgnTotal : pCol
+  const weighted = pProd * 25 + pImg * 40 + pCol * 15 + pAsgn * 20
+  return Math.min(99, Math.floor(weighted))
 }
 
 function isDm2buyUrl(url: string): boolean {
@@ -493,12 +514,12 @@ function MigrateWizard() {
         const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
         const d = await r.json() as {
           status: string
-          progress?: { current: number; total: number; message: string; phase?: string; collections_total?: number }
+          progress?: { current: number; total: number; message: string; phase?: string; collections_total?: number; collections_current?: number; images_total?: number; images_current?: number; assigns_total?: number; assigns_current?: number }
           error?: string
           result?: ImportResult
         }
         const prog = d.progress ?? { current: 0, total: 0, message: '' }
-        setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message, phase: prog.phase, collectionsTotal: prog.collections_total })
+        setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message, phase: prog.phase, collectionsTotal: prog.collections_total, collectionsCurrent: prog.collections_current, imagesTotal: prog.images_total, imagesCurrent: prog.images_current, assignsTotal: prog.assigns_total, assignsCurrent: prog.assigns_current })
         if (d.status === 'complete') {
           clearPoll()
           const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
@@ -720,9 +741,9 @@ function MigrateWizard() {
       const poll = async () => {
         try {
           const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
-          const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string }; error?: string; result?: ImportResult }
+          const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string; phase?: string; collections_total?: number; collections_current?: number; images_total?: number; images_current?: number; assigns_total?: number; assigns_current?: number }; error?: string; result?: ImportResult }
           const prog = d.progress ?? { current: 0, total: 0, message: '' }
-          setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+          setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message, phase: prog.phase, collectionsTotal: prog.collections_total, collectionsCurrent: prog.collections_current, imagesTotal: prog.images_total, imagesCurrent: prog.images_current, assignsTotal: prog.assigns_total, assignsCurrent: prog.assigns_current })
           if (d.status === 'complete') {
             clearPoll()
             const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
@@ -794,9 +815,9 @@ function MigrateWizard() {
         const poll = async () => {
           try {
             const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
-            const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string }; error?: string; result?: ImportResult }
+            const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string; phase?: string; collections_total?: number; collections_current?: number; images_total?: number; images_current?: number; assigns_total?: number; assigns_current?: number }; error?: string; result?: ImportResult }
             const prog = d.progress ?? { current: 0, total: 0, message: '' }
-            setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
+            setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message, phase: prog.phase, collectionsTotal: prog.collections_total, collectionsCurrent: prog.collections_current, imagesTotal: prog.images_total, imagesCurrent: prog.images_current, assignsTotal: prog.assigns_total, assignsCurrent: prog.assigns_current })
             if (d.status === 'complete') {
               clearPoll()
               const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
@@ -851,8 +872,7 @@ function MigrateWizard() {
   const tier           = reconData ? priceTier(reconData.product_count) : null
   const extractPercent = extractProgress && extractProgress.total > 0
     ? Math.round((extractProgress.current / extractProgress.total) * 100) : 0
-  const importPercent  = importStatus && importStatus.total > 0
-    ? Math.round((importStatus.current / importStatus.total) * 100) : 0
+  const importPercent  = importStatus ? calcImportProgress(importStatus) : 0
   const trialExtDone   = extractProgress != null && extractProgress.total > 0 && extractProgress.current >= extractProgress.total
   const showWarnBanner = step === 'extracting' || step === 'trialing' || step === 'importing'
 
@@ -868,19 +888,16 @@ function MigrateWizard() {
     : null
 
   let importEta: string | null = null
-  if (importStatus && importStatus.current > 0 && importStatus.total > 0 && importStartRef.current) {
+  if (importStatus && importStartRef.current) {
     const elapsed = Date.now() - importStartRef.current
-    if (elapsed >= 3000) {
-      const rate = importStatus.current / elapsed           // products per ms
-      const remaining = importStatus.total - importStatus.current
-      if (remaining > 0) {
-        const etaMs = remaining / rate
-        if (etaMs < 15000)      importEta = '< 15 sec'
-        else if (etaMs < 60000) importEta = `~${Math.round(etaMs / 1000)} sec`
-        else {
-          const mins = Math.round(etaMs / 60000)
-          importEta = `~${mins} min${mins !== 1 ? 's' : ''}`
-        }
+    const pct = importPercent / 100
+    if (elapsed >= 3000 && pct > 0.05 && pct < 1) {
+      const etaMs = (elapsed / pct) - elapsed
+      if (etaMs < 15000)      importEta = '< 15 sec'
+      else if (etaMs < 60000) importEta = `~${Math.round(etaMs / 1000)} sec`
+      else {
+        const mins = Math.round(etaMs / 60000)
+        importEta = `~${mins} min${mins !== 1 ? 's' : ''}`
       }
     }
   }
@@ -1370,15 +1387,16 @@ function MigrateWizard() {
 
             {importStatus && importStatus.total > 0 ? (
               <>
+                {/* Main weighted progress bar */}
                 <ProgressTrack percent={importPercent} />
                 <div className="flex items-center justify-between mt-2 mb-6">
                   <p className="font-mono text-[11px] text-ink-4">
-                    {importStatus.current > 0 ? `${importStatus.current} / ${importStatus.total} products` : 'Starting...'}
+                    {importEta ? `${importEta} remaining` : (importStatus.current > 0 ? `${importStatus.current} / ${importStatus.total} products` : 'Starting...')}
                   </p>
                   <p className="font-mono text-[11px] text-ink-3">{importPercent}%</p>
                 </div>
 
-                {/* Checklist */}
+                {/* Phase checklist with per-phase mini progress bars */}
                 {(() => {
                   const PHASES = ['products', 'images', 'collections', 'assigns']
                   const curPhase = importStatus.phase ?? 'products'
@@ -1393,62 +1411,62 @@ function MigrateWizard() {
                     return 'pending'
                   }
 
-                  const prodTotal = importStatus.total
-                  const colTotal = importStatus.collectionsTotal ?? 0
+                  function phaseBarPct(state: 'done' | 'active' | 'pending', current: number, total: number): number {
+                    if (state === 'done') return 100
+                    if (total > 0) return Math.round((current / total) * 100)
+                    return 0
+                  }
+
+                  function phaseCountText(state: 'done' | 'active' | 'pending', current: number, total: number): string {
+                    if (state === 'done') return total > 0 ? `${total} done` : 'done'
+                    if (state === 'active') return total > 0 ? `${current} / ${total}` : 'in progress'
+                    return total > 0 ? `0 / ${total}` : '—'
+                  }
 
                   const items = [
-                    {
-                      id: 'products',
-                      label: 'Products created',
-                      detail: stepState('products') === 'active'
-                        ? `${importStatus.current} / ${prodTotal}`
-                        : `${prodTotal} done`,
-                    },
-                    {
-                      id: 'images',
-                      label: 'Images uploaded',
-                      detail: stepState('images') === 'active' ? 'uploading...' : stepState('images') === 'done' ? 'done' : '—',
-                    },
-                    {
-                      id: 'collections',
-                      label: 'Collections created',
-                      detail: stepState('collections') === 'active'
-                        ? `0 / ${colTotal}`
-                        : stepState('collections') === 'done' && colTotal > 0 ? `${colTotal} done` : colTotal > 0 ? `${colTotal} pending` : '—',
-                    },
-                    {
-                      id: 'assigns',
-                      label: 'Assigned to collections',
-                      detail: stepState('assigns') === 'active' ? 'assigning...' : stepState('assigns') === 'done' ? 'done' : '—',
-                    },
+                    { id: 'products',    label: 'Products created',        current: importStatus.current,                 total: importStatus.total },
+                    { id: 'images',      label: 'Images uploaded',          current: importStatus.imagesCurrent ?? 0,      total: importStatus.imagesTotal ?? 0 },
+                    { id: 'collections', label: 'Collections created',      current: importStatus.collectionsCurrent ?? 0, total: importStatus.collectionsTotal ?? 0 },
+                    { id: 'assigns',     label: 'Assigned to collections',  current: importStatus.assignsCurrent ?? 0,     total: importStatus.assignsTotal ?? 0 },
                   ]
 
                   return (
-                    <div className="space-y-3 border border-wire rounded-xl px-5 py-4 bg-surface">
-                      {items.map(({ id, label, detail }) => {
+                    <div className="border border-wire rounded-xl overflow-hidden bg-surface divide-y divide-wire/40">
+                      {items.map(({ id, label, current, total }) => {
                         const state = stepState(id)
+                        const barPct = phaseBarPct(state, current, total)
+                        const countText = phaseCountText(state, current, total)
                         return (
-                          <div key={id} className="flex items-center gap-3">
-                            <span className="flex-shrink-0 w-4">
-                              {state === 'done' && (
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-mint-dark">
-                                  <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeOpacity="0.3"/>
-                                  <path d="M4.5 7L6.5 9L9.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                              {state === 'active' && (
-                                <span className="block w-3.5 h-3.5 border-[1.5px] border-wire border-t-mint rounded-full animate-spin" />
-                              )}
-                              {state === 'pending' && (
-                                <span className="block w-3 h-3 rounded-full border border-wire/60 mx-auto" />
-                              )}
-                            </span>
-                            <span className={`font-mono text-[11px] flex-1 ${state === 'pending' ? 'text-ink-4' : 'text-ink'}`}>
-                              {label}
-                            </span>
-                            <span className={`font-mono text-[11px] flex-shrink-0 ${state === 'done' ? 'text-mint-dark' : 'text-ink-4'}`}>
-                              {detail}
-                            </span>
+                          <div key={id} className="px-5 py-3">
+                            <div className="flex items-center gap-3 mb-1.5">
+                              <span className="flex-shrink-0 w-4 flex items-center justify-center">
+                                {state === 'done' && (
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-mint-dark">
+                                    <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeOpacity="0.3"/>
+                                    <path d="M4.5 7L6.5 9L9.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                                {state === 'active' && (
+                                  <span className="block w-3.5 h-3.5 border-[1.5px] border-wire border-t-mint rounded-full animate-spin" />
+                                )}
+                                {state === 'pending' && (
+                                  <span className="block w-3 h-3 rounded-full border border-wire/60" />
+                                )}
+                              </span>
+                              <span className={`font-mono text-[11px] flex-1 ${state === 'pending' ? 'text-ink-4' : 'text-ink'}`}>
+                                {label}
+                              </span>
+                              <span className={`font-mono text-[11px] flex-shrink-0 tabular-nums ${state === 'done' ? 'text-mint-dark' : 'text-ink-4'}`}>
+                                {countText}
+                              </span>
+                            </div>
+                            {/* Mini progress bar — aligned with content, not the icon */}
+                            <div className="ml-7 h-[2px] bg-wire/30 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${state === 'done' ? 'bg-mint-dark' : state === 'active' ? 'bg-mint' : 'bg-transparent'}`}
+                                style={{ width: `${barPct}%` }}
+                              />
+                            </div>
                           </div>
                         )
                       })}

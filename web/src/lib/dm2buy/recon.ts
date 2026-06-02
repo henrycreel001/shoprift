@@ -112,7 +112,9 @@ function countImages(products: Array<{ productPhotos?: string[]; otherPhotos?: s
 }
 
 function estimateTime(productCount: number, imageCount: number): { seconds: number; label: string } {
-  const seconds = productCount * 8 + imageCount * 2;
+  // Calibrated against observed 1–2 min for 26 products with batched parallel import.
+  // ~3s per product (batching + Railway→Shopify latency) + 0.3s per image job overhead + fixed.
+  const seconds = Math.max(20, Math.round(productCount * 3 + imageCount * 0.3 + 15));
   if (seconds < 60) return { seconds, label: `About ${seconds} seconds` };
   const minutes = Math.ceil(seconds / 60);
   return { seconds, label: `About ${minutes} minute${minutes > 1 ? 's' : ''}` };
