@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { verifySessionToken } from '@/lib/auth';
+import { verifyRequest } from '@/lib/auth';
 
 function genCode(): string {
   // No I, O, 0, 1 — easy to read aloud or type
@@ -19,20 +19,20 @@ function genCode(): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  let shop: string;
-  try {
-    shop = await verifySessionToken(request);
-  } catch (err) {
-    const status = (err as { status?: number }).status ?? 401;
-    const detail = (err as Error).message ?? 'Unauthorized';
-    return NextResponse.json({ error: detail }, { status });
-  }
-
-  let body: { storeUrl?: unknown };
+  let body: { storeUrl?: unknown; shop?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  let shop: string;
+  try {
+    shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    const detail = (err as Error).message ?? 'Unauthorized';
+    return NextResponse.json({ error: detail }, { status });
   }
 
   const { storeUrl } = body;

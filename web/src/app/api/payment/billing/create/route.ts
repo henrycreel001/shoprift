@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getValidAccessToken, SessionExpiredError } from '@/lib/shopify';
-import { verifySessionToken } from '@/lib/auth';
+import { verifyRequest } from '@/lib/auth';
 
 const SHOPIFY_API_VERSION = '2025-01';
 
@@ -22,15 +22,8 @@ function requireEnv(name: string): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  let shop: string;
-  try {
-    shop = await verifySessionToken(request);
-  } catch (err) {
-    const status = (err as { status?: number }).status ?? 401;
-    return NextResponse.json({ error: 'Unauthorized' }, { status });
-  }
-
   let body: {
+    shop?: unknown;
     storeUrl?: unknown;
     storeData?: unknown;
     skipUrls?: unknown;
@@ -41,6 +34,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  let shop: string;
+  try {
+    shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
   }
 
   const { storeUrl, storeData, skipUrls, amount, planName } = body;

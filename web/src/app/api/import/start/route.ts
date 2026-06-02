@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { verifySessionToken } from '@/lib/auth';
+import { verifyRequest } from '@/lib/auth';
 
 function requireEnv(name: string): string {
   const val = process.env[name];
@@ -18,15 +18,8 @@ function requireEnv(name: string): string {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  let shop: string;
-  try {
-    shop = await verifySessionToken(request);
-  } catch (err) {
-    const status = (err as { status?: number }).status ?? 401;
-    return NextResponse.json({ error: 'Unauthorized' }, { status });
-  }
-
   let body: {
+    shop?: unknown
     storeUrl?: unknown
     storeData?: unknown
     isTrial?: unknown
@@ -37,6 +30,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  let shop: string;
+  try {
+    shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
+  } catch (err) {
+    const status = (err as { status?: number }).status ?? 401;
+    return NextResponse.json({ error: 'Unauthorized' }, { status });
   }
 
   const { storeUrl, storeData, isTrial, trialProductUrls, skipUrls } = body;

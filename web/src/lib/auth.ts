@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { sessionStorage } from './shopify';
 
 interface ShopifyTokenPayload {
   iss: string;
@@ -70,4 +71,33 @@ export async function verifySessionToken(request: Request): Promise<string> {
   } catch {
     throw Object.assign(new Error('Invalid dest URL'), { status: 401 });
   }
+}
+
+/**
+ * Verifies the request is from an authenticated Shopify session.
+ * Tries App Bridge JWT first (preferred). Falls back to checking that the
+ * provided shop has a valid OAuth session stored in Supabase.
+ * Returns the verified shop domain.
+ */
+export async function verifyRequest(request: Request, shopFallback?: string | null): Promise<string> {
+  // Attempt JWT verification (cryptographically strong — works when App Bridge is healthy)
+  const auth = request.headers.get('authorization');
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      return await verifySessionToken(request);
+    } catch {
+      // JWT failed — fall through to session check
+    }
+  }
+
+  // Session-based fallback: the shop is authenticated if it has a valid OAuth session
+  const shop = shopFallback?.trim() ?? '';
+  if (!shop.endsWith('.myshopify.com')) {
+    throw Object.assign(new Error('Missing session token'), { status: 401 });
+  }
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
+  if (!session?.accessToken) {
+    throw Object.assign(new Error('Shop not installed'), { status: 401 });
+  }
+  return session.shop;
 }

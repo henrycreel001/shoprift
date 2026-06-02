@@ -14,15 +14,16 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { verifySessionToken } from '@/lib/auth';
+import { verifyRequest } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> },
 ): Promise<Response> {
+  const shopParam = request.nextUrl.searchParams.get('shop');
   let shop: string;
   try {
-    shop = await verifySessionToken(request);
+    shop = await verifyRequest(request, shopParam);
   } catch (err) {
     const status = (err as { status?: number }).status ?? 401;
     return NextResponse.json({ error: 'Unauthorized' }, { status });

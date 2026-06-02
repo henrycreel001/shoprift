@@ -495,7 +495,7 @@ function MigrateWizard() {
     track('payment_complete', { shop })
     const poll = async () => {
       try {
-        const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
+        const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
         const d = await r.json() as {
           status: string
           progress?: { current: number; total: number; message: string }
@@ -597,7 +597,7 @@ function MigrateWizard() {
           const vRes = await fetch('/api/verify/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-            body: JSON.stringify({ storeUrl: data.store_url }),
+            body: JSON.stringify({ shop, storeUrl: data.store_url }),
           })
           setCheckingAccount(false)
           const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
@@ -632,14 +632,14 @@ function MigrateWizard() {
       const r = await fetch('/api/verify/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ attemptId: verifyAttemptId, storeUrl: reconData!.store_url }),
+        body: JSON.stringify({ shop, attemptId: verifyAttemptId, storeUrl: reconData!.store_url }),
       })
       const d = await r.json() as { verified?: boolean; error?: string; expired?: boolean }
       if (d.expired) {
         const vRes = await fetch('/api/verify/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-          body: JSON.stringify({ storeUrl: reconData!.store_url }),
+          body: JSON.stringify({ shop, storeUrl: reconData!.store_url }),
         })
         const vData = await vRes.json() as { code?: string; attemptId?: string }
         if (vData.code) {
@@ -688,7 +688,7 @@ function MigrateWizard() {
       const res = await fetch('/api/import/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ storeUrl: reconData.store_url, storeData: { ...allData, products: trialProducts }, isTrial: true, trialProductUrls: trialUrls }),
+        body: JSON.stringify({ shop, storeUrl: reconData.store_url, storeData: { ...allData, products: trialProducts }, isTrial: true, trialProductUrls: trialUrls }),
       })
       const respData = await res.json() as { jobId?: string; error?: string }
       if (!res.ok) throw new Error(respData.error ?? 'Trial import failed to start.')
@@ -697,7 +697,7 @@ function MigrateWizard() {
 
       const poll = async () => {
         try {
-          const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
+          const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
           const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string }; error?: string; result?: ImportResult }
           const prog = d.progress ?? { current: 0, total: 0, message: '' }
           setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
@@ -762,7 +762,7 @@ function MigrateWizard() {
         const res = await fetch('/api/import/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-          body: JSON.stringify({ storeUrl: reconData.store_url, storeData, ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}) }),
+          body: JSON.stringify({ shop, storeUrl: reconData.store_url, storeData, ...(trialProductUrls.length > 0 ? { skipUrls: trialProductUrls } : {}) }),
         })
         const data = await res.json() as { jobId?: string; error?: string }
         if (!res.ok) throw new Error(data.error ?? 'Import failed to start.')
@@ -771,7 +771,7 @@ function MigrateWizard() {
 
         const poll = async () => {
           try {
-            const r = await fetch(`/api/import/status/${id}`, { headers: await authHeaders() })
+            const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`, { headers: await authHeaders() })
             const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string }; error?: string; result?: ImportResult }
             const prog = d.progress ?? { current: 0, total: 0, message: '' }
             setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message })
@@ -806,7 +806,7 @@ function MigrateWizard() {
       const res = await fetch('/api/payment/billing/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ storeUrl: reconData.store_url, storeData, skipUrls: trialProductUrls.length > 0 ? trialProductUrls : undefined, amount, planName: `Shoprift ${tier.plan}` }),
+        body: JSON.stringify({ shop, storeUrl: reconData.store_url, storeData, skipUrls: trialProductUrls.length > 0 ? trialProductUrls : undefined, amount, planName: `Shoprift ${tier.plan}` }),
       })
       const d = await res.json() as { confirmationUrl?: string; error?: string }
       if (!res.ok) throw new Error(d.error ?? 'Failed to create payment.')
