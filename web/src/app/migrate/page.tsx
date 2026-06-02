@@ -934,58 +934,66 @@ function MigrateWizard() {
         {/* ── URL input ─────────────────────────────────────────────────── */}
         {(step === 'url' || step === 'reconning') && (
           <div>
-            <div className="mb-9">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-4 mb-3">
+            <div className="mb-8">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-4 mb-5">
                 dm2buy → Shopify
               </p>
-              <h1 className="text-[1.8rem] font-semibold tracking-[-0.025em] text-ink leading-tight mb-3">
+              <h1 className="text-[2.625rem] font-black tracking-[-0.04em] text-ink leading-[1.05] mb-4">
                 Move your store.
               </h1>
-              <p className="text-[0.9375rem] text-ink-3 leading-relaxed max-w-[40ch]">
+              <p className="text-[0.9375rem] text-ink-3 leading-relaxed max-w-[40ch] mb-6">
                 Products, images, and collections land directly in your Shopify admin. No CSV. No re-entering data.
               </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                {['Products', 'Images', 'Collections'].map(f => (
+                  <span key={f} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-wire-subtle border border-wire text-[11px] font-mono text-ink-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-mint-dark/60 flex-shrink-0" />
+                    {f}
+                  </span>
+                ))}
+                <span className="font-mono text-[11px] text-ink-4">→ directly into Shopify admin</span>
+              </div>
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); if (step === 'url') handleCheckStore() }}>
-              <div className="mb-4">
-                <label htmlFor="store-url" className="block font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3 mb-2">
-                  Store URL
-                </label>
-                <input
-                  id="store-url"
-                  type="url"
-                  value={storeUrl}
-                  onChange={(e) => { setStoreUrl(e.target.value); setUrlError(undefined) }}
-                  placeholder="https://yourstore.dm2buy.com"
-                  autoComplete="url"
-                  disabled={step === 'reconning'}
-                  className={[
-                    'w-full bg-surface rounded-xl px-4 py-3.5',
-                    'font-mono text-sm text-ink placeholder:text-ink-5',
-                    'border transition-all duration-200 focus:outline-none',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    urlError
-                      ? 'border-red-300 focus:border-red-400'
-                      : 'border-wire-strong focus:border-mint focus:ring-2 focus:ring-mint/10',
-                  ].join(' ')}
-                />
-                {urlError && (
-                  <p className="mt-2 font-mono text-[11px] text-red-500">{urlError}</p>
-                )}
+              <label htmlFor="store-url" className="sr-only">Store URL</label>
+              <div className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <input
+                    id="store-url"
+                    type="url"
+                    value={storeUrl}
+                    onChange={(e) => { setStoreUrl(e.target.value); setUrlError(undefined) }}
+                    placeholder="https://yourstore.dm2buy.com"
+                    autoComplete="url"
+                    disabled={step === 'reconning'}
+                    className={[
+                      'w-full bg-surface rounded-xl px-4 py-3.5',
+                      'font-mono text-sm text-ink placeholder:text-ink-5',
+                      'border transition-all duration-200 focus:outline-none',
+                      'disabled:opacity-50 disabled:cursor-not-allowed',
+                      urlError
+                        ? 'border-red-300 focus:border-red-400'
+                        : 'border-wire-strong focus:border-mint focus:ring-2 focus:ring-mint/10',
+                    ].join(' ')}
+                  />
+                </div>
+                <Btn
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  loading={step === 'reconning'}
+                  className="flex-shrink-0"
+                >
+                  {/* #12 — differentiate "scanning store" from "checking your account" */}
+                  {step === 'reconning'
+                    ? (checkingAccount ? 'Checking...' : 'Scanning...')
+                    : <><span>Scan store</span><IcoArrow /></>}
+                </Btn>
               </div>
-
-              <Btn
-                type="submit"
-                variant="primary"
-                size="lg"
-                loading={step === 'reconning'}
-                className="w-full"
-              >
-                {/* #12 — differentiate "scanning store" from "checking your account" */}
-                {step === 'reconning'
-                  ? (checkingAccount ? 'Checking account...' : 'Scanning...')
-                  : <><span>Check store</span><IcoArrow /></>}
-              </Btn>
+              {urlError && (
+                <p className="mt-2 font-mono text-[11px] text-red-500">{urlError}</p>
+              )}
             </form>
           </div>
         )}
@@ -995,7 +1003,7 @@ function MigrateWizard() {
           <div>
             <div className="mb-8">
               <RowLabel>Step 2 — Ownership verification</RowLabel>
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight mb-1.5">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight mb-1.5">
                 Confirm you own this store.
               </h2>
               <p className="text-[0.9375rem] text-ink-3">
@@ -1094,7 +1102,7 @@ function MigrateWizard() {
           <div>
             <div className="mb-7">
               <RowLabel>Step 3 — Store preview</RowLabel>
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight">
                 {reconData.store_name}
               </h2>
               <p className="font-mono text-[11px] text-ink-4 mt-1">{reconData.store_url}</p>
@@ -1115,7 +1123,7 @@ function MigrateWizard() {
                 { n: reconData.image_count,      label: 'images'      },
               ].map(({ n, label }, i) => (
                 <div key={label} className={`flex-1 px-5 py-4 bg-surface ${i > 0 ? 'border-l border-wire' : ''}`}>
-                  <p className="font-mono text-[1.9rem] font-medium text-ink leading-none mb-1 tabular-nums">{n}</p>
+                  <p className="font-mono text-[2.4rem] font-black text-ink leading-none mb-1.5 tabular-nums tracking-[-0.02em]">{n}</p>
                   <p className="font-mono text-[9.5px] uppercase tracking-[0.11em] text-ink-4">{label}</p>
                 </div>
               ))}
@@ -1182,7 +1190,7 @@ function MigrateWizard() {
           <div>
             <div className="mb-8">
               <RowLabel>{trialExtDone ? 'Adding to Shopify' : 'Reading products'}</RowLabel>
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink">
                 Importing 5 trial products.
               </h2>
             </div>
@@ -1220,7 +1228,7 @@ function MigrateWizard() {
             </div>
 
             <div className="mb-7">
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight mb-1.5">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight mb-1.5">
                 Trial complete.
               </h2>
               <p className="text-[0.9375rem] text-ink-3">
@@ -1253,7 +1261,7 @@ function MigrateWizard() {
           <div>
             <div className="mb-8">
               <RowLabel>Collecting data</RowLabel>
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink">
                 Reading your store.
               </h2>
             </div>
@@ -1286,7 +1294,7 @@ function MigrateWizard() {
           <div>
             <div className="mb-7">
               <RowLabel>Step 5 — Ready to import</RowLabel>
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink leading-tight">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight">
                 Your data is ready.
               </h2>
             </div>
@@ -1380,7 +1388,7 @@ function MigrateWizard() {
           <div>
             <div className="mb-8">
               <RowLabel>Importing</RowLabel>
-              <h2 className="text-2xl font-semibold tracking-[-0.025em] text-ink">
+              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink">
                 Adding products to Shopify.
               </h2>
             </div>
@@ -1490,7 +1498,7 @@ function MigrateWizard() {
               <IcoCheck /> Migration complete
             </div>
 
-            <h2 className="text-[1.8rem] font-semibold tracking-[-0.025em] text-ink leading-tight mb-9">
+            <h2 className="text-[2.625rem] font-black tracking-[-0.04em] text-ink leading-[1.05] mb-9">
               {importResult.productsCreated}{' '}
               product{importResult.productsCreated !== 1 ? 's' : ''} in Shopify.
             </h2>
