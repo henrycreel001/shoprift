@@ -15,6 +15,15 @@ import { verifyRequest } from '@/lib/auth';
 
 const SHOPIFY_API_VERSION = '2025-01';
 
+function isValidDm2buyUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return parsed.hostname.endsWith('.dm2buy.com');
+  } catch {
+    return false;
+  }
+}
+
 function requireEnv(name: string): string {
   const val = process.env[name];
   if (!val) throw new Error(`Missing env var: ${name}`);
@@ -41,13 +50,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
   } catch (err) {
     const status = (err as { status?: number }).status ?? 401;
-    return NextResponse.json({ error: 'Unauthorized' }, { status });
+    console.error({ phase: 'billing/create', error: (err as Error).message });
+    return NextResponse.json({ error: 'Session expired. Please refresh and try again.' }, { status });
   }
 
   const { storeUrl, storeData, skipUrls, amount, planName } = body;
 
-  if (!storeUrl || typeof storeUrl !== 'string') {
-    return NextResponse.json({ error: 'storeUrl required' }, { status: 400 });
+  if (!storeUrl || typeof storeUrl !== 'string' || !isValidDm2buyUrl(storeUrl)) {
+    return NextResponse.json({ error: 'Please enter a valid dm2buy store URL.' }, { status: 400 });
   }
   if (!storeData || typeof storeData !== 'object') {
     return NextResponse.json({ error: 'storeData required' }, { status: 400 });
@@ -70,7 +80,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   if (!accessToken) {
     return NextResponse.json(
-      { error: 'No active Shopify session — reinstall the app' },
+      { error: 'Session expired. Please reinstall the app to continue.' },
       { status: 401 },
     );
   }
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (insertError || !jobRow) {
     console.error({ phase: 'billing/create', shop, error: insertError });
-    return NextResponse.json({ error: 'Failed to create import job' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not initiate payment. Please try again.' }, { status: 500 });
   }
 
   const jobId = jobRow.id;
@@ -127,13 +137,15 @@ export async function POST(request: NextRequest): Promise<Response> {
           test: isTest,
         },
       }),
+      signal: AbortSignal.timeout(10000),
     });
   } catch (err) {
+    console.error({ phase: 'billing/create', shop, jobId, error: err instanceof Error ? err.message : err });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: 'Shopify API unreachable' })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Shopify API unreachable' }, { status: 502 });
+    return NextResponse.json({ error: 'Could not connect to payment service. Please try again.' }, { status: 502 });
   }
 
   if (!gqlRes.ok) {
@@ -144,7 +156,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .from('import_jobs')
       .update({ status: 'failed', error: errMsg })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Payment service error' }, { status: 502 });
+    return NextResponse.json({ error: 'Payment service is temporarily unavailable. Please try again.' }, { status: 502 });
   }
 
   const gqlData = await gqlRes.json() as {
@@ -173,7 +185,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .from('import_jobs')
       .update({ status: 'failed', error: errMsg })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Payment service rejected request' }, { status: 400 });
+    return NextResponse.json({ error: 'Payment could not be created. Please try again or contact support.' }, { status: 400 });
   }
 
   const confirmationUrl = result.confirmationUrl;

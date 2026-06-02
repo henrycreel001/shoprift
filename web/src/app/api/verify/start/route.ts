@@ -10,6 +10,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { verifyRequest } from '@/lib/auth';
 
+function isValidDm2buyUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return parsed.hostname.endsWith('.dm2buy.com');
+  } catch {
+    return false;
+  }
+}
+
 function genCode(): string {
   // No I, O, 0, 1 — easy to read aloud or type
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -31,13 +40,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
   } catch (err) {
     const status = (err as { status?: number }).status ?? 401;
-    const detail = (err as Error).message ?? 'Unauthorized';
-    return NextResponse.json({ error: detail }, { status });
+    console.error({ phase: 'verify/start', error: (err as Error).message });
+    return NextResponse.json({ error: 'Session expired. Please refresh and try again.' }, { status });
   }
 
   const { storeUrl } = body;
-  if (!storeUrl || typeof storeUrl !== 'string' || !storeUrl.includes('dm2buy.com')) {
-    return NextResponse.json({ error: 'storeUrl is required and must be a dm2buy.com URL' }, { status: 400 });
+  if (!storeUrl || typeof storeUrl !== 'string' || !isValidDm2buyUrl(storeUrl)) {
+    return NextResponse.json({ error: 'Please enter a valid dm2buy store URL.' }, { status: 400 });
   }
 
   const supabase = createServerSupabaseClient();
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (error || !data) {
     console.error({ phase: 'verify/start', shop, error });
-    return NextResponse.json({ error: 'Failed to start verification' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not start verification. Please try again.' }, { status: 500 });
   }
 
   return NextResponse.json({ code, attemptId: data.id });

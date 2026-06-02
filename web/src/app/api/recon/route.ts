@@ -1,87 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-// Node runtime — not Edge. Supabase client requires Node APIs.
-export const runtime = 'nodejs'
-
 /**
  * POST /api/recon
- *
- * Accepts: { storeUrl: string }
- * Returns: {
- *   jobId: string
- *   storeName: string
- *   productCount: number
- *   imageCount: number
- *   collectionCount: number
- * }
- *
- * Architecture note:
- * The actual Playwright-based recon runs on Railway (not Vercel).
- * This route forwards the request to the Railway worker and returns
- * the response. The web app is a thin API gateway — no engine code here.
- *
- * TODO: call Railway worker
- *   const workerUrl = process.env.RAILWAY_WORKER_URL
- *   const res = await fetch(`${workerUrl}/recon`, { method: 'POST', body: ... })
- *   const data = await res.json()
- *   if (!res.ok) return NextResponse.json({ error: data.error }, { status: res.status })
- *   return NextResponse.json(data)
+ * Body: { storeUrl: string }
+ * Forwards to Railway worker /recon. Returns recon summary.
  */
-export async function POST(request: NextRequest) {
+
+export const runtime = 'nodejs';
+
+import { NextRequest, NextResponse } from 'next/server';
+
+function isValidDm2buyUrl(url: string): boolean {
   try {
-    const body = await request.json()
-    const { storeUrl } = body as { storeUrl: string }
-
-    if (!storeUrl || typeof storeUrl !== 'string') {
-      return NextResponse.json(
-        { error: 'storeUrl is required.' },
-        { status: 400 }
-      )
-    }
-
-    if (!storeUrl.includes('dm2buy.com')) {
-      return NextResponse.json(
-        { error: 'URL must be a dm2buy.com store.' },
-        { status: 400 }
-      )
-    }
-
-    // ── TODO: call Railway worker ──────────────────────────────────────────
-    // const workerUrl = process.env.RAILWAY_WORKER_URL
-    // if (!workerUrl) {
-    //   return NextResponse.json({ error: 'Worker not configured.' }, { status: 503 })
-    // }
-    // const upstream = await fetch(`${workerUrl}/recon`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ storeUrl }),
-    // })
-    // const data = await upstream.json()
-    // if (!upstream.ok) {
-    //   return NextResponse.json({ error: data.error ?? 'Recon failed.' }, { status: upstream.status })
-    // }
-    // return NextResponse.json(data)
-    // ──────────────────────────────────────────────────────────────────────
-
-    // ── STUB — returns mock recon data for UI development ──────────────────
-    // Remove this block once Railway worker is wired up.
-    const mockJobId = `job_${Date.now()}_stub`
-    const mockResponse = {
-      jobId: mockJobId,
-      storeName: 'Kiwii Shop (stub)',
-      storeUrl,
-      productCount: 4,
-      imageCount: 18,
-      collectionCount: 2,
-    }
-    return NextResponse.json(mockResponse)
-    // ──────────────────────────────────────────────────────────────────────
-
-  } catch (err) {
-    console.error('[/api/recon] Unexpected error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error.' },
-      { status: 500 }
-    )
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return parsed.hostname.endsWith('.dm2buy.com');
+  } catch {
+    return false;
   }
+}
+
+export async function POST(request: NextRequest) {
+  let body: { storeUrl?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  }
+
+  const { storeUrl } = body;
+
+  if (!storeUrl || typeof storeUrl !== 'string' || !isValidDm2buyUrl(storeUrl)) {
+    return NextResponse.json({ error: 'Please enter a valid dm2buy store URL.' }, { status: 400 });
+  }
+
+  const workerUrl = process.env.RAILWAY_WORKER_URL;
+  if (!workerUrl) {
+    console.error({ phase: 'recon', error: 'RAILWAY_WORKER_URL not configured' });
+    return NextResponse.json({ error: 'Service temporarily unavailable. Please try again.' }, { status: 503 });
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${workerUrl}/recon`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeUrl }),
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch (err) {
+    console.error({ phase: 'recon', storeUrl, error: err instanceof Error ? err.message : err });
+    return NextResponse.json({ error: 'Could not reach the scan service. Please try again.' }, { status: 502 });
+  }
+
+  const data = await upstream.json().catch(() => ({}));
+
+  if (!upstream.ok) {
+    console.error({ phase: 'recon', storeUrl, status: upstream.status, workerError: data });
+    return NextResponse.json({ error: 'Scan failed. Please try again.' }, { status: upstream.status >= 500 ? 502 : upstream.status });
+  }
+
+  return NextResponse.json(data);
 }

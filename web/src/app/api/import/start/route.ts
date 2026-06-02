@@ -11,6 +11,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { verifyRequest } from '@/lib/auth';
 
+function isValidDm2buyUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return parsed.hostname.endsWith('.dm2buy.com');
+  } catch {
+    return false;
+  }
+}
+
 function requireEnv(name: string): string {
   const val = process.env[name];
   if (!val) throw new Error(`Missing env var: ${name}`);
@@ -37,14 +46,15 @@ export async function POST(request: NextRequest): Promise<Response> {
     shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
   } catch (err) {
     const status = (err as { status?: number }).status ?? 401;
-    return NextResponse.json({ error: 'Unauthorized' }, { status });
+    console.error({ phase: 'import/start', error: (err as Error).message });
+    return NextResponse.json({ error: 'Session expired. Please refresh and try again.' }, { status });
   }
 
   const { storeUrl, storeData, isTrial, trialProductUrls, skipUrls } = body;
 
-  if (!storeUrl || typeof storeUrl !== 'string' || !storeUrl.includes('dm2buy.com')) {
+  if (!storeUrl || typeof storeUrl !== 'string' || !isValidDm2buyUrl(storeUrl)) {
     return NextResponse.json(
-      { error: 'Invalid storeUrl — must be a dm2buy.com URL' },
+      { error: 'Please enter a valid dm2buy store URL.' },
       { status: 400 },
     );
   }
@@ -72,7 +82,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (insertError || !jobRow) {
     console.error({ phase: 'import/start', shop, error: insertError });
-    return NextResponse.json({ error: 'Failed to create import job' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not start the import. Please try again.' }, { status: 500 });
   }
 
   const jobId: string = jobRow.id;
@@ -80,12 +90,13 @@ export async function POST(request: NextRequest): Promise<Response> {
   let workerUrl: string;
   try {
     workerUrl = requireEnv('RAILWAY_WORKER_URL');
-  } catch (err) {
+  } catch {
+    console.error({ phase: 'import/start', shop, jobId, error: 'RAILWAY_WORKER_URL not configured' });
     await supabase
       .from('import_jobs')
       .update({ status: 'failed', error: 'RAILWAY_WORKER_URL not configured' })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Worker not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'Import service is temporarily unavailable. Please try again.' }, { status: 503 });
   }
 
   const workerBody: Record<string, unknown> = { jobId, shop, storeData };
@@ -98,6 +109,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(workerBody),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!workerRes.ok) {
@@ -108,7 +120,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         .from('import_jobs')
         .update({ status: 'failed', error: errMsg })
         .eq('id', jobId);
-      return NextResponse.json({ error: 'Import service error' }, { status: 502 });
+      return NextResponse.json({ error: 'Import service returned an error. Please try again.' }, { status: 502 });
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Worker unreachable';
@@ -117,7 +129,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .from('import_jobs')
       .update({ status: 'failed', error: message })
       .eq('id', jobId);
-    return NextResponse.json({ error: 'Import service unreachable' }, { status: 502 });
+    return NextResponse.json({ error: 'Import service is temporarily unavailable. Please try again.' }, { status: 502 });
   }
 
   return NextResponse.json({ jobId });

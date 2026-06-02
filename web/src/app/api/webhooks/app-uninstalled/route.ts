@@ -2,9 +2,6 @@
  * POST /api/webhooks/app-uninstalled
  * Shopify calls this when a merchant uninstalls the app.
  * Validates the HMAC signature then deletes all sessions for that shop.
- *
- * Register this URL in Partner dashboard:
- *   App setup → Webhooks → app/uninstalled → https://yourapp.com/api/webhooks/app-uninstalled
  */
 
 export const runtime = 'nodejs';
@@ -35,26 +32,30 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     result = await shopify.webhooks.validate({ rawBody, rawRequest: request });
   } catch (err) {
-    console.error('[webhooks/app-uninstalled] Validation error:', err);
-    return NextResponse.json({ error: 'Validation failed' }, { status: 500 });
+    console.error({ phase: 'webhooks/app-uninstalled', error: 'validate() threw', detail: err instanceof Error ? err.message : err });
+    return NextResponse.json({ ok: true });
   }
 
   if (!result.valid) {
-    return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    console.error({ phase: 'webhooks/app-uninstalled', error: 'invalid_signature' });
+    return NextResponse.json({ ok: true });
   }
 
   if (webhookId) {
-    await supabase.from('webhook_idempotency').insert({ webhook_id: webhookId }).select().maybeSingle();
+    const { error: insertError } = await supabase
+      .from('webhook_idempotency')
+      .insert({ webhook_id: webhookId });
+    if (insertError && insertError.code === '23505') {
+      return NextResponse.json({ ok: true });
+    }
   }
 
-  // result.domain is only present when result.valid === true (discriminated union)
   const domain = result.domain;
 
-  // Delete all sessions for the uninstalled shop
   const sessions = await sessionStorage.findSessionsByShop(domain);
   if (sessions.length > 0) {
     await sessionStorage.deleteSessions(sessions.map(s => s.id));
-    console.log(`[webhooks/app-uninstalled] Deleted ${sessions.length} session(s) for ${domain}`);
+    console.error({ phase: 'webhooks/app-uninstalled', shop: domain, sessionsDeleted: sessions.length });
   }
 
   return NextResponse.json({ ok: true });

@@ -593,8 +593,8 @@ function MigrateWizard() {
           const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
           if (!vRes.ok || !vData.code) {
             const msg = vRes.status === 401
-              ? `Auth failed: ${vData.error ?? 'no token'}. Refresh and try again.`
-              : vData.error ?? 'Failed to start verification.'
+              ? 'Session expired. Please refresh the page and try again.'
+              : vData.error ?? 'Could not start verification. Please try again.'
             throw new Error(msg)
           }
           setVerifyCode(vData.code)
@@ -651,6 +651,33 @@ function MigrateWizard() {
       }
     } catch {
       setVerifyError('Check failed. Try again.')
+    } finally {
+      setVerifyLoading(false)
+    }
+  }
+
+  async function handleRefreshCode() {
+    if (!reconData) return
+    setVerifyLoading(true)
+    setVerifyError(null)
+    try {
+      const vRes = await fetch('/api/verify/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ shop, storeUrl: reconData.store_url }),
+      })
+      const vData = await vRes.json() as { code?: string; attemptId?: string; error?: string }
+      if (!vRes.ok || !vData.code) {
+        setVerifyError(vData.error ?? 'Could not get a new code. Please try again.')
+        return
+      }
+      setVerifyCode(vData.code)
+      setVerifyAttemptId(vData.attemptId ?? null)
+      verifyExpRef.current = Date.now() + 15 * 60 * 1000
+      setVerifySecsLeft(null)
+      setVerifyError(null)
+    } catch {
+      setVerifyError('Could not get a new code. Please try again.')
     } finally {
       setVerifyLoading(false)
     }
@@ -1002,12 +1029,19 @@ function MigrateWizard() {
                   Product name must match exactly. Delete it after verification.
                 </p>
                 {verifyCountdown !== null && (
-                  <p className={[
-                    'font-mono text-[10px] flex-shrink-0 ml-3',
-                    verifySecsLeft === 0 ? 'text-red-400' : 'text-ink-5',
-                  ].join(' ')}>
-                    {verifySecsLeft === 0 ? 'Code expired' : `Expires ${verifyCountdown}`}
-                  </p>
+                  verifySecsLeft === 0 ? (
+                    <button
+                      onClick={handleRefreshCode}
+                      disabled={verifyLoading}
+                      className="font-mono text-[10px] flex-shrink-0 ml-3 text-mint hover:underline disabled:opacity-50"
+                    >
+                      Code expired — get new code
+                    </button>
+                  ) : (
+                    <p className="font-mono text-[10px] flex-shrink-0 ml-3 text-ink-5">
+                      {`Expires ${verifyCountdown}`}
+                    </p>
+                  )
                 )}
               </div>
             </div>
@@ -1024,7 +1058,12 @@ function MigrateWizard() {
               </Btn>
               <Btn
                 variant="ghost"
-                onClick={() => { setReconData(null); setVerifyCode(''); setVerifyAttemptId(null); setVerifyError(null); verifyExpRef.current = null; setStep('url') }}
+                onClick={() => {
+                  setReconData(null); setVerifyCode(''); setVerifyAttemptId(null);
+                  setVerifyError(null); setVerifyLoading(false); setVerifySecsLeft(null);
+                  setTrialUsed(false); setTrialProductUrls([]);
+                  verifyExpRef.current = null; setStep('url');
+                }}
               >
                 Change URL
               </Btn>
@@ -1106,7 +1145,13 @@ function MigrateWizard() {
               )}
               <Btn
                 variant="ghost"
-                onClick={() => { setReconData(null); setTrialUsed(false); setTrialProductUrls([]); setVerified(false); setHasPriorMigration(false); setStep('url') }}
+                onClick={() => {
+                  setReconData(null); setVerifyCode(''); setVerifyAttemptId(null);
+                  setVerifyError(null); setVerifyLoading(false); setVerifySecsLeft(null);
+                  setTrialUsed(false); setTrialProductUrls([]);
+                  setVerified(false); setHasPriorMigration(false);
+                  verifyExpRef.current = null; setStep('url');
+                }}
               >
                 Change URL
               </Btn>

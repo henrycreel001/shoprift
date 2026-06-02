@@ -37,6 +37,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     .from('import_jobs')
     .select('id, status, store_data, skip_urls')
     .eq('id', jobId)
+    .eq('account_id', shop)
     .single();
 
   if (!job) {
@@ -138,6 +139,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(workerBody),
+      signal: AbortSignal.timeout(8000),
     });
     if (!workerRes.ok) {
       const err = await workerRes.json().catch(() => ({ error: 'Worker error' })) as { error?: string };

@@ -30,7 +30,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     shop = await verifyRequest(request, typeof body.shop === 'string' ? body.shop : null);
   } catch (err) {
     const status = (err as { status?: number }).status ?? 401;
-    return NextResponse.json({ error: 'Unauthorized' }, { status });
+    console.error({ phase: 'verify/check', error: (err as Error).message });
+    return NextResponse.json({ error: 'Session expired. Please refresh and try again.' }, { status });
   }
 
   const { attemptId, storeUrl } = body;
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   if (new Date(attempt.expires_at) < new Date()) {
     return NextResponse.json(
-      { error: 'Verification code expired. Refresh to get a new code.', verified: false, expired: true },
+      { error: 'Your verification code has expired. Click "Get new code" to start again.', verified: false, expired: true },
       { status: 410 },
     );
   }
@@ -76,12 +77,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ storeUrl, code: attempt.code }),
+      signal: AbortSignal.timeout(8000),
     });
     const d = await r.json() as { verified?: boolean; error?: string };
     verified = d.verified === true;
   } catch (err) {
-    console.error({ phase: 'verify/check', shop, attemptId, error: err });
-    return NextResponse.json({ error: 'Verification check failed', verified: false }, { status: 502 });
+    console.error({ phase: 'verify/check', shop, attemptId, error: err instanceof Error ? err.message : err });
+    return NextResponse.json({ error: 'Verification check is temporarily unavailable. Please try again.', verified: false }, { status: 502 });
   }
 
   if (verified) {

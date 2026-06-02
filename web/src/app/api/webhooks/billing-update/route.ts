@@ -34,24 +34,37 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     result = await shopify.webhooks.validate({ rawBody, rawRequest: request });
   } catch (err) {
-    console.error('[webhooks/billing-update] Validation error:', err);
-    return NextResponse.json({ error: 'Validation failed' }, { status: 500 });
+    // Internal validation error — return 200 to stop Shopify retries; log for investigation
+    console.error({ phase: 'webhooks/billing-update', error: 'validate() threw', detail: err instanceof Error ? err.message : err });
+    return NextResponse.json({ ok: true });
   }
 
   if (!result.valid) {
-    return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    // Invalid signature — return 200 to stop Shopify retries (retries won't fix a bad signature)
+    console.error({ phase: 'webhooks/billing-update', error: 'invalid_signature' });
+    return NextResponse.json({ ok: true });
   }
 
-  // Mark as processed (best-effort — if insert fails, still process the webhook)
+  // Mark as processed — check for duplicate key (concurrent delivery)
   if (webhookId) {
-    await supabase.from('webhook_idempotency').insert({ webhook_id: webhookId }).select().maybeSingle();
+    const { error: insertError } = await supabase
+      .from('webhook_idempotency')
+      .insert({ webhook_id: webhookId });
+    if (insertError) {
+      if (insertError.code === '23505') {
+        // Unique constraint: another concurrent delivery already inserted — already processed
+        return NextResponse.json({ ok: true });
+      }
+      // Other DB error: log but continue processing
+      console.error({ phase: 'webhooks/billing-update', error: 'idempotency_insert_failed', detail: insertError.message });
+    }
   }
 
   let payload: { id?: number; status?: string } = {};
   try {
     payload = JSON.parse(rawBody) as { id?: number; status?: string };
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json({ ok: true }); // malformed body — ack and ignore
   }
 
   const { id: chargeNumericId, status } = payload;
@@ -82,7 +95,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .from('import_jobs')
       .update({ status: 'failed', error: `Charge ${normalizedStatus.toLowerCase()} via webhook` })
       .eq('id', job.id);
-    console.log(`[webhooks/billing-update] Job ${job.id} marked failed — charge ${normalizedStatus}`);
+    console.error({ phase: 'webhooks/billing-update', jobId: job.id, chargeStatus: normalizedStatus });
   }
 
   return NextResponse.json({ ok: true });

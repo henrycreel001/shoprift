@@ -52,7 +52,7 @@ export async function verifySessionToken(request: Request): Promise<string> {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < now) {
+  if (payload.exp && payload.exp <= now) {
     throw Object.assign(new Error('Token expired'), { status: 401 });
   }
 

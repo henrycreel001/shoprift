@@ -24,16 +24,22 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     result = await shopify.webhooks.validate({ rawBody, rawRequest: request });
   } catch (err) {
-    console.error('[webhooks/compliance] Validation error:', err);
-    return NextResponse.json({ error: 'Validation failed' }, { status: 500 });
+    console.error({ phase: 'webhooks/compliance', error: 'validate() threw', detail: err instanceof Error ? err.message : err });
+    return NextResponse.json({ ok: true });
   }
 
   if (!result.valid) {
-    return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    console.error({ phase: 'webhooks/compliance', error: 'invalid_signature' });
+    return NextResponse.json({ ok: true });
   }
 
   if (webhookId) {
-    await supabase.from('webhook_idempotency').insert({ webhook_id: webhookId }).select().maybeSingle();
+    const { error: insertError } = await supabase
+      .from('webhook_idempotency')
+      .insert({ webhook_id: webhookId });
+    if (insertError && insertError.code === '23505') {
+      return NextResponse.json({ ok: true });
+    }
   }
 
   const topic = request.headers.get('x-shopify-topic') ?? '';
@@ -55,7 +61,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (sessions.length > 0) {
       await sessionStorage.deleteSessions(sessions.map(s => s.id));
     }
-    console.log(`[webhooks/compliance] shop/redact: deleted all data for ${shop}`);
+    console.error({ phase: 'webhooks/compliance', topic: 'shop/redact', shop, action: 'data_deleted' });
     return NextResponse.json({ ok: true });
   }
 

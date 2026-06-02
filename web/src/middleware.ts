@@ -18,6 +18,9 @@ export function middleware(request: NextRequest): NextResponse {
       : `frame-ancestors https://*.myshopify.com https://admin.shopify.com`;
 
   response.headers.set('Content-Security-Policy', csp);
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
   return response;
 }
 
