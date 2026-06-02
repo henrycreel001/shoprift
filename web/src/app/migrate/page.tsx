@@ -435,21 +435,11 @@ function MigrateWizard() {
       if (apiKey) {
         const app = createApp({ apiKey, host })
         appBridgeRef.current = app
-        // Pre-warm with retries: App Bridge channel establishment can take 1-3s.
-        // Retry getSessionToken until a non-empty token is returned.
-        tokenPromiseRef.current = (async () => {
-          for (let i = 0; i < 8; i++) {
-            try {
-              const t = await Promise.race([
-                getSessionToken(app),
-                new Promise<never>((_, r) => setTimeout(() => r(new Error('t/o')), 4000)),
-              ])
-              if (t) return t
-            } catch {}
-            await new Promise(r => setTimeout(r, 1000))
-          }
-          return ''
-        })()
+        // Pre-warm once with short timeout — session-based auth is the reliable path.
+        tokenPromiseRef.current = Promise.race([
+          getSessionToken(app),
+          new Promise<string>(r => setTimeout(() => r(''), 500)),
+        ])
       }
     } catch { /* not in Shopify context */ }
   }, [host])
@@ -463,7 +453,7 @@ function MigrateWizard() {
       tokenPromiseRef.current = null
       const token = await Promise.race([
         tokenPromise,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000)),
+        new Promise<string>(r => setTimeout(() => r(''), 500)),
       ])
       if (!token) throw new Error('empty token')
       return { Authorization: `Bearer ${token}` }
