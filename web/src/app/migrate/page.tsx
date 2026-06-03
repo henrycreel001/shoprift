@@ -405,6 +405,8 @@ function MigrateWizard() {
   const [checkingAccount,   setCheckingAccount]   = useState(false)
   // #13 — verification code expiry countdown
   const [verifySecsLeft,    setVerifySecsLeft]    = useState<number | null>(null)
+  // session restore — set true when prior completed trial is found on mount
+  const [sessionRestored,   setSessionRestored]   = useState(false)
 
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null)
   const appBridgeRef    = useRef<ReturnType<typeof createApp> | null>(null)
@@ -469,6 +471,97 @@ function MigrateWizard() {
       }
     } catch { /* not in Shopify context */ }
   }, [host])
+
+  // ── Session restore on mount ───────────────────────────────────────────────
+  // Checks Supabase for prior jobs on load so the app remembers where the user
+  // was if they navigated away or refreshed.
+  useEffect(() => {
+    if (!shop) return
+    ;(async () => {
+      const supabase = createBrowserSupabaseClient()
+
+      // 1. Active import in progress — resume polling
+      const { data: active } = await supabase
+        .from('import_jobs')
+        .select('id, status, store_url')
+        .eq('account_id', shop)
+        .not('status', 'in', '("complete","failed")')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (active) {
+        setJobId(active.id)
+        setStoreUrl(active.store_url)
+        setStep('importing')
+        setImportStatus({ status: active.status, current: 0, total: 0, message: 'Checking progress...' })
+        const id = active.id
+        const poll = async () => {
+          try {
+            const r = await fetch(`/api/import/status/${id}?shop=${encodeURIComponent(shop)}`)
+            const d = await r.json() as { status: string; progress?: { current: number; total: number; message: string; phase?: string; collections_total?: number; collections_current?: number; images_total?: number; images_current?: number; assigns_total?: number; assigns_current?: number }; error?: string; result?: ImportResult }
+            const prog = d.progress ?? { current: 0, total: 0, message: '' }
+            setImportStatus({ status: d.status, current: prog.current, total: prog.total, message: prog.message, phase: prog.phase, collectionsTotal: prog.collections_total, collectionsCurrent: prog.collections_current, imagesTotal: prog.images_total, imagesCurrent: prog.images_current, assignsTotal: prog.assigns_total, assignsCurrent: prog.assigns_current })
+            if (d.status === 'complete') {
+              clearPoll()
+              const result = d.result ?? { productsCreated: 0, productsFailed: 0, collectionsCreated: 0 }
+              setImportResult(result)
+              setStep('done')
+            } else if (d.status === 'failed') {
+              clearPoll()
+              setError(d.error ?? 'Import failed. Contact support.')
+              setStep('url')
+            }
+          } catch { /* network blip */ }
+        }
+        poll()
+        clearPoll()
+        pollRef.current = setInterval(poll, 3000)
+        return
+      }
+
+      // 2. Completed full import — restore done step
+      const { data: fullJob } = await supabase
+        .from('import_jobs')
+        .select('id, store_url, recon_data')
+        .eq('account_id', shop)
+        .eq('is_trial', false)
+        .eq('status', 'complete')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (fullJob?.recon_data) {
+        const result = fullJob.recon_data as ImportResult
+        if (result.productsCreated > 0) {
+          setImportResult(result)
+          setStep('done')
+          return
+        }
+      }
+
+      // 3. Completed trial — pre-fill URL so user can continue with one tap
+      const { data: trialJob } = await supabase
+        .from('import_jobs')
+        .select('id, store_url, recon_data, trial_product_urls')
+        .eq('account_id', shop)
+        .eq('is_trial', true)
+        .eq('status', 'complete')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (trialJob?.recon_data) {
+        const result = trialJob.recon_data as ImportResult
+        if (result.productsCreated > 0) {
+          setStoreUrl(trialJob.store_url)
+          setTrialProductUrls(Array.isArray(trialJob.trial_product_urls) ? trialJob.trial_product_urls as string[] : [])
+          setTrialUsed(true)
+          setSessionRestored(true)
+        }
+      }
+    })().catch(() => {})
+  }, [shop]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function authHeaders(): Promise<Record<string, string>> {
     if (!appBridgeRef.current || appBridgeDeadRef.current) return {}
@@ -934,6 +1027,11 @@ function MigrateWizard() {
         {/* ── URL input ─────────────────────────────────────────────────── */}
         {(step === 'url' || step === 'reconning') && (
           <div>
+            {sessionRestored && trialUsed && storeUrl && (
+              <AlertOk>
+                Trial complete for <span className="font-semibold">{storeUrl.replace(/^https?:\/\//, '')}</span>. Scan again to import the rest.
+              </AlertOk>
+            )}
             <div className="mb-8">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-4 mb-5">
                 dm2buy → Shopify
@@ -1223,36 +1321,69 @@ function MigrateWizard() {
         {/* ── Trial done ────────────────────────────────────────────────── */}
         {step === 'trial_done' && importResult && (
           <div>
-            <div className="flex items-center gap-2 text-mint-dark font-mono text-xs mb-5">
-              <IcoCheck /> 5 products added to Shopify
-            </div>
+            {importResult.productsCreated === 0 ? (
+              /* Zero products — surface the error clearly */
+              <>
+                <div className="flex items-center gap-2 text-red-500 font-mono text-xs mb-5">
+                  Trial import failed — 0 products added
+                </div>
+                <div className="mb-6">
+                  <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight mb-1.5">
+                    Nothing was imported.
+                  </h2>
+                  <p className="text-[0.9375rem] text-ink-3 leading-relaxed">
+                    {(importResult as ImportResult & { errors?: string[] }).errors?.[0]
+                      ? `Shopify error: ${(importResult as ImportResult & { errors?: string[] }).errors![0]}`
+                      : 'Shopify rejected all products. This usually means the app connection needs to be refreshed — try reinstalling Shoprift from the Shopify App Store.'}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <Btn variant="primary" size="lg" onClick={() => setStep('preview')} className="w-full">
+                    Try again <IcoArrow />
+                  </Btn>
+                  <p className="font-mono text-[10px] text-ink-4 text-center">
+                    Still failing?{' '}
+                    <a href="mailto:support@shoprift.app" className="text-portal hover:text-portal/80 transition-colors">
+                      support@shoprift.app
+                    </a>
+                  </p>
+                </div>
+              </>
+            ) : (
+              /* Success */
+              <>
+                <div className="flex items-center gap-2 text-mint-dark font-mono text-xs mb-5">
+                  <IcoCheck /> {importResult.productsCreated} product{importResult.productsCreated !== 1 ? 's' : ''} added to Shopify
+                </div>
 
-            <div className="mb-7">
-              <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight mb-1.5">
-                Trial complete.
-              </h2>
-              <p className="text-[0.9375rem] text-ink-3">
-                Check them in your Shopify admin, then import the rest.
-              </p>
-            </div>
+                <div className="mb-7">
+                  <h2 className="text-[1.875rem] font-bold tracking-[-0.03em] text-ink leading-tight mb-1.5">
+                    Trial complete.
+                  </h2>
+                  <p className="text-[0.9375rem] text-ink-3">
+                    Check them in your Shopify admin, then import the rest.
+                  </p>
+                </div>
 
-            <div className="border border-wire rounded-xl overflow-hidden mb-7 divide-y divide-wire-subtle">
-              <DataRow label="Trial products imported" value={String(importResult.productsCreated)} accent />
-              {remainingCount > 0 && (
-                <DataRow label="Remaining products" value={String(remainingCount)} />
-              )}
-            </div>
+                <div className="border border-wire rounded-xl overflow-hidden mb-7 divide-y divide-wire-subtle">
+                  <DataRow label="Trial products imported" value={String(importResult.productsCreated)} accent />
+                  {remainingCount > 0 && (
+                    <DataRow label="Remaining products" value={String(remainingCount)} />
+                  )}
+                </div>
 
-            <div className="flex flex-col gap-2.5">
-              <LinkBtn href={shop ? `https://${shop}/admin/products` : '#'} external={!!shop} variant="secondary">
-                View in Shopify
-              </LinkBtn>
-              {remainingCount > 0 && tier && (
-                <Btn variant="primary" size="lg" onClick={handleFullImport} className="w-full">
-                  Import {remainingCount} remaining — {tier.price} <IcoArrow />
-                </Btn>
-              )}
-            </div>
+                <div className="flex flex-col gap-2.5">
+                  <LinkBtn href={shop ? `https://${shop}/admin/products` : '#'} external={!!shop} variant="secondary">
+                    View in Shopify
+                  </LinkBtn>
+                  {remainingCount > 0 && tier && (
+                    <Btn variant="primary" size="lg" onClick={handleFullImport} className="w-full">
+                      Import {remainingCount} remaining — {tier.price} <IcoArrow />
+                    </Btn>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
