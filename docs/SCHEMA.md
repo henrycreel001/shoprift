@@ -87,7 +87,14 @@ Each item in the `products` array:
   "variants": {
     "sizes": ["string array — all size options, empty array if none"],
     "colors": ["string array — all color options, empty array if none"],
-    "other": ["string array — any other variant type"]
+    "other": ["string array — any other variant type (not a color or size)"],
+    "all": [
+      {
+        "name": "string — variant name as shown on dm2buy",
+        "price": "number | null — per-variant selling price (INR) if dm2buy provides it",
+        "mrp": "number | null — per-variant MRP (crossed-out price) if dm2buy provides it"
+      }
+    ]
   },
   "stock_status": "string — 'in_stock' | 'out_of_stock' | 'unknown'",
   "images_cdn": ["string array — original CDN URLs from dm2buy Azure"],
@@ -270,10 +277,17 @@ Copy this exactly — do not modify field names.
 ```javascript
 import { z } from 'zod';
 
+const VariantOptionSchema = z.object({
+  name: z.string(),
+  price: z.number().nullable(),
+  mrp: z.number().nullable()
+});
+
 const VariantsSchema = z.object({
   sizes: z.array(z.string()),
   colors: z.array(z.string()),
-  other: z.array(z.string())
+  other: z.array(z.string()),
+  all: z.array(VariantOptionSchema).default([])
 });
 
 const ProductSchema = z.object({

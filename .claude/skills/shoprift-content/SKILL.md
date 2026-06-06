@@ -13,14 +13,18 @@ You are writing content for **Shoprift** and its solo founder **Mayank Malik**. 
 
 Voice violations are the #1 failure mode. Read all the way through, including the **Voice Hard Rules** block, before you write a single line.
 
+**Always read `DESIGN.md` (project root) at the start of every content session.** It is the master index for all design profiles, brand assets, content file status, and posting rules. Update its CHANGELOG section before ending any session where you created or modified a design/content file.
+
 For deeper context, read the matching reference file:
 
 - Posts / captions / comments / DMs → `references/voice-rules.md` + `references/channels.md`
-- Carousels → `references/voice-rules.md` + `templates/carousel-base.html`
+- Carousels → `references/voice-rules.md` + `templates/carousel-base.html` + `references/design-profiles.md`
 - Reels or YouTube → `references/channels.md` + `templates/youtube-script.md`
 - Reddit → `references/channels.md` + `references/reddit-subs.md`
 - Anything about audience or positioning → `references/audience.md`
 - "Are we live yet or still pre-launch?" → `references/content-modes.md`
+- "Which design profile should I use?" → `references/design-profiles.md`
+- "What's the current status of assets?" → `DESIGN.md` → Content Assets section
 
 ---
 

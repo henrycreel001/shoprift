@@ -6,10 +6,17 @@
 
 import { z } from 'zod';
 
+const VariantOptionSchema = z.object({
+  name: z.string(),
+  price: z.number().nullable(),
+  mrp: z.number().nullable()
+});
+
 const VariantsSchema = z.object({
   sizes: z.array(z.string()),
   colors: z.array(z.string()),
-  other: z.array(z.string())
+  other: z.array(z.string()),
+  all: z.array(VariantOptionSchema).default([])
 });
 
 const ProductSchema = z.object({

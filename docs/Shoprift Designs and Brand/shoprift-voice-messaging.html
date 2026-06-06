@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ShopRift — Brand Voice &amp; Messaging Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0A0B0F;
+    --bg-elev: #11131A;
+    --bg-elev-2: #15171F;
+    --line: rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --text: #F4F5F7;
+    --text-dim: #8A8E9B;
+    --text-mute: #4F535E;
+    --accent: #00E5A0;
+    --accent-2: #6B8AFF;
+    --grid: rgba(255,255,255,0.025);
+    --danger: #FF4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    line-height: 1.5;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 64px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .topbar .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* COVER */
+  .cover {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 96px;
+    position: relative;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    inset: -40px;
+    background: radial-gradient(circle at 30% 50%, rgba(0,229,160,0.06), transparent 50%);
+    pointer-events: none;
+  }
+  .cover-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .cover h1 {
+    font-size: clamp(48px, 8vw, 112px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .cover h1 em {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .cover-sub {
+    font-size: 20px;
+    color: var(--text-dim);
+    max-width: 580px;
+    line-height: 1.5;
+    margin-bottom: 64px;
+    position: relative;
+  }
+  .cover-details {
+    display: flex;
+    gap: 48px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .cover-details .k { color: var(--text-mute); margin-bottom: 6px; }
+  .cover-details .v { color: var(--text); font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+  /* SECTION */
+  section {
+    margin-bottom: 96px;
+    scroll-margin-top: 32px;
+  }
+
+  .section-head {
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .section-head h2 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+  .section-head p {
+    font-size: 17px;
+    color: var(--text-dim);
+    max-width: 640px;
+    line-height: 1.6;
+  }
+
+  /* SUBSECTION */
+  .subsection {
+    margin-bottom: 56px;
+  }
+  .subsection-head {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 500;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  p.body {
+    font-size: 15px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    max-width: 720px;
+    margin-bottom: 12px;
+  }
+  p.body strong { color: var(--text); font-weight: 500; }
+
+  /* PILLARS */
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .pillar {
+    background: var(--bg);
+    padding: 40px 32px;
+  }
+  .pillar .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+  }
+  .pillar h4 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+  .pillar h4 em {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--accent);
+  }
+  .pillar p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    margin-bottom: 16px;
+  }
+  .pillar .example {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line-strong);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .pillar .example span {
+    color: var(--text-mute);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* SAY / DONT TABLE */
+  .vs-table {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .vs-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .vs-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--line);
+  }
+  .vs-row:last-child { border-bottom: none; }
+  .vs-row > div {
+    padding: 24px 32px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .vs-row .yes {
+    color: var(--text);
+    border-right: 1px solid var(--line);
+    position: relative;
+    font-weight: 500;
+  }
+  .vs-row .yes::before {
+    content: '✓';
+    color: var(--accent);
+    margin-right: 14px;
+    font-weight: 700;
+  }
+  .vs-row .no {
+    color: var(--text-mute);
+    text-decoration: line-through;
+    text-decoration-color: rgba(255,68,68,0.4);
+  }
+  .vs-row .no::before {
+    content: '×';
+    color: var(--danger);
+    margin-right: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  /* TAGLINES */
+  .taglines {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .tagline {
+    background: var(--bg);
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+  }
+  .tagline .role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .tagline .line {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .tagline .line em {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline .use {
+    margin-top: auto;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* PITCH */
+  .pitch-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pitch {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .pitch .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding-top: 4px;
+  }
+  .pitch .text {
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .pitch .text em {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* CHANNELS */
+  .channels {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .channel {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 32px;
+  }
+  .channel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .channel-head .name {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .channel-head .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .channel .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .channel .rules {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+  .channel .rules li {
+    font-size: 13px;
+    color: var(--text);
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .channel .rules li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+  .channel .example {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.6;
+    border-left: 2px solid var(--accent);
+  }
+  .channel .example .label {
+    font-size: 9px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  /* WORD BANK */
+  .word-bank {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .word-bank-col {
+    background: var(--bg);
+    padding: 32px;
+  }
+  .word-bank-col .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .word-bank-col .head h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .word-bank-col.good .head h4 { color: var(--accent); }
+  .word-bank-col.bad .head h4 { color: var(--danger); }
+  .word-bank-col ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .word-bank-col li {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 2px;
+  }
+  .word-bank-col.good li {
+    background: rgba(0,229,160,0.08);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.2);
+  }
+  .word-bank-col.bad li {
+    background: rgba(255,68,68,0.06);
+    color: rgba(255,68,68,0.7);
+    text-decoration: line-through;
+    border: 1px solid rgba(255,68,68,0.15);
+  }
+
+  /* CTA BANK */
+  .cta-bank {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .cta-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 100px;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    gap: 24px;
+  }
+  .cta-row:last-child { border-bottom: none; }
+  .cta-row .button {
+    background: var(--accent);
+    color: #000;
+    padding: 8px 16px;
+    border-radius: 2px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: -0.01em;
+    display: inline-block;
+  }
+  .cta-row .button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+  }
+  .cta-row .button.tertiary {
+    background: transparent;
+    color: var(--accent);
+    border: none;
+    padding: 8px 0;
+    text-align: left;
+  }
+  .cta-row .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .cta-row .where {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: right;
+  }
+
+  /* ERROR / SUCCESS MESSAGES */
+  .copy-block {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .copy-row {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .copy-row:last-child { border-bottom: none; }
+  .copy-row .scenario {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding-top: 4px;
+  }
+  .copy-row .message {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .copy-row .message strong { color: var(--accent); display: block; margin-bottom: 4px; font-size: 13px; }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--line);
+    margin-top: 96px;
+    padding-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  @media (max-width: 900px) {
+    .pillars { grid-template-columns: 1fr; }
+    .vs-row { grid-template-columns: 1fr; }
+    .vs-row .yes { border-right: none; border-bottom: 1px solid var(--line); }
+    .vs-head { display: none; }
+    .taglines { grid-template-columns: 1fr; }
+    .pitch { grid-template-columns: 1fr; gap: 16px; }
+    .channels { grid-template-columns: 1fr; }
+    .word-bank { grid-template-columns: 1fr; }
+    .cta-row { grid-template-columns: 1fr; gap: 8px; }
+    .cta-row .where { text-align: left; }
+    .copy-row { grid-template-columns: 1fr; gap: 8px; }
+    .cover-details { flex-wrap: wrap; gap: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div><span class="dot"></span>ShopRift / Voice &amp; Messaging Guide / v1.0</div>
+    <div>Document 3 of 3</div>
+  </div>
+
+  <!-- COVER -->
+  <section class="cover">
+    <div class="cover-meta">// Brand Voice &amp; Messaging Guide</div>
+    <h1>How <em>shoprift</em><br/>talks.</h1>
+    <p class="cover-sub">Direct. Technical. Slightly understated. Like a senior engineer who's tired of marketing fluff and just wants to ship the thing. This document captures exactly that — voice, taglines, channel guidance, and ready-to-use copy.</p>
+    <div class="cover-details">
+      <div>
+        <div class="k">Document</div>
+        <div class="v">Voice &amp; Messaging v1.0</div>
+      </div>
+      <div>
+        <div class="k">Owner</div>
+        <div class="v">Mayank Malik</div>
+      </div>
+      <div>
+        <div class="k">Use this for</div>
+        <div class="v">Landing pages, X posts, emails, support</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 01 — THE FOUR VOICE PILLARS -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 01 — Voice Pillars</div>
+      <h2>The four pillars.</h2>
+      <p>Every word ShopRift puts into the world should pass through these four filters. If a line doesn't feel like all four, rewrite it.</p>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar">
+        <div class="num">/ 01</div>
+        <h4>Be <em>direct</em>.</h4>
+        <p>Lead with the answer. Cut the warmup. If migration takes minutes, we say "minutes" — not "blazing-fast performance optimized for modern e-commerce." Short sentences. Concrete numbers. Zero corporate softeners.</p>
+        <div class="example">
+          <span>// Direct</span>
+          100 products. 3 minutes. Done.
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="num">/ 02</div>
+        <h4>Be <em>technical</em>.</h4>
+        <p>We're a tool for people who get it. CSV, API, SKU, listings, collections — we use the real words. We don't dumb things down. We don't over-explain. The audience already manages a store; they know the terminology.</p>
+        <div class="example">
+          <span>// Technical</span>
+          Imports products, images, and collections directly into Shopify admin.
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="num">/ 03</div>
+        <h4>Be <em>understated</em>.</h4>
+        <p>We don't shout. We don't use "revolutionary" or "game-changing." The product is impressive enough that hyperbole cheapens it. State the facts; let the user be impressed on their own.</p>
+        <div class="example">
+          <span>// Understated</span>
+          Migrate your store. That's the whole thing.
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="num">/ 04</div>
+        <h4>Be <em>human</em>.</h4>
+        <p>We're built by a solo founder, not a corporation. The voice should occasionally show that — first-person on the about page, casual on X, available in DMs. Tool-grade product, founder-grade support.</p>
+        <div class="example">
+          <span>// Human</span>
+          Built by one person. DM me on X if it breaks.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 02 — WE SAY / WE DON'T SAY -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 02 — Calibration</div>
+      <h2>We say / we don't.</h2>
+      <p>The fastest way to learn the voice — direct examples of the right side and the wrong side.</p>
+    </div>
+
+    <div class="vs-table">
+      <div class="vs-head">
+        <div>We say</div>
+        <div>We don't say</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">Migrate your store in minutes.</div>
+        <div class="no">Unleash the power of seamless e-commerce migration.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">Every product. Every image. Every collection.</div>
+        <div class="no">Comprehensive data transfer across all product attributes.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">Built for dm2buy sellers moving to Shopify.</div>
+        <div class="no">Empowering merchants in their growth journey.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">Drop in your dm2buy URL. Products land in Shopify.</div>
+        <div class="no">Leverage our cutting-edge platform interoperability engine.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">No setup. No code. No bullshit.</div>
+        <div class="no">Streamlined onboarding with intuitive user experience.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">100 products in 3 minutes.</div>
+        <div class="no">Lightning-fast bulk product processing capabilities.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">Stuck? DM me.</div>
+        <div class="no">Our dedicated support team is here to assist you.</div>
+      </div>
+      <div class="vs-row">
+        <div class="yes">It just works.</div>
+        <div class="no">A truly best-in-class solution for modern merchants.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 03 — WORD BANK -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 03 — Word Bank</div>
+      <h2>Words we use. Words we don't.</h2>
+      <p>The vocabulary that defines the brand. Pull from the left list. Avoid the right.</p>
+    </div>
+
+    <div class="word-bank">
+      <div class="word-bank-col good">
+        <div class="head">
+          <h4>// Use these</h4>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute);">DIRECT · CONCRETE</span>
+        </div>
+        <ul>
+          <li>migrate</li>
+          <li>port</li>
+          <li>move</li>
+          <li>ship</li>
+          <li>drop in</li>
+          <li>minutes</li>
+          <li>CSV</li>
+          <li>products</li>
+          <li>listings</li>
+          <li>collections</li>
+          <li>SKU</li>
+          <li>rift</li>
+          <li>portal</li>
+          <li>bridge</li>
+          <li>switch</li>
+          <li>built for</li>
+          <li>just works</li>
+          <li>done</li>
+          <li>fast</li>
+          <li>simple</li>
+          <li>solo</li>
+          <li>indie</li>
+        </ul>
+      </div>
+      <div class="word-bank-col bad">
+        <div class="head">
+          <h4>// Avoid these</h4>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mute);">CORPORATE · FLUFFY</span>
+        </div>
+        <ul>
+          <li>seamless</li>
+          <li>revolutionary</li>
+          <li>game-changing</li>
+          <li>cutting-edge</li>
+          <li>best-in-class</li>
+          <li>leverage</li>
+          <li>unleash</li>
+          <li>empower</li>
+          <li>synergy</li>
+          <li>ecosystem</li>
+          <li>holistic</li>
+          <li>scalable solution</li>
+          <li>journey</li>
+          <li>experience</li>
+          <li>delight</li>
+          <li>magical</li>
+          <li>innovative</li>
+          <li>next-gen</li>
+          <li>world-class</li>
+          <li>premier</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 04 — TAGLINES -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 04 — Taglines</div>
+      <h2>Three taglines.</h2>
+      <p>One for clarity, one for brand, one for tight spaces. Pick the one that fits the placement.</p>
+    </div>
+
+    <div class="taglines">
+      <div class="tagline">
+        <div class="role">/ Primary · Functional</div>
+        <div class="line">dm2buy to Shopify, in <em>minutes</em>.</div>
+        <div class="use">The clearest, most useful version. Use for landing page hero, App Store listing, paid ads — anywhere the audience needs to immediately understand what we do.</div>
+      </div>
+      <div class="tagline">
+        <div class="role">/ Secondary · Conceptual</div>
+        <div class="line">The <em>rift</em> between storefronts.</div>
+        <div class="use">More poetic. Use for brand-focused contexts: about page, decks, social bios, magazine features — anywhere we have permission to be evocative instead of literal.</div>
+      </div>
+      <div class="tagline">
+        <div class="role">/ Shortest · Ultra-Compact</div>
+        <div class="line">Migrate. In <em>minutes</em>.</div>
+        <div class="use">For very tight spaces: business cards, X bio, email signatures, OG image overlays, favicon hover state.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 05 — ELEVATOR PITCHES -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 05 — Elevator Pitches</div>
+      <h2>The pitch, three lengths.</h2>
+      <p>Same idea, three depths. Use the one that fits the time you have.</p>
+    </div>
+
+    <div class="pitch-stack">
+      <div class="pitch">
+        <div class="label">/ One sentence</div>
+        <div class="text">Shoprift moves your dm2buy store to Shopify — products, images, and collections land directly in your Shopify admin.</div>
+      </div>
+      <div class="pitch">
+        <div class="label">/ Two sentences</div>
+        <div class="text">Shoprift moves your dm2buy store to Shopify. Products, images, and collections are imported directly into Shopify admin — no manual listing, no copy-paste, no agency fees.</div>
+      </div>
+      <div class="pitch">
+        <div class="label">/ Three sentences</div>
+        <div class="text">Most dm2buy sellers who outgrow the platform stay stuck because migrating to Shopify means manually re-listing every product — days of work for 100+ SKUs. Shoprift automates the whole thing: install the app, drop in your dm2buy URL, and your products land directly in Shopify admin. Minutes, not days.</div>
+      </div>
+      <div class="pitch">
+        <div class="label">/ Paragraph</div>
+        <div class="text">Shoprift is a migration tool built for Indian D2C sellers moving from dm2buy to Shopify. When a seller outgrows dm2buy — usually around 100+ products and ₹5L+ in monthly revenue — they want Shopify's app ecosystem, international payments, and professional storefront. But there's no export tool. They either spend days manually re-listing every product, or pay an agency thousands of rupees. Shoprift solves this: install the Shopify app, paste your dm2buy store URL, and every product, image, and collection imports directly into your Shopify admin. The <em>rift</em> between storefronts.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 06 — CHANNEL GUIDANCE -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 06 — Channels</div>
+      <h2>How to talk on each channel.</h2>
+      <p>Same voice, different volume. X is loud and casual. Landing pages are confident and tight. Emails are warm and direct. Errors are honest.</p>
+    </div>
+
+    <div class="channels">
+
+      <!-- Landing Page -->
+      <div class="channel">
+        <div class="channel-head">
+          <div class="name">Landing Page</div>
+          <div class="tag">/ Hero · Marketing</div>
+        </div>
+        <div class="desc">The first impression. Lead with the value prop, back it with proof, end with a low-friction CTA.</div>
+        <ul class="rules">
+          <li>Headline = the tagline, no decoration</li>
+          <li>Sub-line = one sentence of clarity</li>
+          <li>CTA = a verb, never "Learn More"</li>
+          <li>Numbers everywhere they're real</li>
+        </ul>
+        <div class="example">
+          <div class="label">// Hero example</div>
+          dm2buy to Shopify,<br/>
+          in minutes.<br/><br/>
+          Products, images, and collections imported directly into Shopify admin.<br/><br/>
+          [ Install on Shopify → ]
+        </div>
+      </div>
+
+      <!-- X / Twitter -->
+      <div class="channel">
+        <div class="channel-head">
+          <div class="name">X / Twitter</div>
+          <div class="tag">/ Founder · Casual</div>
+        </div>
+        <div class="desc">First-person, loose, occasionally lowercase. This is where the founder shows up. Share progress, screenshots, real numbers, real wins, real bugs.</div>
+        <ul class="rules">
+          <li>Write in first person ("I built…")</li>
+          <li>Show, don't tell — screenshots, GIFs, numbers</li>
+          <li>Reply to every DM and comment</li>
+          <li>Lowercase is allowed, exclamation marks aren't</li>
+        </ul>
+        <div class="example">
+          <div class="label">// X post example</div>
+          shipped shoprift today.<br/><br/>
+          moves your entire dm2buy store to shopify. products, images, collections — straight into shopify admin.<br/><br/>
+          every product. every image. every collection.<br/><br/>
+          install free → shoprift.app
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="channel">
+        <div class="channel-head">
+          <div class="name">Email</div>
+          <div class="tag">/ Direct · Warm</div>
+        </div>
+        <div class="desc">Short. Personal. From a real human address, not "noreply@". Sign off with first name. No HTML decoration.</div>
+        <ul class="rules">
+          <li>Subject lines under 6 words</li>
+          <li>Open with the point, not pleasantries</li>
+          <li>One CTA per email, max</li>
+          <li>Signed: "— Mayank"</li>
+        </ul>
+        <div class="example">
+          <div class="label">// Onboarding email</div>
+          Subj: Your store is ready to move<br/><br/>
+          Hey [name],<br/><br/>
+          Open Shoprift in your Shopify admin and paste your dm2buy URL.<br/>
+          [shoprift.app]<br/><br/>
+          Products land in Shopify in minutes.<br/><br/>
+          — Mayank
+        </div>
+      </div>
+
+      <!-- Product UI -->
+      <div class="channel">
+        <div class="channel-head">
+          <div class="name">Product UI</div>
+          <div class="tag">/ Microcopy · Functional</div>
+        </div>
+        <div class="desc">Verbs over nouns. Numbers over adjectives. Errors that explain. Success states that don't oversell.</div>
+        <ul class="rules">
+          <li>Buttons = verbs ("Migrate", "Export")</li>
+          <li>Empty states = next action, not encouragement</li>
+          <li>Loading states = real progress, not "Please wait"</li>
+          <li>Errors = what broke + what to do</li>
+        </ul>
+        <div class="example">
+          <div class="label">// Status messages</div>
+          Extracting products… 47 of 213<br/>
+          Mapping collections… done<br/>
+          Importing to Shopify…<br/><br/>
+          ✓ 213 products imported to your Shopify store.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 07 — CTA LIBRARY -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 07 — CTA Library</div>
+      <h2>Buttons, exactly.</h2>
+      <p>The buttons we use across the product. Always verbs. Never "Learn More."</p>
+    </div>
+
+    <div class="cta-bank">
+      <div class="cta-row">
+        <span class="button">Migrate now</span>
+        <div class="desc">The primary action across the entire brand. Main hero CTA, dashboard primary button.</div>
+        <div class="where">Hero · Dashboard</div>
+      </div>
+      <div class="cta-row">
+        <span class="button">Start migration</span>
+        <div class="desc">Slightly more formal alternative when "Migrate now" feels too aggressive for context.</div>
+        <div class="where">Onboarding</div>
+      </div>
+      <div class="cta-row">
+        <span class="button">View your products in Shopify</span>
+        <div class="desc">The completion action. Links to Shopify admin after import is done.</div>
+        <div class="where">Success state</div>
+      </div>
+      <div class="cta-row">
+        <span class="button secondary">See a demo</span>
+        <div class="desc">Secondary CTA for hesitant users. Pairs next to "Migrate now" in heroes.</div>
+        <div class="where">Hero · Landing</div>
+      </div>
+      <div class="cta-row">
+        <span class="button secondary">View pricing</span>
+        <div class="desc">Standard nav CTA. Direct, no friction.</div>
+        <div class="where">Nav</div>
+      </div>
+      <div class="cta-row">
+        <span class="button tertiary">Read the docs →</span>
+        <div class="desc">For technical users. Use this CTA only on technical-context pages.</div>
+        <div class="where">Footer · Help</div>
+      </div>
+      <div class="cta-row">
+        <span class="button tertiary">DM the founder →</span>
+        <div class="desc">The human escape hatch. For anything support, custom, or unusual.</div>
+        <div class="where">Support · Pricing</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 08 — STATUS / ERROR / SUCCESS COPY -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 08 — System Copy</div>
+      <h2>Errors, success, in-progress.</h2>
+      <p>The product talks to users hundreds of times. Each one of these strings should pass the four pillars.</p>
+    </div>
+
+    <div class="copy-block">
+      <div class="copy-row">
+        <div class="scenario">/ Loading</div>
+        <div class="message">
+          <strong>Extracting products…</strong>
+          47 of 213. Hang tight — this'll take about 90 seconds.
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Success</div>
+        <div class="message">
+          <strong>✓ 213 products imported to your Shopify store.</strong>
+          Your products, images, and collections are now live in Shopify admin.
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Partial Success</div>
+        <div class="message">
+          <strong>208 of 213 products migrated.</strong>
+          5 products skipped because their images couldn't be reached. <a href="#" style="color:var(--accent);">See the list →</a>
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Error · URL</div>
+        <div class="message">
+          <strong>Couldn't find that store.</strong>
+          Double-check your dm2buy URL. It should look like <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);">yourstore.dm2buy.com</span>
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Error · System</div>
+        <div class="message">
+          <strong>Something broke on our side.</strong>
+          Not your fault. Try again in a minute — or DM the founder if it keeps happening.
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Empty state</div>
+        <div class="message">
+          <strong>No migrations yet.</strong>
+          Drop in your dm2buy URL to get started. Takes about 3 minutes.
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Payment</div>
+        <div class="message">
+          <strong>Payment received.</strong>
+          You're on the Pro plan. Migrate as much as you want — no per-product caps.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 09 — SOCIAL BIO BANK -->
+  <!-- ============================================ -->
+  <section>
+    <div class="section-head">
+      <div class="section-tag">/ 09 — Bio Bank</div>
+      <h2>Ready-to-paste bios.</h2>
+      <p>Drop these into any profile. All exactly tuned for the character limit.</p>
+    </div>
+
+    <div class="copy-block">
+      <div class="copy-row">
+        <div class="scenario">/ X · 160 chars</div>
+        <div class="message">
+          dm2buy → Shopify. Direct import. Every product. Every image. Every collection. Built solo by @mayankmalikx. → shoprift.app
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Instagram</div>
+        <div class="message">
+          shoprift<br/>
+          The rift between storefronts.<br/>
+          Move your dm2buy store to Shopify in minutes.<br/>
+          ↓ shoprift.app
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ LinkedIn</div>
+        <div class="message">
+          Shoprift is a migration tool for Indian D2C sellers moving from dm2buy to Shopify. Products, images, and collections are imported directly into Shopify admin — in minutes instead of days. Built solo, shipped fast.
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Product Hunt</div>
+        <div class="message">
+          <strong>Tagline:</strong> dm2buy to Shopify, in minutes.<br/><br/>
+          <strong>Description:</strong> Shoprift moves your entire dm2buy store to Shopify automatically. Every product, image, and collection imported directly into Shopify admin — no manual listing, no agency fees. Install the app, paste your URL, done.
+        </div>
+      </div>
+      <div class="copy-row">
+        <div class="scenario">/ Email signature</div>
+        <div class="message">
+          Mayank Malik<br/>
+          Founder · Shoprift<br/>
+          <span style="color:var(--accent);">dm2buy → Shopify, in minutes.</span><br/>
+          shoprift.app · @mayankmalikx
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>ShopRift · Voice &amp; Messaging Guide v1.0</div>
+    <div>Document 3 of 3 · 2026</div>
+  </div>
+
+</div>
+
+</body>
+</html>

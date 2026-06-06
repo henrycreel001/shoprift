@@ -2,8 +2,10 @@
 
 > Read this file first. Every decision must align with it.
 > Cross-reference: ARCHITECTURE.md → TASKS.md → SCHEMA.md → ERRORS.md → PRE_LAUNCH_CHECKLIST.md → LAUNCH_STABILITY_CHECKLIST.md
+> **Design:** `DESIGN.md` — brand tokens, visual profiles, carousel asset inventory. Read before any visual production session.
+> **Marketing:** `MARKETING.md` — growth strategy, platform playbooks, 25-day sprint, content mix, posting rules, SEO. Read before any `/shoprift-content` or SEO session.
 > **Project skills:** `/shoprift-pm` · `/shoprift-legal` · `/shoprift-accountant` · `/shoprift-content` · `/caveman`
-> **Change log:** Every edit recorded in `docs/DEVLOG.md` — date, files, reason. Update before each commit.
+> **Change log:** Every code edit recorded in `docs/DEVLOG.md`. Every design/content change recorded in `DESIGN.md` changelog. Update before each commit.
 
 ## SESSION CONTINUITY
 

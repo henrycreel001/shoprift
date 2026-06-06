@@ -185,8 +185,8 @@ Razorpay can still be used for concierge (off-app payments).
 
 | # | Task | Done |
 |---|------|------|
-| T8.1 | Full e2e: install app on dev store → migrate kiwiishop → confirm 4 products in Shopify admin | [ ] |
-| T8.2 | Full e2e: migrate mmshop (5 products, 0 collections) | [ ] |
+| T8.1 | Full e2e: install app on dev store → migrate kiwiishop → confirm 4 products in Shopify admin | [x] |
+| T8.2 | Full e2e: migrate mmshop (5 products, 0 collections) | [x] |
 | T8.3 | Large store test: find a dm2buy store with 20+ products. Test full flow. | [x] |
 | T8.4 | Error scenarios: invalid URL, private store, store with 0 products, network drop mid-extraction | [x] |
 | T8.5 | Billing flow test: test charge, decline, refund | [ ] |

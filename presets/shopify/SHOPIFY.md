@@ -112,6 +112,22 @@ Sellers then create Shopify Smart Collections with the condition "Product tag is
 
 This convention is critical to migration completeness. Do not change it without updating both the emitter and the seller-facing documentation.
 
+## VARIANT HANDLING — OPTION1 NAME LOGIC
+
+| Variant set type | Option1 Name |
+|---|---|
+| Only colors detected | `Color` |
+| Only sizes detected | `Size` |
+| Colors + sizes (multi-axis) | `Color` (sizes become Option2) |
+| Mixed (colors + other) or only other | `Option` |
+| No variants at all | `Title` |
+
+Variant rows use `variants.all[]` from the Shoprift schema as the primary source. This preserves:
+1. **Original API ordering** (seller's intended display order)
+2. **Per-variant prices** — if dm2buy's `variantOptions[].price` is non-null, each row gets its own `Variant Price`
+
+If `all[]` is empty (old extracted data), the emitter falls back to `colors → sizes → other → "Default Title"`.
+
 ## KNOWN UNSUPPORTED FIELDS
 
 These are fields dm2buy doesn't have. We leave them blank rather than fabricating data:

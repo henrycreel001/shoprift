@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shoprift — Ownership Verification (design preview)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; }
+
+    /* ── Design tokens ── */
+    :root {
+      --page:       #F6F6F7;
+      --surface:    #FFFFFF;
+      --void:       #0A0B0F;
+      --mint:       #00E5A0;
+      --mint-hover: #00CC8E;
+      --mint-dark:  #007A52;
+      --portal:     #6B8AFF;
+      --ink:        #1A1A1A;
+      --ink-2:      #4A4F54;
+      --ink-3:      #6D7175;
+      --ink-4:      #8C9196;
+      --ink-5:      #C9CCCF;
+      --wire:       #E1E3E5;
+      --wire-subtle:#F1F2F3;
+      --wire-strong:#C9CCCF;
+      --font-sans:  'Inter', ui-sans-serif, system-ui, sans-serif;
+      --font-mono:  'JetBrains Mono', ui-monospace, 'Menlo', monospace;
+    }
+
+    body {
+      background: var(--page);
+      font-family: var(--font-sans);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .wrap {
+      max-width: 592px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 6rem;
+    }
+
+    /* ── Step track ── */
+    .step-track {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 2.5rem;
+      list-style: none;
+    }
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .step-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-dot.done {
+      background: #ECFDF5;
+      border: 1px solid rgba(0,229,160,0.4);
+    }
+    .step-dot.active {
+      background: var(--mint);
+      box-shadow: 0 0 0 3px rgba(0,229,160,0.20);
+    }
+    .step-dot.future {
+      background: var(--wire-subtle);
+      border: 1px solid var(--wire);
+    }
+    .step-dot svg { display: block; }
+    .step-dot .num {
+      font-family: var(--font-mono);
+      font-size: 8.5px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .step-dot.active .num { color: var(--void); }
+    .step-dot.future .num { color: var(--ink-4); }
+    .step-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .step-label.done   { color: var(--ink-3); }
+    .step-label.active { color: var(--ink); font-weight: 600; }
+    .step-label.future { color: var(--ink-5); }
+    .step-connector {
+      flex: 1;
+      height: 1px;
+      margin: 10px 4px 0;
+    }
+    .step-connector.done   { background: rgba(0,229,160,0.35); }
+    .step-connector.future { background: var(--wire-strong); }
+
+    /* ── Header block ── */
+    .row-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--ink-3);
+      margin-bottom: 6px;
+    }
+    .heading {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+    .subtext {
+      font-size: 0.9375rem;
+      color: var(--ink-3);
+      margin-bottom: 2rem;
+    }
+
+    /* ── Timeline instructions ── */
+    .timeline {
+      list-style: none;
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    .timeline-item {
+      display: flex;
+      gap: 1rem;
+      position: relative;
+    }
+    .timeline-item:not(:last-child) .tl-dot-wrap::after {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 19px;
+      bottom: 0;
+      width: 1px;
+      background: var(--wire);
+    }
+    .tl-dot-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .tl-dot {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      border: 1px solid var(--wire-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      background: var(--surface);
+      position: relative;
+      z-index: 1;
+    }
+    .tl-dot span {
+      font-family: var(--font-mono);
+      font-size: 8.5px;
+      color: var(--ink-4);
+    }
+    .tl-text {
+      font-size: 0.9rem;
+      color: var(--ink-2);
+      padding-bottom: 18px;
+      line-height: 1.45;
+    }
+
+    /* ── Code display ── */
+    .code-label { margin-bottom: 6px; }
+    .code-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--wire);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+    }
+    .code-value {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      color: var(--mint-dark);
+      letter-spacing: 0.06em;
+      word-break: break-all;
+      user-select: all;
+    }
+    .copy-btn {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-4);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .copy-btn:hover { color: var(--ink-2); }
+    .code-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .code-hint {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ink-5);
+    }
+    .code-expiry {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ink-5);
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 2rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-weight: 500;
+      font-size: 0.875rem;
+      padding: 0.625rem 1.25rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      outline: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--mint);
+      color: var(--void);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,229,160,0.25);
+    }
+    .btn-primary:hover { background: var(--mint-hover); }
+    .btn-ghost {
+      color: var(--ink-4);
+      background: none;
+      padding: 6px 8px;
+    }
+    .btn-ghost:hover { color: var(--ink-2); }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 4rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--wire-subtle);
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .footer a {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--ink-4);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer a:hover { color: var(--ink-2); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Step track -->
+    <nav class="step-track" aria-label="Migration steps">
+
+      <!-- URL — done -->
+      <div class="step-item">
+        <div class="step-dot done">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M1.5 5.5l3 3 5-5" stroke="#007A52" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="step-label done">URL</span>
+      </div>
+      <div class="step-connector done"></div>
+
+      <!-- Verify — active -->
+      <div class="step-item">
+        <div class="step-dot active">
+          <span class="num">2</span>
+        </div>
+        <span class="step-label active">Verify</span>
+      </div>
+      <div class="step-connector future"></div>
+
+      <!-- Preview -->
+      <div class="step-item">
+        <div class="step-dot future">
+          <span class="num" style="color:var(--ink-4)">3</span>
+        </div>
+        <span class="step-label future">Preview</span>
+      </div>
+      <div class="step-connector future"></div>
+
+      <!-- Extract -->
+      <div class="step-item">
+        <div class="step-dot future">
+          <span class="num" style="color:var(--ink-4)">4</span>
+        </div>
+        <span class="step-label future">Extract</span>
+      </div>
+      <div class="step-connector future"></div>
+
+      <!-- Review -->
+      <div class="step-item">
+        <div class="step-dot future">
+          <span class="num" style="color:var(--ink-4)">5</span>
+        </div>
+        <span class="step-label future">Review</span>
+      </div>
+      <div class="step-connector future"></div>
+
+      <!-- Import -->
+      <div class="step-item">
+        <div class="step-dot future">
+          <span class="num" style="color:var(--ink-4)">6</span>
+        </div>
+        <span class="step-label future">Import</span>
+      </div>
+      <div class="step-connector future"></div>
+
+      <!-- Done -->
+      <div class="step-item">
+        <div class="step-dot future">
+          <span class="num" style="color:var(--ink-4)">7</span>
+        </div>
+        <span class="step-label future">Done</span>
+      </div>
+
+    </nav>
+
+    <!-- Header -->
+    <div style="margin-bottom: 2rem;">
+      <p class="row-label">Step 2 — Ownership verification</p>
+      <h2 class="heading">Confirm you own this store.</h2>
+      <p class="subtext">We verify ownership before any data moves.</p>
+    </div>
+
+    <!-- Timeline instructions -->
+    <ol class="timeline">
+      <li class="timeline-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot"><span>1</span></div>
+        </div>
+        <p class="tl-text">Log in to your dm2buy seller dashboard.</p>
+      </li>
+      <li class="timeline-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot"><span>2</span></div>
+        </div>
+        <p class="tl-text">Go to Products → Add Product.</p>
+      </li>
+      <li class="timeline-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot"><span>3</span></div>
+        </div>
+        <p class="tl-text">Set the product name to exactly the code below.</p>
+      </li>
+      <li class="timeline-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot"><span>4</span></div>
+        </div>
+        <p class="tl-text">Save — draft status is fine.</p>
+      </li>
+      <li class="timeline-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot"><span>5</span></div>
+        </div>
+        <p class="tl-text">Click "Verify now" below.</p>
+      </li>
+    </ol>
+
+    <!-- Verification code -->
+    <div style="margin-bottom: 2rem;">
+      <p class="row-label code-label">Your verification code</p>
+      <div class="code-box">
+        <code class="code-value">SR-7B4N-XQMK</code>
+        <button class="copy-btn" type="button">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <rect x="4.5" y="4.5" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M4.5 8.5H2.5a1 1 0 01-1-1V2.5a1 1 0 011-1h5a1 1 0 011 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Copy
+        </button>
+      </div>
+      <div class="code-meta">
+        <p class="code-hint">Product name must match exactly. Delete it after verification.</p>
+        <p class="code-expiry">Expires 14:47</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="btn-row">
+      <button class="btn btn-primary" type="button">
+        Verify now
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M2 6.5h9M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="btn btn-ghost" type="button">Change URL</button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+      <a href="#">Refunds</a>
+      <a href="#">Grievance Officer</a>
+    </footer>
+
+  </div>
+</body>
+</html>

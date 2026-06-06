@@ -7,6 +7,26 @@
 
 ---
 
+## 2026-06-06 — fix(variants): capture all variant options + per-variant pricing
+
+**Files:**
+- `src/extractor.js` (edit — `classifyVariants`)
+- `src/validator.js` (edit — `VariantsSchema`)
+- `presets/shopify/emitter.js` (edit — `getOption1Name`, `emitAnchorRow`, `emitVariantRow`, `emitShopifyCsv`)
+- `presets/shopify/SHOPIFY.md` (edit — new VARIANT HANDLING section)
+- `docs/SCHEMA.md` (edit — `variants.all` field)
+
+**Changes:**
+- **Bug 1 (critical):** `other` variants (non-color, non-size options like "Both 🩷 🖤", combo sets, generic options) were extracted correctly into `variants.other` but the emitter completely ignored them. Stores with mixed or non-standard variant names produced CSV rows only for detected colors/sizes — all `other` entries were silently dropped.
+- **Bug 2:** Per-variant pricing never captured. `classifyVariants()` only read `v.name`; `v.price`/`v.mrp` from the dm2buy API were discarded.
+- **Bug 3:** `getOption1Name()` returned `"Title"` for products with only `other` variants instead of something meaningful.
+- **Fix 1:** `classifyVariants()` now builds a `variants.all` array preserving API order and per-variant `price`/`mrp`.
+- **Fix 2:** Emitter now uses `variants.all` as primary source for variant rows. Falls back to `colors/sizes/other` for legacy data without `all`. Per-variant price used when non-null, falls back to `product.price`.
+- **Fix 3:** `getOption1Name()` signature extended to include `other`; returns `"Option"` for mixed/generic sets, `"Color"` for pure-color, `"Size"` for pure-size.
+- **Schema:** `VariantsSchema` extended with `all: VariantOptionSchema[]` (optional, defaults to `[]`).
+
+---
+
 ## 2026-06-03 — perf(importer): batch concurrency + decouple image uploads
 
 **Files:**

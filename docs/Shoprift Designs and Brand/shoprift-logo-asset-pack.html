@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ShopRift — Logo Asset Pack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0A0B0F;
+    --bg-elev: #11131A;
+    --bg-elev-2: #15171F;
+    --line: rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --text: #F4F5F7;
+    --text-dim: #8A8E9B;
+    --text-mute: #4F535E;
+    --accent: #00E5A0;
+    --accent-2: #6B8AFF;
+    --grid: rgba(255,255,255,0.025);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 64px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .topbar .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* INTRO */
+  .intro {
+    margin-bottom: 64px;
+    max-width: 760px;
+  }
+  .intro .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .intro h1 {
+    font-size: clamp(48px, 6vw, 88px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    margin-bottom: 24px;
+  }
+  .intro h1 .accent {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .intro p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text-dim);
+  }
+
+  /* INSTRUCTIONS */
+  .how-to {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 32px;
+    margin-bottom: 80px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 32px;
+  }
+  .how-to h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+  }
+  .how-to ol {
+    list-style: none;
+    counter-reset: step;
+  }
+  .how-to li {
+    padding: 12px 0;
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 16px;
+    align-items: baseline;
+    border-bottom: 1px solid var(--line);
+  }
+  .how-to li:last-child { border-bottom: none; }
+  .how-to li::before {
+    content: "0" counter(step);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .how-to li .text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .how-to li .text span {
+    color: var(--text-dim);
+    display: block;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* CATEGORY DIVIDER */
+  .category {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 48px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .category:first-of-type { margin-top: 0; }
+  .category h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .category .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+  }
+
+  /* ASSET GRID */
+  .asset-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .asset {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .asset-canvas {
+    aspect-ratio: 1.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .asset-canvas.dark { background: var(--bg-elev-2); }
+  .asset-canvas.light { background: #F4F5F7; }
+  .asset-canvas.accent { background: linear-gradient(135deg, #00E5A0 0%, #00B380 100%); }
+  .asset-canvas.dark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(0,229,160,0.10), transparent 50%),
+      radial-gradient(circle at 70% 70%, rgba(107,138,255,0.08), transparent 50%);
+  }
+  .asset-canvas svg {
+    width: 35%;
+    height: 35%;
+    position: relative;
+    z-index: 1;
+  }
+  .asset-canvas.lockup svg.mark { width: auto; height: 64px; }
+  .asset-canvas.lockup {
+    flex-direction: row;
+    gap: 16px;
+    padding: 32px;
+  }
+  .asset-canvas.lockup .wm {
+    position: relative;
+    z-index: 1;
+    font-family: 'Geist', sans-serif;
+    font-weight: 900;
+    font-size: 48px;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+  .asset-canvas.dark.lockup .wm { color: var(--text); }
+  .asset-canvas.light.lockup .wm { color: #0A0B0F; }
+  .asset-canvas.accent.lockup .wm { color: #0A0B0F; }
+
+  /* Asset info */
+  .asset-info {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .asset-info .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .asset-info .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .asset-info .type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .asset-info .desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* Buttons */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 24px 24px;
+  }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn:hover {
+    background: var(--bg-elev-2);
+    border-color: var(--line-strong);
+  }
+  .btn.primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .btn.primary:hover {
+    background: #00C58A;
+    border-color: #00C58A;
+  }
+  .btn.copied {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  /* PNG SIZES */
+  .png-sizes {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 40px;
+    margin-bottom: 64px;
+  }
+  .png-sizes h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .png-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+  .png-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .png-item:hover { border-color: var(--accent); }
+  .png-item .preview {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--bg-elev-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .png-item .preview svg { width: 60%; height: 60%; }
+  .png-item .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .png-item .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-mute);
+    margin-top: -4px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent);
+    color: #000;
+    padding: 14px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    z-index: 100;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 12px 40px rgba(0,229,160,0.3);
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--line);
+    margin-top: 64px;
+    padding-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  @media (max-width: 900px) {
+    .how-to { grid-template-columns: 1fr; gap: 16px; }
+    .asset-grid { grid-template-columns: 1fr; }
+    .png-grid { grid-template-columns: repeat(3, 1fr); }
+    .asset-canvas.lockup { flex-direction: column; gap: 12px; padding: 32px 16px; }
+    .asset-canvas.lockup .wm { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HIDDEN SVG SYMBOLS -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5A0" />
+      <stop offset="100%" stop-color="#6B8AFF" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div><span class="dot"></span>ShopRift / Logo Asset Pack / v1.0</div>
+    <div>Document 2 of 3</div>
+  </div>
+
+  <!-- INTRO -->
+  <section class="intro">
+    <div class="label">// Logo Asset Pack</div>
+    <h1>Every logo, ready to <span class="accent">copy</span>.</h1>
+    <p>10 logo variants as production-ready SVG. Click Copy SVG to grab the code, or click Download to save the file. Everything you need to ship — no Figma required.</p>
+  </section>
+
+  <!-- HOW TO -->
+  <section class="how-to">
+    <h3>How to use<br/>this pack</h3>
+    <ol>
+      <li>
+        <div class="text">Pick the variant that matches your background.
+          <span>Use the gradient mark on dark surfaces, black on light, white on photos, favicon for anything under 32px.</span>
+        </div>
+      </li>
+      <li>
+        <div class="text">Copy SVG or download the file.
+          <span>SVGs scale infinitely. For raster needs, download a PNG from the sizes grid below.</span>
+        </div>
+      </li>
+      <li>
+        <div class="text">Respect the rules from Doc 1.
+          <span>Clear space = 1× rift height. Minimum size 20px. No skewing, stretching, rotating, or recoloring.</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- CATEGORY 1: PRIMARY MARK -->
+  <!-- ============================================ -->
+  <div class="category">
+    <h2>Family 01 — Primary Mark</h2>
+    <span class="meta">/ Icon-only · 64px+</span>
+  </div>
+
+  <div class="asset-grid">
+
+    <!-- Primary gradient on dark -->
+    <div class="asset">
+      <div class="asset-canvas dark">
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="g-1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g-1)" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g-1)" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g-1)" opacity="0.6" />
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">01 / Primary Gradient</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">The full-color mark on dark surfaces. Default everywhere — websites, app icons, marketing.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-primary')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-primary', 'shoprift-mark-primary')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- White on dark -->
+    <div class="asset">
+      <div class="asset-canvas dark">
+        <svg viewBox="0 0 120 120">
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#fff" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#fff" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#fff" opacity="0.6" />
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">02 / White Mono</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Pure white on any dark background. Use over photography, video, or when the gradient won't render.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-white')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-white', 'shoprift-mark-white')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- Black on light -->
+    <div class="asset">
+      <div class="asset-canvas light">
+        <svg viewBox="0 0 120 120">
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6" />
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">03 / Black Mono</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Solid black on light backgrounds. For print, business cards, white-background placements.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-black')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-black', 'shoprift-mark-black')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- Black on accent -->
+    <div class="asset">
+      <div class="asset-canvas accent">
+        <svg viewBox="0 0 120 120">
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6" />
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">04 / On Accent</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Black mark on the Rift Mint accent. For accent panels, social posts with branded backgrounds.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-on-accent')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-on-accent', 'shoprift-mark-on-accent')">↓ Download</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================ -->
+  <!-- CATEGORY 2: FAVICON -->
+  <!-- ============================================ -->
+  <div class="category">
+    <h2>Family 02 — Favicon Variant</h2>
+    <span class="meta">/ Simplified · Sub-32px</span>
+  </div>
+
+  <div class="asset-grid">
+
+    <!-- Favicon gradient -->
+    <div class="asset">
+      <div class="asset-canvas dark">
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="g-fav" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="url(#g-fav)" />
+          <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="url(#g-fav)" />
+          <rect x="40" y="56" width="40" height="8" fill="url(#g-fav)" opacity="0.7" />
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">05 / Favicon Gradient</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Simplified mark — no particles, thicker rift. For browser tabs, app icons, anywhere under 32px.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-fav')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-fav', 'shoprift-favicon')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- Favicon black -->
+    <div class="asset">
+      <div class="asset-canvas light">
+        <svg viewBox="0 0 120 120">
+          <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="#0A0B0F" />
+          <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="#0A0B0F" />
+          <rect x="40" y="56" width="40" height="8" fill="#0A0B0F" opacity="0.7" />
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">06 / Favicon Black</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Black favicon variant for light backgrounds. Use for light-mode browser tabs.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-fav-black')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-fav-black', 'shoprift-favicon-black')">↓ Download</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================ -->
+  <!-- CATEGORY 3: LOCKUPS -->
+  <!-- ============================================ -->
+  <div class="category">
+    <h2>Family 03 — Full Lockups</h2>
+    <span class="meta">/ Mark + Wordmark</span>
+  </div>
+
+  <div class="asset-grid">
+
+    <!-- Lockup primary -->
+    <div class="asset">
+      <div class="asset-canvas dark lockup">
+        <svg class="mark" viewBox="0 0 120 120">
+          <defs><linearGradient id="g-lk1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g-lk1)" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g-lk1)" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g-lk1)" opacity="0.6" />
+        </svg>
+        <div class="wm">shoprift</div>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">07 / Primary Lockup</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Gradient mark + Geist Black wordmark on dark. The default brand lockup for headers and nav.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-lockup')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-lockup', 'shoprift-lockup-primary')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- Lockup white -->
+    <div class="asset">
+      <div class="asset-canvas dark lockup">
+        <svg class="mark" viewBox="0 0 120 120">
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#fff" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#fff" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#fff" opacity="0.6" />
+        </svg>
+        <div class="wm">shoprift</div>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">08 / White Lockup</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">All-white mark + wordmark. For dark photography, video overlays, or where gradient fails.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-lockup-white')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-lockup-white', 'shoprift-lockup-white')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- Lockup black -->
+    <div class="asset">
+      <div class="asset-canvas light lockup">
+        <svg class="mark" viewBox="0 0 120 120">
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6" />
+        </svg>
+        <div class="wm">shoprift</div>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">09 / Black Lockup</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">All-black lockup for light surfaces. Business cards, printed materials, light-themed sites.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-lockup-black')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-lockup-black', 'shoprift-lockup-black')">↓ Download</button>
+      </div>
+    </div>
+
+    <!-- Lockup on accent -->
+    <div class="asset">
+      <div class="asset-canvas accent lockup">
+        <svg class="mark" viewBox="0 0 120 120">
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6" />
+        </svg>
+        <div class="wm">shoprift</div>
+      </div>
+      <div class="asset-info">
+        <div class="top">
+          <div class="name">10 / Lockup on Accent</div>
+          <div class="type">SVG</div>
+        </div>
+        <div class="desc">Black lockup on Rift Mint. For high-contrast brand panels and feature placements.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="copySvg(this, 'svg-lockup-accent')">Copy SVG</button>
+        <button class="btn primary" onclick="downloadSvg('svg-lockup-accent', 'shoprift-lockup-on-accent')">↓ Download</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================ -->
+  <!-- PNG EXPORT SIZES -->
+  <!-- ============================================ -->
+  <div class="category">
+    <h2>Family 04 — PNG Export Sizes</h2>
+    <span class="meta">/ Click to download</span>
+  </div>
+
+  <div class="png-sizes">
+    <h3>Common Sizes — Primary Mark</h3>
+    <div class="png-grid">
+      <div class="png-item" onclick="downloadPng(16)">
+        <div class="preview">
+          <svg viewBox="0 0 120 120"><defs><linearGradient id="g-p1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="url(#g-p1)" />
+          <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="url(#g-p1)" />
+          <rect x="40" y="56" width="40" height="8" fill="url(#g-p1)" opacity="0.7" /></svg>
+        </div>
+        <div class="label">16×16</div>
+        <div class="sub">Favicon</div>
+      </div>
+      <div class="png-item" onclick="downloadPng(32)">
+        <div class="preview">
+          <svg viewBox="0 0 120 120"><defs><linearGradient id="g-p2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="url(#g-p2)" />
+          <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="url(#g-p2)" />
+          <rect x="40" y="56" width="40" height="8" fill="url(#g-p2)" opacity="0.7" /></svg>
+        </div>
+        <div class="label">32×32</div>
+        <div class="sub">Tab Icon</div>
+      </div>
+      <div class="png-item" onclick="downloadPng(64)">
+        <div class="preview">
+          <svg viewBox="0 0 120 120"><defs><linearGradient id="g-p3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g-p3)" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g-p3)" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g-p3)" opacity="0.6" /></svg>
+        </div>
+        <div class="label">64×64</div>
+        <div class="sub">Avatar</div>
+      </div>
+      <div class="png-item" onclick="downloadPng(128)">
+        <div class="preview">
+          <svg viewBox="0 0 120 120"><defs><linearGradient id="g-p4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g-p4)" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g-p4)" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g-p4)" opacity="0.6" /></svg>
+        </div>
+        <div class="label">128×128</div>
+        <div class="sub">iOS</div>
+      </div>
+      <div class="png-item" onclick="downloadPng(512)">
+        <div class="preview">
+          <svg viewBox="0 0 120 120"><defs><linearGradient id="g-p5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g-p5)" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g-p5)" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g-p5)" opacity="0.6" /></svg>
+        </div>
+        <div class="label">512×512</div>
+        <div class="sub">App Store</div>
+      </div>
+      <div class="png-item" onclick="downloadPng(1024)">
+        <div class="preview">
+          <svg viewBox="0 0 120 120"><defs><linearGradient id="g-p6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g-p6)" />
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g-p6)" />
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g-p6)" opacity="0.6" /></svg>
+        </div>
+        <div class="label">1024×1024</div>
+        <div class="sub">Marketing</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>ShopRift · Logo Asset Pack v1.0</div>
+    <div>Document 2 of 3 · 2026</div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<!-- HIDDEN SVG SOURCES (used for copy/download) -->
+<div style="display:none">
+
+<div id="svg-primary"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g)"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g)"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g)" opacity="0.6"/>
+</svg></div>
+
+<div id="svg-white"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#FFFFFF"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#FFFFFF"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#FFFFFF" opacity="0.6"/>
+</svg></div>
+
+<div id="svg-black"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6"/>
+</svg></div>
+
+<div id="svg-on-accent"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6"/>
+</svg></div>
+
+<div id="svg-fav"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+  <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="url(#g)"/>
+  <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="url(#g)"/>
+  <rect x="40" y="56" width="40" height="8" fill="url(#g)" opacity="0.7"/>
+</svg></div>
+
+<div id="svg-fav-black"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="#0A0B0F"/>
+  <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="#0A0B0F"/>
+  <rect x="40" y="56" width="40" height="8" fill="#0A0B0F" opacity="0.7"/>
+</svg></div>
+
+<div id="svg-lockup"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120">
+  <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#6B8AFF"/></linearGradient></defs>
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#g)"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#g)"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#g)" opacity="0.6"/>
+  <text x="150" y="86" font-family="Geist, sans-serif" font-weight="900" font-size="80" letter-spacing="-3.6" fill="#F4F5F7">shoprift</text>
+</svg></div>
+
+<div id="svg-lockup-white"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120">
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#FFFFFF"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#FFFFFF"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#FFFFFF" opacity="0.6"/>
+  <text x="150" y="86" font-family="Geist, sans-serif" font-weight="900" font-size="80" letter-spacing="-3.6" fill="#FFFFFF">shoprift</text>
+</svg></div>
+
+<div id="svg-lockup-black"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120">
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6"/>
+  <text x="150" y="86" font-family="Geist, sans-serif" font-weight="900" font-size="80" letter-spacing="-3.6" fill="#0A0B0F">shoprift</text>
+</svg></div>
+
+<div id="svg-lockup-accent"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120">
+  <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F"/>
+  <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F"/>
+  <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6"/>
+  <text x="150" y="86" font-family="Geist, sans-serif" font-weight="900" font-size="80" letter-spacing="-3.6" fill="#0A0B0F">shoprift</text>
+</svg></div>
+
+</div>
+
+<script>
+function getSvgString(id) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  return el.innerHTML.trim().replace(/\s+/g, ' ');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function copySvg(btn, id) {
+  const svg = getSvgString(id);
+  navigator.clipboard.writeText(svg).then(() => {
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    showToast('SVG copied to clipboard');
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+function downloadSvg(id, filename) {
+  const svg = getSvgString(id);
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename + '.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Downloaded ' + filename + '.svg');
+}
+
+function downloadPng(size) {
+  // Use favicon variant for sizes ≤32, primary for larger
+  const sourceId = size <= 32 ? 'svg-fav' : 'svg-primary';
+  const svgString = getSvgString(sourceId);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  const img = new Image();
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0, size, size);
+    URL.revokeObjectURL(url);
+
+    canvas.toBlob(function(blob) {
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = `shoprift-${size}x${size}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(dlUrl);
+      showToast(`Downloaded ${size}×${size}.png`);
+    }, 'image/png');
+  };
+
+  img.src = url;
+}
+</script>
+
+</body>
+</html>

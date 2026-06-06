@@ -16,9 +16,9 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-06-02
-- **Session topic:** Full pre-launch audit (security, reliability, UX) — 14 files changed, commit `f04100c`. See DEVLOG.md for full list of changes.
-- **Branch:** main (last commit: `f04100c`)
+- **Date:** 2026-06-06
+- **Session topic:** Variant extraction fix — `other` variants (non-color, non-size) were silently dropped from CSV; per-variant pricing not captured. Fixed extractor + emitter + Zod schema. Verified on pookiescoopee (Boba Sanrio pens: all 6 character variants now emitted). New concierge tool: `scripts/recon_sample.js`.
+- **Branch:** main (last commit: see git log)
 
 ---
 
@@ -42,11 +42,11 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Pre-launch audit hardening** — commit `f04100c`: deleted dead Razorpay routes, wired recon stub to Railway, storeUrl validation fix, token expiry fix, billing/callback ownership, AbortSignal timeouts, webhook 500→200, idempotency duplicate key check, user-facing error cleanup, frontend state reset + expired code CTA, security headers.
-2. **Session token timeout cut** — commit `2c4b8e4`: App Bridge v3 token warmup timeout cut from 12s to 500ms, eliminating 10s+ delay on every request.
-3. **Session-based auth fallback** — commit `5c7d9ee`: `verifyRequest()` dual-auth (JWT first, then Supabase session check). Fixed "Session error" on all API routes. App Bridge v3 `getSessionToken()` permanently fails in current Shopify admin — session fallback is the live auth path.
-4. **T8.4 error handling fix** — commit `8bd008b`: `fetchStoreMeta` now shows "Store not found. Check the URL and try again." instead of leaking raw API URL.
-5. **T8.7 performance confirmed** — mmshop 45s CLI, web app ~25s for 10 products. ✅ under 2 min.
+1. **Variant fix (this session)** — `other` variants (non-color, non-size) dropped from emitter fixed. Per-variant pricing now captured from `variantOptions[].price`. `variants.all[]` added to schema + Zod. `getOption1Name` extended. Verified: pookiescoopee Boba Sanrio pens → 6 variants, correct rows. Files: `src/extractor.js`, `src/validator.js`, `presets/shopify/emitter.js`, `docs/SCHEMA.md`, `presets/shopify/SHOPIFY.md`.
+2. **`scripts/recon_sample.js`** — new concierge tool: recon summary + N-product Shopify CSV sample. Usage: `node scripts/recon_sample.js <store-url> [--count N]`. Uses real emitter. Verified on pookiescoopee (5 products, 13 rows, all variants).
+3. **fix(trial)** — commit `1d96943`: session restore on mount + surface 0-products error in trial_done.
+4. **feat(ui)** — commit `778b536`: tier-1 polish — bigger headings, feature pills, side-by-side input, bolder stats.
+5. **feat(import)** — commit `44dba62`: per-phase mini progress bars + weighted main progress.
 
 ---
 
@@ -58,7 +58,7 @@ None for code work. Remaining T8/T9 items are manual browser tasks — only Maya
 
 ## UNCOMMITTED CHANGES
 
-None. Working tree clean as of `8bd008b`.
+None. Working tree clean (committed this session).
 
 ---
 

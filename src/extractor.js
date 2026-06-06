@@ -51,10 +51,13 @@ function isBoilerplate(description) {
 }
 
 /**
- * Classifies variant options into colors, sizes, or other.
+ * Classifies variant options into colors, sizes, other, and a flat `all` list.
  * dm2buy uses type "fit" for all variants — infer from names.
+ * `all` preserves the original API order and captures per-variant pricing.
+ * The emitter uses `all` as its primary source; colors/sizes/other remain for
+ * backward compatibility and Option1 Name detection.
  * @param {object[]} variantOptions
- * @returns {{ sizes: string[], colors: string[], other: string[] }}
+ * @returns {{ sizes: string[], colors: string[], other: string[], all: Array<{name:string, price:number|null, mrp:number|null}> }}
  */
 function classifyVariants(variantOptions) {
   const SIZE_PATTERNS = /^(xs|s|m|l|xl|xxl|xxxl|2xl|3xl|free size|\d+\s*(ml|cm|mm|g|kg|oz|inch|in))$/i;
@@ -65,10 +68,16 @@ function classifyVariants(variantOptions) {
   const sizes = [];
   const colors = [];
   const other = [];
+  const all = [];
 
   for (const v of variantOptions) {
     if (!v.isActive) continue;
     const name = v.name?.trim() || '';
+    all.push({
+      name,
+      price: typeof v.price === 'number' ? v.price : null,
+      mrp: typeof v.mrp === 'number' ? v.mrp : null,
+    });
     if (SIZE_PATTERNS.test(name)) {
       sizes.push(name);
     } else if (COLOR_KEYWORDS.some(c => name.toLowerCase().includes(c))) {
@@ -78,7 +87,7 @@ function classifyVariants(variantOptions) {
     }
   }
 
-  return { sizes, colors, other };
+  return { sizes, colors, other, all };
 }
 
 /**

@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ShopRift — Brand Guidelines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0A0B0F;
+    --bg-elev: #11131A;
+    --bg-elev-2: #15171F;
+    --line: rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --text: #F4F5F7;
+    --text-dim: #8A8E9B;
+    --text-mute: #4F535E;
+    --accent: #00E5A0;
+    --accent-2: #6B8AFF;
+    --grid: rgba(255,255,255,0.025);
+    --danger: #FF4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    line-height: 1.5;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 64px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .topbar .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* COVER */
+  .cover {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 96px;
+    position: relative;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    inset: -40px;
+    background: radial-gradient(circle at 30% 50%, rgba(0,229,160,0.06), transparent 50%);
+    pointer-events: none;
+  }
+  .cover-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .cover h1 {
+    font-size: clamp(64px, 10vw, 144px);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .cover-sub {
+    font-size: 20px;
+    color: var(--text-dim);
+    max-width: 520px;
+    line-height: 1.5;
+    margin-bottom: 64px;
+    position: relative;
+  }
+  .cover-details {
+    display: flex;
+    gap: 48px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .cover-details .k { color: var(--text-mute); margin-bottom: 6px; }
+  .cover-details .v { color: var(--text); font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+  /* TOC */
+  .toc {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 40px;
+    margin-bottom: 96px;
+  }
+  .toc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .toc-head h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .toc-head .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+  }
+  .toc-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .toc-item {
+    background: var(--bg-elev);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.2s;
+  }
+  .toc-item:hover { background: var(--bg-elev-2); }
+  .toc-item .left {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .toc-item .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .toc-item .title {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .toc-item .arrow {
+    color: var(--text-mute);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* SECTION */
+  section {
+    margin-bottom: 96px;
+    scroll-margin-top: 32px;
+  }
+
+  .section-head {
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .section-head h2 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+  .section-head p {
+    font-size: 17px;
+    color: var(--text-dim);
+    max-width: 640px;
+    line-height: 1.6;
+  }
+
+  /* SUBSECTION */
+  .subsection {
+    margin-bottom: 48px;
+  }
+  .subsection h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 500;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* TEXT */
+  p.body {
+    font-size: 15px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    max-width: 680px;
+    margin-bottom: 16px;
+  }
+  p.body strong { color: var(--text); font-weight: 500; }
+
+  /* ============================================ */
+  /* 01 — BRAND ESSENCE */
+  /* ============================================ */
+  .essence-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .essence-cell {
+    background: var(--bg);
+    padding: 32px;
+  }
+  .essence-cell .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .essence-cell .big {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .essence-cell .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .mission-block {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 56px 48px;
+    margin: 40px 0;
+    position: relative;
+  }
+  .mission-block::before {
+    content: '"';
+    position: absolute;
+    top: 16px;
+    left: 24px;
+    font-family: 'Instrument Serif', serif;
+    font-size: 96px;
+    color: var(--accent);
+    opacity: 0.3;
+    line-height: 1;
+  }
+  .mission-block .quote {
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    max-width: 720px;
+    margin-left: 64px;
+  }
+  .mission-block .quote em {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ============================================ */
+  /* 02 — LOGO */
+  /* ============================================ */
+  .logo-display {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    aspect-ratio: 1.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .logo-display::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(0,229,160,0.10), transparent 50%),
+      radial-gradient(circle at 70% 70%, rgba(107,138,255,0.08), transparent 50%);
+  }
+  .logo-display::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .logo-display svg {
+    width: 30%;
+    height: 30%;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Final lockup display */
+  .lockup-display {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 96px 48px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .lockup-display::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .lockup-display .mark {
+    width: 88px; height: 88px;
+    position: relative;
+    z-index: 1;
+  }
+  .lockup-display .wordmark {
+    position: relative;
+    z-index: 1;
+    font-family: 'Geist', sans-serif;
+    font-weight: 900;
+    font-size: 80px;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .v-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .v-cell .tag {
+    position: absolute;
+    top: 12px; left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  .v-cell.dark { background: var(--bg-elev); }
+  .v-cell.light { background: #F4F5F7; }
+  .v-cell.light .tag { color: rgba(0,0,0,0.4); }
+  .v-cell.accent { background: linear-gradient(135deg, #00E5A0 0%, #00B380 100%); }
+  .v-cell.accent .tag { color: rgba(0,0,0,0.5); }
+  .v-cell svg { width: 50%; height: 50%; }
+
+  /* Clear space diagram */
+  .clearspace-block {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 64px;
+    display: flex;
+    justify-content: center;
+  }
+  .cs-diagram {
+    position: relative;
+    width: 320px;
+    height: 320px;
+  }
+  .cs-outline {
+    position: absolute;
+    inset: 0;
+    border: 1px dashed var(--accent);
+    opacity: 0.5;
+  }
+  .cs-mark-area {
+    position: absolute;
+    top: 70px; bottom: 70px; left: 70px; right: 70px;
+    border: 1px solid var(--line-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cs-mark-area svg { width: 80%; height: 80%; }
+  .cs-label {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--bg-elev);
+    padding: 2px 8px;
+  }
+  .cs-label.t { top: -10px; left: 50%; transform: translateX(-50%); }
+  .cs-label.b { bottom: -10px; left: 50%; transform: translateX(-50%); }
+  .cs-label.l { left: -10px; top: 50%; transform: translateY(-50%); }
+  .cs-label.r { right: -10px; top: 50%; transform: translateY(-50%); }
+
+  /* Rules grid */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .rule-cell {
+    background: var(--bg);
+    padding: 24px;
+  }
+  .rule-cell .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .rule-cell .value {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .rule-cell .value .unit {
+    font-size: 15px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  .rule-cell .desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* Don'ts */
+  .donts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .dont {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .dont .x {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+  .dont .x::before, .dont .x::after {
+    content: '';
+    position: absolute;
+    width: 8px; height: 1.5px;
+    background: #fff;
+  }
+  .dont .x::before { transform: rotate(45deg); }
+  .dont .x::after { transform: rotate(-45deg); }
+  .dont .tag {
+    position: absolute;
+    bottom: 12px; left: 12px; right: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
+  .dont svg { width: 55%; height: 55%; }
+  .dont.skew svg { transform: skew(-15deg, 5deg); }
+  .dont.stretch svg { transform: scaleX(1.5); }
+  .dont.rotate svg { transform: rotate(18deg); }
+  .dont.clash { background: #FF6B9E; }
+  .dont.clash svg path { fill: #FFC700; }
+
+  /* ============================================ */
+  /* 03 — COLOR */
+  /* ============================================ */
+  .palette-primary {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .swatch-lg {
+    background: #00E5A0;
+    aspect-ratio: 1.4;
+    padding: 32px;
+    position: relative;
+  }
+  .swatch-lg .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .swatch-lg .big {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .swatch-lg .vals {
+    position: absolute;
+    bottom: 24px; left: 32px; right: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    opacity: 0.8;
+  }
+  .swatch-lg.mint { color: #0A0B0F; }
+  .swatch-lg.blue { background: #6B8AFF; color: #0A0B0F; }
+  .swatch-lg.void { background: #0A0B0F; color: #F4F5F7; border-right: 1px solid var(--line); }
+
+  .palette-support {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .swatch-sm {
+    aspect-ratio: 1;
+    padding: 20px;
+    position: relative;
+  }
+  .swatch-sm .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .swatch-sm .hex {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    position: absolute;
+    bottom: 20px; left: 20px;
+  }
+  .swatch-sm.dark { color: #fff; }
+  .swatch-sm.light { color: #000; }
+
+  /* Color usage */
+  .usage-table {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .usage-row {
+    display: grid;
+    grid-template-columns: 60px 200px 1fr;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    gap: 24px;
+  }
+  .usage-row:last-child { border-bottom: none; }
+  .usage-row .chip {
+    width: 32px; height: 32px;
+    border-radius: 2px;
+  }
+  .usage-row .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .usage-row .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* ============================================ */
+  /* 04 — TYPOGRAPHY */
+  /* ============================================ */
+  .type-spec {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 48px;
+    margin-bottom: 12px;
+  }
+  .type-spec .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+  .type-spec .meta .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .type-spec .meta .role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .type-spec .sample {
+    margin-bottom: 32px;
+  }
+  .type-spec.geist .sample-h {
+    font-family: 'Geist', sans-serif;
+    font-weight: 800;
+    font-size: 64px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .type-spec.geist .sample-p {
+    font-family: 'Geist', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 580px;
+  }
+  .type-spec.mono .sample-h {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 32px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .type-spec.mono .sample-p {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    line-height: 1.7;
+    max-width: 580px;
+  }
+  .type-spec.serif .sample-h {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 64px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .type-spec.serif .sample-p {
+    font-family: 'Instrument Serif', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-width: 580px;
+  }
+  .type-spec .scale {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .type-spec .scale strong {
+    color: var(--text);
+    font-weight: 500;
+    margin-left: 6px;
+  }
+
+  /* Type scale */
+  .scale-table {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .scale-row {
+    display: grid;
+    grid-template-columns: 80px 100px 100px 1fr;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    gap: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  .scale-row:last-child { border-bottom: none; }
+  .scale-row.header { color: var(--text-mute); text-transform: uppercase; font-size: 10px; }
+  .scale-row .name { color: var(--text); }
+
+  /* ============================================ */
+  /* 05 — VOICE */
+  /* ============================================ */
+  .voice-pillars {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .pillar {
+    background: var(--bg);
+    padding: 32px;
+  }
+  .pillar .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+  .pillar h4 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .pillar p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .vs-table {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+  .vs-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .vs-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--line);
+  }
+  .vs-row:last-child { border-bottom: none; }
+  .vs-row > div {
+    padding: 20px 24px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .vs-row .yes {
+    color: var(--text);
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .vs-row .yes::before {
+    content: '✓';
+    color: var(--accent);
+    margin-right: 12px;
+    font-weight: 700;
+  }
+  .vs-row .no {
+    color: var(--text-mute);
+    text-decoration: line-through;
+    text-decoration-color: rgba(255,68,68,0.4);
+  }
+  .vs-row .no::before {
+    content: '×';
+    color: var(--danger);
+    margin-right: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  /* ============================================ */
+  /* APPENDIX */
+  /* ============================================ */
+  .appendix {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    padding: 40px;
+  }
+  .appendix h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .appendix-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px 32px;
+  }
+  .appendix-grid .k {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding-top: 4px;
+  }
+  .appendix-grid .v {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .appendix-grid .v a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(0,229,160,0.4);
+  }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--line);
+    margin-top: 96px;
+    padding-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  @media (max-width: 900px) {
+    .toc-list { grid-template-columns: 1fr; }
+    .essence-grid { grid-template-columns: 1fr; }
+    .variants { grid-template-columns: repeat(2, 1fr); }
+    .rules-grid { grid-template-columns: 1fr; }
+    .donts { grid-template-columns: repeat(2, 1fr); }
+    .palette-primary { grid-template-columns: 1fr; }
+    .palette-support { grid-template-columns: repeat(2, 1fr); }
+    .voice-pillars { grid-template-columns: 1fr; }
+    .vs-row { grid-template-columns: 1fr; }
+    .vs-row .yes { border-right: none; border-bottom: 1px solid var(--line); }
+    .vs-head { display: none; }
+    .lockup-display { flex-direction: column; padding: 48px 24px; }
+    .lockup-display .wordmark { font-size: 48px; }
+    .usage-row { grid-template-columns: 40px 1fr; gap: 16px; }
+    .usage-row .desc { grid-column: 1 / -1; padding-left: 56px; }
+    .appendix-grid { grid-template-columns: 1fr; }
+    .cover-details { flex-wrap: wrap; gap: 24px; }
+    .scale-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- REUSABLE LOGO SYMBOLS -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5A0" />
+      <stop offset="100%" stop-color="#6B8AFF" />
+    </linearGradient>
+    <symbol id="mark" viewBox="0 0 120 120">
+      <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#mg)" />
+      <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#mg)" />
+      <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#mg)" opacity="0.6" />
+    </symbol>
+    <symbol id="mark-white" viewBox="0 0 120 120">
+      <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#fff" />
+      <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#fff" />
+      <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#fff" opacity="0.6" />
+    </symbol>
+    <symbol id="mark-black" viewBox="0 0 120 120">
+      <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#0A0B0F" />
+      <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#0A0B0F" />
+      <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#0A0B0F" opacity="0.6" />
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div><span class="dot"></span>ShopRift / Brand Guidelines / v1.0</div>
+    <div>Document 1 of 3</div>
+  </div>
+
+  <!-- COVER -->
+  <section class="cover">
+    <div class="cover-meta">// Brand Guidelines · Master Document</div>
+    <h1>shoprift</h1>
+    <p class="cover-sub">The complete identity system. Everything you need to use, reference, or extend the ShopRift brand — distilled to one source of truth.</p>
+    <div class="cover-details">
+      <div>
+        <div class="k">Document</div>
+        <div class="v">Brand Guidelines v1.0</div>
+      </div>
+      <div>
+        <div class="k">Owner</div>
+        <div class="v">Mayank Malik</div>
+      </div>
+      <div>
+        <div class="k">Released</div>
+        <div class="v">May 2026</div>
+      </div>
+      <div>
+        <div class="k">Pages</div>
+        <div class="v">5 sections, 1 specimen</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOC -->
+  <section class="toc">
+    <div class="toc-head">
+      <h2>Table of Contents</h2>
+      <span class="meta">/ 5 sections</span>
+    </div>
+    <div class="toc-list">
+      <a href="#essence" class="toc-item">
+        <div class="left">
+          <span class="num">01</span>
+          <span class="title">Brand Essence</span>
+        </div>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="#logo" class="toc-item">
+        <div class="left">
+          <span class="num">02</span>
+          <span class="title">Logo System</span>
+        </div>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="#color" class="toc-item">
+        <div class="left">
+          <span class="num">03</span>
+          <span class="title">Color</span>
+        </div>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="#type" class="toc-item">
+        <div class="left">
+          <span class="num">04</span>
+          <span class="title">Typography</span>
+        </div>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="#voice" class="toc-item">
+        <div class="left">
+          <span class="num">05</span>
+          <span class="title">Voice &amp; Tone</span>
+        </div>
+        <span class="arrow">↗</span>
+      </a>
+      <a href="#appendix" class="toc-item">
+        <div class="left">
+          <span class="num">06</span>
+          <span class="title">Appendix &amp; Resources</span>
+        </div>
+        <span class="arrow">↗</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 01 — BRAND ESSENCE -->
+  <!-- ============================================ -->
+  <section id="essence">
+    <div class="section-head">
+      <div class="section-tag">/ 01 — Brand Essence</div>
+      <h2>What ShopRift is.</h2>
+      <p>The bridge between storefronts. A migration tool that moves your entire dm2buy store — products, images, collections — through to Shopify in minutes, not days.</p>
+    </div>
+
+    <div class="mission-block">
+      <div class="quote">
+        ShopRift is the <em>rift</em> between platforms. It pulls your store through a portal and drops it, fully formed, on the other side.
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Brand Essence Triangle</h3>
+      <div class="essence-grid">
+        <div class="essence-cell">
+          <div class="label">/ Mission</div>
+          <div class="big">Eliminate platform lock-in for Indian D2C sellers.</div>
+          <div class="desc">No seller should be stuck on a platform because migrating is too painful. ShopRift makes leaving instant.</div>
+        </div>
+        <div class="essence-cell">
+          <div class="label">/ Vision</div>
+          <div class="big">The default migration layer for e-commerce platforms.</div>
+          <div class="desc">Start with dm2buy → Shopify. Expand to every meaningful platform pair. Become the rift between any two stores.</div>
+        </div>
+        <div class="essence-cell">
+          <div class="label">/ Promise</div>
+          <div class="big">Minutes, not days. Every product. Zero manual work.</div>
+          <div class="desc">If a migration takes longer than your coffee break, we've failed. If a single product is missing, we've failed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>The Audience</h3>
+      <p class="body"><strong>Primary:</strong> Indian D2C sellers on dm2buy who've scaled past the platform's ceiling — typically 100+ SKUs, ₹5L+ monthly revenue, and are now ready to move to Shopify for the professional storefront, better apps, and international payments.</p>
+      <p class="body"><strong>Secondary:</strong> Agencies and freelancers who manage migrations for clients. ShopRift turns a multi-day client project into a 30-minute deliverable.</p>
+      <p class="body"><strong>Future:</strong> Sellers migrating between any two platforms — Shopify ↔ WooCommerce, Wix ↔ Shopify, BigCommerce ↔ Shopify.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>The One-Line Pitch</h3>
+      <div class="mission-block" style="margin: 0;">
+        <div class="quote" style="font-size: 22px;">
+          Move your entire dm2buy store to Shopify in <em>minutes</em>. Every product, every image, every collection.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 02 — LOGO -->
+  <!-- ============================================ -->
+  <section id="logo">
+    <div class="section-head">
+      <div class="section-tag">/ 02 — Logo System</div>
+      <h2>The mark.</h2>
+      <p>A stylized "S" formed by two angular chevron halves, separated by a sliver of light — the rift. The portal in the name, drawn.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>Primary Mark</h3>
+      <div class="logo-display">
+        <svg><use href="#mark"/></svg>
+      </div>
+      <p class="body">The full mark with particles. Use this anywhere the logo renders at 64px or larger — app icons, marketing, hero placements, business cards.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>Primary Lockup</h3>
+      <div class="lockup-display">
+        <svg class="mark"><use href="#mark"/></svg>
+        <div class="wordmark">shoprift</div>
+      </div>
+      <p class="body">The mark paired with the wordmark — <strong>Geist Black 900, lowercase, letter-spacing -0.045em.</strong> One word, single weight, super-tight tracking. Use for nav headers, email signatures, decks, and anywhere the brand needs to read as a single word.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>Variants</h3>
+      <div class="variants">
+        <div class="v-cell dark"><span class="tag">01 / Primary</span><svg><use href="#mark"/></svg></div>
+        <div class="v-cell dark"><span class="tag">02 / White</span><svg><use href="#mark-white"/></svg></div>
+        <div class="v-cell light"><span class="tag">03 / Black</span><svg><use href="#mark-black"/></svg></div>
+        <div class="v-cell accent"><span class="tag">04 / On Accent</span><svg><use href="#mark-black"/></svg></div>
+        <div class="v-cell dark"><span class="tag">05 / Mono Mint</span>
+          <svg viewBox="0 0 120 120">
+            <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#00E5A0" />
+            <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#00E5A0" />
+            <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#00E5A0" opacity="0.6" />
+          </svg>
+        </div>
+        <div class="v-cell dark"><span class="tag">06 / Favicon</span>
+          <svg viewBox="0 0 120 120">
+            <path d="M 18 26 L 60 26 L 80 46 L 80 56 L 50 56 L 40 46 L 18 46 Z" fill="url(#mg)" />
+            <path d="M 102 94 L 60 94 L 40 74 L 40 64 L 70 64 L 80 74 L 102 74 Z" fill="url(#mg)" />
+            <rect x="40" y="56" width="40" height="8" fill="url(#mg)" opacity="0.7" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Clear Space</h3>
+      <div class="clearspace-block">
+        <div class="cs-diagram">
+          <div class="cs-outline"></div>
+          <div class="cs-label t">X</div>
+          <div class="cs-label b">X</div>
+          <div class="cs-label l">X</div>
+          <div class="cs-label r">X</div>
+          <div class="cs-mark-area">
+            <svg><use href="#mark"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="body" style="margin-top: 16px;">Minimum clear space on all sides equals <strong>X</strong> — the height of the central rift sliver. No text, edges, or other elements should encroach into this zone.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>Sizing Rules</h3>
+      <div class="rules-grid">
+        <div class="rule-cell">
+          <div class="label">/ Clear space</div>
+          <div class="value">1<span class="unit">× rift</span></div>
+          <div class="desc">Minimum padding on all sides equals the height of the central rift sliver.</div>
+        </div>
+        <div class="rule-cell">
+          <div class="label">/ Min size · screen</div>
+          <div class="value">20<span class="unit">px</span></div>
+          <div class="desc">Below 20px, switch to the favicon variant (no particles, thicker rift).</div>
+        </div>
+        <div class="rule-cell">
+          <div class="label">/ Min size · print</div>
+          <div class="value">8<span class="unit">mm</span></div>
+          <div class="desc">Absolute minimum for print materials. Below this, use favicon variant.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Misuse — Don't Do This</h3>
+      <div class="donts">
+        <div class="dont skew">
+          <div class="x"></div>
+          <svg><use href="#mark"/></svg>
+          <div class="tag">Don't skew</div>
+        </div>
+        <div class="dont stretch">
+          <div class="x"></div>
+          <svg><use href="#mark"/></svg>
+          <div class="tag">Don't stretch</div>
+        </div>
+        <div class="dont rotate">
+          <div class="x"></div>
+          <svg><use href="#mark"/></svg>
+          <div class="tag">Don't rotate</div>
+        </div>
+        <div class="dont clash">
+          <div class="x"></div>
+          <svg viewBox="0 0 120 120">
+            <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="#FFC700" />
+            <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="#FFC700" />
+            <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="#FFC700" opacity="0.6" />
+          </svg>
+          <div class="tag">Don't clash colors</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 03 — COLOR -->
+  <!-- ============================================ -->
+  <section id="color">
+    <div class="section-head">
+      <div class="section-tag">/ 03 — Color</div>
+      <h2>The palette.</h2>
+      <p>Mint mint, portal blue, void black. A dominant dark substrate with bright dimensional accents. Built for high-contrast tech interfaces.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>Primary Palette</h3>
+      <div class="palette-primary">
+        <div class="swatch-lg void">
+          <div class="name">/ Void</div>
+          <div class="big">01</div>
+          <div class="vals">
+            HEX · #0A0B0F<br/>
+            RGB · 10, 11, 15<br/>
+            CMYK · 33, 27, 0, 94<br/>
+            Use: backgrounds, primary surface
+          </div>
+        </div>
+        <div class="swatch-lg mint">
+          <div class="name">/ Rift Mint</div>
+          <div class="big">02</div>
+          <div class="vals">
+            HEX · #00E5A0<br/>
+            RGB · 0, 229, 160<br/>
+            CMYK · 100, 0, 30, 10<br/>
+            Use: primary accent, CTAs
+          </div>
+        </div>
+        <div class="swatch-lg blue">
+          <div class="name">/ Portal Blue</div>
+          <div class="big">03</div>
+          <div class="vals">
+            HEX · #6B8AFF<br/>
+            RGB · 107, 138, 255<br/>
+            CMYK · 58, 46, 0, 0<br/>
+            Use: gradient pair, secondary
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Supporting Palette</h3>
+      <div class="palette-support">
+        <div class="swatch-sm dark" style="background:#11131A;">
+          <div class="name">/ Substrate</div>
+          <div class="hex">#11131A</div>
+        </div>
+        <div class="swatch-sm dark" style="background:#15171F;">
+          <div class="name">/ Elevation</div>
+          <div class="hex">#15171F</div>
+        </div>
+        <div class="swatch-sm dark" style="background:#8A8E9B;">
+          <div class="name">/ Text Dim</div>
+          <div class="hex">#8A8E9B</div>
+        </div>
+        <div class="swatch-sm light" style="background:#F4F5F7;">
+          <div class="name">/ Bone</div>
+          <div class="hex">#F4F5F7</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Usage Rules</h3>
+      <div class="usage-table">
+        <div class="usage-row">
+          <div class="chip" style="background:#0A0B0F; border: 1px solid var(--line);"></div>
+          <div class="name">Void</div>
+          <div class="desc">Default canvas. Every interface starts here. Reserve white backgrounds for printed material only.</div>
+        </div>
+        <div class="usage-row">
+          <div class="chip" style="background:#00E5A0;"></div>
+          <div class="name">Rift Mint</div>
+          <div class="desc">Primary CTAs ("Migrate now"), links, success states, brand accents. Use sparingly — should always feel earned.</div>
+        </div>
+        <div class="usage-row">
+          <div class="chip" style="background: linear-gradient(135deg, #00E5A0, #6B8AFF);"></div>
+          <div class="name">Mint → Blue Gradient</div>
+          <div class="desc">The signature gradient. Used for the logo, hero accents, and key emphasis moments. Angle: 135°. Don't overuse.</div>
+        </div>
+        <div class="usage-row">
+          <div class="chip" style="background:#FF4444;"></div>
+          <div class="name">Danger Red (#FF4444)</div>
+          <div class="desc">Error states and destructive actions only. Never decorative.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 04 — TYPOGRAPHY -->
+  <!-- ============================================ -->
+  <section id="type">
+    <div class="section-head">
+      <div class="section-tag">/ 04 — Typography</div>
+      <h2>The type system.</h2>
+      <p>Three typefaces with non-overlapping roles. Geist does the heavy lifting. JetBrains Mono signals the technical. Instrument Serif provides editorial accent.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>Primary — Geist</h3>
+      <div class="type-spec geist">
+        <div class="meta">
+          <div class="name">Geist · Sans-serif</div>
+          <div class="role">/ Display + Body</div>
+        </div>
+        <div class="sample">
+          <div class="sample-h">shoprift</div>
+          <div class="sample-p">Geist is the brand workhorse. It handles the wordmark, all display headlines, UI text, marketing copy, and body paragraphs. Open-source, modern, and built for software — exactly what ShopRift is.</div>
+        </div>
+        <div class="scale">
+          <div>Weights: <strong>300, 400, 500, 600, 700, 800, 900</strong></div>
+          <div>Default tracking: <strong>-0.02em</strong></div>
+          <div>Source: <strong>vercel.com/font/geist</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Technical — JetBrains Mono</h3>
+      <div class="type-spec mono">
+        <div class="meta">
+          <div class="name">JetBrains Mono · Monospaced</div>
+          <div class="role">/ Code + Labels</div>
+        </div>
+        <div class="sample">
+          <div class="sample-h">// READY TO MIGRATE</div>
+          <div class="sample-p">// Used for: code snippets, status indicators, micro-labels, section tags, and anywhere the interface needs to signal technical precision. Never use for body copy.</div>
+        </div>
+        <div class="scale">
+          <div>Weights: <strong>400, 500, 700</strong></div>
+          <div>Tracking: <strong>+0.05em to +0.2em</strong></div>
+          <div>Source: <strong>jetbrains.com/lp/mono</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Accent — Instrument Serif</h3>
+      <div class="type-spec serif">
+        <div class="meta">
+          <div class="name">Instrument Serif · Italic</div>
+          <div class="role">/ Editorial Accent</div>
+        </div>
+        <div class="sample">
+          <div class="sample-h">the rift</div>
+          <div class="sample-p">Used exclusively for emphasis — usually paired with the brand gradient. Reserve for single words or phrases inside larger Geist headlines. Never use for headlines on its own, never for body.</div>
+        </div>
+        <div class="scale">
+          <div>Weight: <strong>400 italic only</strong></div>
+          <div>Use case: <strong>emphasis in headlines</strong></div>
+          <div>Source: <strong>Google Fonts</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Type Scale</h3>
+      <div class="scale-table">
+        <div class="scale-row header">
+          <div>Token</div>
+          <div>Size</div>
+          <div>Weight</div>
+          <div class="name">Use</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">display-xl</div>
+          <div>96–144px</div>
+          <div>900</div>
+          <div>Hero headlines, cover pages</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">display-lg</div>
+          <div>56–80px</div>
+          <div>800</div>
+          <div>Section headlines, landing pages</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">heading-1</div>
+          <div>32–40px</div>
+          <div>700</div>
+          <div>Page titles, major sections</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">heading-2</div>
+          <div>20–24px</div>
+          <div>600</div>
+          <div>Card titles, subsections</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">body-lg</div>
+          <div>16–18px</div>
+          <div>400</div>
+          <div>Long-form body, marketing</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">body</div>
+          <div>14–15px</div>
+          <div>400</div>
+          <div>Default UI body text</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">caption</div>
+          <div>11–12px</div>
+          <div>500</div>
+          <div>Labels, metadata, captions</div>
+        </div>
+        <div class="scale-row">
+          <div class="name">mono-label</div>
+          <div>10–11px</div>
+          <div>500</div>
+          <div>JetBrains Mono · tags, technical labels</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 05 — VOICE & TONE -->
+  <!-- ============================================ -->
+  <section id="voice">
+    <div class="section-head">
+      <div class="section-tag">/ 05 — Voice &amp; Tone</div>
+      <h2>How ShopRift talks.</h2>
+      <p>Direct. Technical. Slightly understated. Like a senior engineer who's tired of bullshit and just wants to ship the thing.</p>
+    </div>
+
+    <div class="subsection">
+      <h3>The Four Voice Pillars</h3>
+      <div class="voice-pillars">
+        <div class="pillar">
+          <div class="num">/ 01</div>
+          <h4>Direct</h4>
+          <p>Lead with the answer. Cut the warmup. If migration takes minutes, we say "minutes" — not "blazing-fast performance optimized for modern e-commerce." Short sentences. Concrete numbers. Zero corporate softeners.</p>
+        </div>
+        <div class="pillar">
+          <div class="num">/ 02</div>
+          <h4>Technical</h4>
+          <p>We're a tool for people who get it. CSV, API, SKU, listings, collections — we use the real words. We don't dumb things down. We don't over-explain. The audience is sellers who already manage a store; they know the terminology.</p>
+        </div>
+        <div class="pillar">
+          <div class="num">/ 03</div>
+          <h4>Understated</h4>
+          <p>We don't shout. We don't use "revolutionary" or "game-changing." The product is impressive enough that hyperbole cheapens it. State the facts, let the user be impressed on their own.</p>
+        </div>
+        <div class="pillar">
+          <div class="num">/ 04</div>
+          <h4>Human</h4>
+          <p>We're built by a solo founder, not a corporation. The brand voice should occasionally show that — first-person on the about page, casual on X, available in DMs. Tool-grade product, founder-grade support.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>We Say / We Don't Say</h3>
+      <div class="vs-table">
+        <div class="vs-head">
+          <div>We say</div>
+          <div>We don't say</div>
+        </div>
+        <div class="vs-row">
+          <div class="yes">Migrate your store in minutes.</div>
+          <div class="no">Unleash the power of seamless e-commerce migration.</div>
+        </div>
+        <div class="vs-row">
+          <div class="yes">Every product. Every image. Every collection.</div>
+          <div class="no">Comprehensive data transfer across all product attributes.</div>
+        </div>
+        <div class="vs-row">
+          <div class="yes">Built for dm2buy sellers moving to Shopify.</div>
+          <div class="no">Empowering merchants in their growth journey.</div>
+        </div>
+        <div class="vs-row">
+          <div class="yes">Drop in your dm2buy URL. Products land in Shopify.</div>
+          <div class="no">Leverage our cutting-edge platform interoperability engine.</div>
+        </div>
+        <div class="vs-row">
+          <div class="yes">No setup. No code. No bullshit.</div>
+          <div class="no">Streamlined onboarding with intuitive user experience.</div>
+        </div>
+        <div class="vs-row">
+          <div class="yes">100 products in 3 minutes.</div>
+          <div class="no">Lightning-fast bulk product processing capabilities.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Taglines</h3>
+      <div class="essence-grid">
+        <div class="essence-cell">
+          <div class="label">/ Primary</div>
+          <div class="big" style="font-size: 20px;">dm2buy → Shopify. Direct import.</div>
+          <div class="desc">The clearest, most useful version. Use for landing page hero, app store, Product Hunt.</div>
+        </div>
+        <div class="essence-cell">
+          <div class="label">/ Secondary</div>
+          <div class="big" style="font-size: 20px;">The rift between storefronts.</div>
+          <div class="desc">More conceptual. Use for brand-focused contexts: social bios, about pages, decks.</div>
+        </div>
+        <div class="essence-cell">
+          <div class="label">/ Shortest</div>
+          <div class="big" style="font-size: 20px;">Migrate. In minutes.</div>
+          <div class="desc">For very tight spaces: business cards, X bio, favicons hover state.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>Elevator Pitches</h3>
+      <p class="body"><strong>One sentence:</strong> Shoprift moves your dm2buy store to Shopify — products, images, and collections land directly in your Shopify admin.</p>
+      <p class="body"><strong>Two sentences:</strong> Shoprift moves your dm2buy store to Shopify. Products, images, and collections are imported directly into Shopify admin — no manual listing, no copy-paste, no agency fees.</p>
+      <p class="body"><strong>Three sentences:</strong> Most dm2buy sellers who outgrow the platform stay stuck because migrating to Shopify means manually re-listing every product — days of work for 100+ SKUs. Shoprift automates the whole thing: install the app, drop in your dm2buy URL, and your products land directly in Shopify admin. Minutes, not days.</p>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- APPENDIX -->
+  <!-- ============================================ -->
+  <section id="appendix">
+    <div class="section-head">
+      <div class="section-tag">/ 06 — Appendix</div>
+      <h2>Resources &amp; specs.</h2>
+      <p>Everything you need to actually use this system.</p>
+    </div>
+
+    <div class="appendix">
+      <h3>File &amp; Asset Index</h3>
+      <div class="appendix-grid">
+        <div class="k">Primary Mark</div>
+        <div class="v">SVG, full color gradient · See <strong>Logo Asset Pack</strong> (Document 2)</div>
+
+        <div class="k">Logo Variants</div>
+        <div class="v">6 variants — primary, white, black, on-accent, mono mint, favicon. All in <strong>Logo Asset Pack</strong>.</div>
+
+        <div class="k">Wordmark Lockup</div>
+        <div class="v">Geist Black 900, lowercase "shoprift", letter-spacing -0.045em.</div>
+
+        <div class="k">Brand Voice</div>
+        <div class="v">See <strong>Brand Voice &amp; Messaging Guide</strong> (Document 3) for full copy bank and channel-specific guidance.</div>
+
+        <div class="k">Geist (font)</div>
+        <div class="v"><a href="https://vercel.com/font/geist" target="_blank">vercel.com/font/geist</a> — open source, free for commercial use</div>
+
+        <div class="k">JetBrains Mono</div>
+        <div class="v"><a href="https://www.jetbrains.com/lp/mono/" target="_blank">jetbrains.com/lp/mono</a> — open source, OFL license</div>
+
+        <div class="k">Instrument Serif</div>
+        <div class="v">Available on Google Fonts — open source, OFL license</div>
+
+        <div class="k">Brand Owner</div>
+        <div class="v">Mayank Malik · <a href="https://x.com/mayankmalikx" target="_blank">@mayankmalikx</a> on X</div>
+
+        <div class="k">Version</div>
+        <div class="v">v1.0 · Released May 2026 · Next review: November 2026</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>ShopRift · Brand Guidelines v1.0</div>
+    <div>Document 1 of 3 · 2026</div>
+  </div>
+
+</div>
+
+</body>
+</html>
