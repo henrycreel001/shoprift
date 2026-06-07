@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { uploadToDrive } from './src/drive-uploader.js';
 
 // __dirname equivalent for ESM — resolves paths relative to this bot.js file
 const BOT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -330,10 +331,30 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
     if (clientDir) stageFile(zipPath, clientDir);
 
     if (parseFloat(sizeMb) > 49) {
-      await ctx.reply(
-        `Extraction complete — ${sizeMb} MB\n` +
-        `Too large for Telegram. Folder ready for Google Drive:\n${clientDir ?? zipPath}`
-      );
+      const driveEnabled = process.env.GOOGLE_SERVICE_ACCOUNT_JSON && process.env.GOOGLE_DRIVE_FOLDER_ID;
+      if (driveEnabled) {
+        await ctx.reply(`Extraction complete — ${sizeMb} MB. Uploading to Google Drive...`);
+        try {
+          const { url } = await uploadToDrive(zipPath, path.basename(zipPath), 'application/zip');
+          await ctx.reply(
+            `Done ✅\n\n` +
+            `📦 ${path.basename(zipPath)} (${sizeMb} MB)\n` +
+            `🔗 ${url}\n\n` +
+            `Link works for anyone — forward directly to client.`
+          );
+        } catch (e) {
+          console.error(JSON.stringify({ phase: 'drive_upload', url, error: e.message }));
+          await ctx.reply(
+            `Drive upload failed: ${e.message}\n\nFile staged locally:\n${clientDir ?? zipPath}`
+          );
+        }
+      } else {
+        await ctx.reply(
+          `Extraction complete — ${sizeMb} MB\n` +
+          `Too large for Telegram. Add GOOGLE_SERVICE_ACCOUNT_JSON + GOOGLE_DRIVE_FOLDER_ID to .env for auto-upload.\n\n` +
+          `File staged at:\n${clientDir ?? zipPath}`
+        );
+      }
       return;
     }
 
