@@ -16,9 +16,9 @@
 
 ## LAST UPDATED
 
-- **Date:** 2026-06-06
-- **Session topic:** Variant extraction fix — `other` variants (non-color, non-size) were silently dropped from CSV; per-variant pricing not captured. Fixed extractor + emitter + Zod schema. Verified on pookiescoopee (Boba Sanrio pens: all 6 character variants now emitted). New concierge tool: `scripts/recon_sample.js`.
-- **Branch:** main (last commit: see git log)
+- **Date:** 2026-06-07
+- **Session topic:** Telegram concierge bot — live, tested E2E. Google Drive delivery working. /clearjobs added.
+- **Branch:** main (last commit: `6091bf0`)
 
 ---
 
@@ -42,46 +42,51 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **Variant fix (this session)** — `other` variants (non-color, non-size) dropped from emitter fixed. Per-variant pricing now captured from `variantOptions[].price`. `variants.all[]` added to schema + Zod. `getOption1Name` extended. Verified: pookiescoopee Boba Sanrio pens → 6 variants, correct rows. Files: `src/extractor.js`, `src/validator.js`, `presets/shopify/emitter.js`, `docs/SCHEMA.md`, `presets/shopify/SHOPIFY.md`.
-2. **`scripts/recon_sample.js`** — new concierge tool: recon summary + N-product Shopify CSV sample. Usage: `node scripts/recon_sample.js <store-url> [--count N]`. Uses real emitter. Verified on pookiescoopee (5 products, 13 rows, all variants).
-3. **fix(trial)** — commit `1d96943`: session restore on mount + surface 0-products error in trial_done.
-4. **feat(ui)** — commit `778b536`: tier-1 polish — bigger headings, feature pills, side-by-side input, bolder stats.
-5. **feat(import)** — commit `44dba62`: per-phase mini progress bars + weighted main progress.
+1. **Google Drive OAuth2 delivery** — `6091bf0`: switched from service account (no quota) to OAuth2 refresh token. `drive-uploader.js` uses `GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN`. `authorize_drive.js` one-time script to get token. All ZIPs (any size) upload to Drive → shareable link sent in Telegram. Tested and working.
+2. **`/clearjobs` command** — `d754c12`: kills all local child processes + marks stuck Supabase `import_jobs` rows (recon/verifying/extracting/downloading) as `failed`. Supabase client initialised in bot using `SUPABASE_URL` + `SUPABASE_SERVICE_KEY`.
+3. **Google Drive folder ID + env wired** — `GOOGLE_DRIVE_FOLDER_ID=1OzWXKrV_zD4mlbAr491HsXPnFqj3NuN3` in `.env`. All ZIPs upload regardless of size (`driveEnabled` checks `GOOGLE_OAUTH_REFRESH_TOKEN`).
+4. **Telegram bot live E2E** — BotFather setup done (`@shoprift_ops_bot`). `/start`, `/recon`, `/extract`, `/receipt`, `/jobs`, `/cancel`, `/clearjobs` all tested on real stores. `npm run bot` runs from project root.
+5. **`/cancel` command + SIGTERM handling** — `ffbae25`: two-step `activeJobs` pattern. `cancelled` flag suppresses misleading "failed" output after kill.
 
 ---
 
 ## ACTIVE BLOCKERS
 
-None for code work. Remaining T8/T9 items are manual browser tasks — only Mayank can do them.
+- **T8/T9 Shopify app QA** — remaining items are manual browser tasks, only Mayank can do them.
+- **Telegram bot Mac-dependent** — Railway deployment not done yet; bot dies when Mac sleeps.
 
 ---
 
 ## UNCOMMITTED CHANGES
 
-None. Working tree clean (committed this session).
+None. Working tree clean.
 
 ---
 
 ## NEXT TASKS
 
-**All remaining work tracked in `docs/LAUNCH_PLAN.md` (T8 + T9). Immediate next actions:**
+### 1 — Railway deployment for Telegram bot (24/7 uptime)
+- Deploy `apps/telegram-bot/bot.js` as new Railway service
+- Playwright browser deps via nixpacks
+- Env vars: all from `.env` + `GOOGLE_OAUTH_*` + `GOOGLE_DRIVE_FOLDER_ID`
+- Bot survives Mac sleep, works from iPhone anywhere
 
-### 1 — T8 manual QA (Mayank — browser required)
+### 2 — Shopify app T8 manual QA (browser required)
 - T8.1 kiwiishop E2E — install app on dev store → migrate kiwiishop → confirm products in Shopify admin
 - T8.2 mmshop E2E — migrate mmshop (13 products, 3 collections)
 - T8.5 billing flow — test charge, decline, confirm
-- T8.18 browser console check — DevTools open during full flow (red errors, API key leaks, hydration warnings)
+- T8.18 browser console check — DevTools open during full flow
 
-### 2 — T9 manual tasks (Mayank — can do now)
+### 3 — Shopify app T9 manual tasks
 - T9.2 app icon — 1200×1200 PNG, Shoprift mark on `#0A0B0F` bg (Canva)
 - T9.3 screenshots — 5 screens per plan in `output/content/app-store-listing.md`
 - T9.4 demo video — 30–60s screen recording
 - T9.6 fill Partner Dashboard listing form
 
-### 3 — Submit (after all QA passes)
+### 4 — Submit Shopify app (after all QA passes)
 Confirm distribution = Public (**IRREVERSIBLE**) → T9.7 submit → T9.8 respond to review
 
-### 4 — Verify in Partner Dashboard
+### 5 — Verify in Partner Dashboard
 `app/uninstalled` webhook URL must be `https://shoprift.app/api/webhooks/app-uninstalled` in Partner Dashboard → App setup → Webhooks.
 
 ---
