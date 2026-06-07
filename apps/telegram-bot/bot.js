@@ -91,6 +91,19 @@ bot.command('start', ctx => {
   );
 });
 
+// ── /help ────────────────────────────────────────────────────────────────────
+bot.command('help', ctx => {
+  ctx.reply(
+    `Shoprift Concierge Bot\n\n` +
+    `/recon <url>   — recon scan + 5-product sample CSV\n` +
+    `/extract <url> — full extraction + delivery ZIP\n` +
+    `/receipt "Client Name" store-url amount upi-ref — payment receipt\n` +
+    `/jobs          — show active jobs\n\n` +
+    `Example:\n` +
+    `/recon https://store.dm2buy.com`
+  );
+});
+
 // ── /jobs ────────────────────────────────────────────────────────────────────
 bot.command('jobs', ctx => {
   if (activeJobs.size === 0) return ctx.reply('No active jobs.');
@@ -325,6 +338,14 @@ bot.on('text', ctx => {
 
 // ── launch ───────────────────────────────────────────────────────────────────
 bot.launch();
+
+bot.telegram.setMyCommands([
+  { command: 'recon',   description: 'Recon scan + 5-product sample CSV' },
+  { command: 'extract', description: 'Full extraction + delivery ZIP' },
+  { command: 'receipt', description: 'Generate payment receipt PDF' },
+  { command: 'jobs',    description: 'Show active running jobs' },
+  { command: 'help',    description: 'Show all commands' },
+]).catch(err => console.error('setMyCommands failed:', err.message));
 
 console.log(`
 ┌─────────────────────────────────┐
