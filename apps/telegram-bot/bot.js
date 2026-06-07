@@ -22,15 +22,15 @@ const activeJobs = new Map();
 // Recon cache: storeUrl → { products, collections, images }
 const reconCache = new Map();
 
-// Receipt counter — persists across bot restarts
-const RECEIPT_COUNTER_PATH = './output/.receipt_counter.json';
+// Receipt counter — persists in bot's own output folder across restarts
+const RECEIPT_COUNTER_PATH = path.join(BOT_DIR, 'output', '.receipt_counter.json');
 
 function nextReceiptNumber() {
   let n = 1;
   if (fs.existsSync(RECEIPT_COUNTER_PATH)) {
     try { n = JSON.parse(fs.readFileSync(RECEIPT_COUNTER_PATH, 'utf8')).next || 1; } catch {}
   }
-  fs.mkdirSync('./output', { recursive: true });
+  fs.mkdirSync(path.join(BOT_DIR, 'output'), { recursive: true });
   fs.writeFileSync(RECEIPT_COUNTER_PATH, JSON.stringify({ next: n + 1 }), 'utf8');
   const year = new Date().getFullYear();
   const yy = String(year + 1).slice(2);
@@ -44,6 +44,28 @@ function findNewestFile(dir, suffix) {
     .map(f => ({ f, mtime: fs.statSync(path.join(dir, f)).mtimeMs }))
     .sort((a, b) => b.mtime - a.mtime);
   return files[0] ? path.join(dir, files[0].f) : null;
+}
+
+/**
+ * Returns (and creates) apps/telegram-bot/output/{subdomain}_{YYYY-MM-DD}/
+ * All files for one client job stage here for easy Google Drive upload.
+ */
+function clientOutputDir(url) {
+  try {
+    const normalized = url.startsWith('http') ? url : `https://${url}`;
+    const subdomain = new URL(normalized).hostname.split('.')[0];
+    const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const dir = path.join(BOT_DIR, 'output', `${subdomain}_${date}`);
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
+  } catch { return null; }
+}
+
+/** Copies src file into destDir. Returns dest path or null on failure. */
+function stageFile(srcPath, destDir, filename) {
+  if (!srcPath || !destDir || !fs.existsSync(srcPath)) return null;
+  const dest = path.join(destDir, filename || path.basename(srcPath));
+  try { fs.copyFileSync(srcPath, dest); return dest; } catch { return null; }
 }
 
 // Auth middleware — only authorized chat can use bot
@@ -151,6 +173,15 @@ bot.command('recon', async ctx => {
     } else {
       await ctx.reply('CSV not found — check output/ folder manually.');
     }
+
+    // Stage both files into per-client output folder
+    const clientDir = clientOutputDir(url);
+    if (clientDir) {
+      const jpgPath2 = findNewestFile(path.join(process.cwd(), 'output', 'summaries'), '.jpg');
+      stageFile(jpgPath2, clientDir);
+      stageFile(csvPath, clientDir);
+      await ctx.reply(`Staged → ${clientDir}`);
+    }
   });
 });
 
@@ -211,17 +242,21 @@ bot.command('extract', async ctx => {
 
     const sizeMb = (fs.statSync(zipPath).size / (1024 * 1024)).toFixed(1);
 
+    // Stage ZIP into per-client folder regardless of size
+    const clientDir = clientOutputDir(url);
+    if (clientDir) stageFile(zipPath, clientDir);
+
     if (parseFloat(sizeMb) > 49) {
       await ctx.reply(
-        `Extraction complete.\n` +
-        `ZIP is ${sizeMb} MB — over Telegram 50 MB limit.\n` +
-        `File path: ${zipPath}`
+        `Extraction complete — ${sizeMb} MB\n` +
+        `Too large for Telegram. Folder ready for Google Drive:\n${clientDir ?? zipPath}`
       );
       return;
     }
 
     await ctx.reply(`Extraction complete (${sizeMb} MB). Sending ZIP...`);
     await ctx.replyWithDocument({ source: zipPath, filename: path.basename(zipPath) });
+    if (clientDir) await ctx.reply(`Also staged → ${clientDir}`);
   });
 });
 
@@ -272,6 +307,13 @@ bot.command('receipt', async ctx => {
     }
     const filename = `shoprift-receipt-${receiptNo.split('/').pop().toLowerCase()}.pdf`;
     await ctx.replyWithDocument({ source: pdfPath, filename });
+
+    // Stage into per-client output folder
+    const clientDir = clientOutputDir(storeUrl);
+    if (clientDir) {
+      stageFile(pdfPath, clientDir, filename);
+      await ctx.reply(`Staged → ${clientDir}`);
+    }
   });
 });
 
