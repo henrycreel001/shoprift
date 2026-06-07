@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shoprift — Migration Service Agreement</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void:     oklch(10% 0.01 264);
+      --surface:  oklch(96% 0.005 264);
+      --muted:    oklch(55% 0.008 264);
+      --mint:     #00E5A0;
+      --ink:      oklch(12% 0.01 264);
+      --rule:     oklch(90% 0.005 264);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: var(--ink);
+      font-size: 13.5px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 52px 56px 60px;
+    }
+
+    /* ── Logo header ── */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 32px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .logo-lockup {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .wordmark {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.045em;
+      color: var(--ink);
+    }
+
+    .doc-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .doc-meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Intro ── */
+    .intro {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 36px;
+      font-size: 13px;
+      color: oklch(35% 0.01 264);
+      line-height: 1.65;
+    }
+
+    /* ── Section ── */
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-num {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin-bottom: 5px;
+    }
+
+    .section-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 9px;
+    }
+
+    p {
+      font-size: 13.5px;
+      color: oklch(32% 0.01 264);
+      margin-bottom: 7px;
+    }
+
+    ul {
+      padding-left: 0;
+      list-style: none;
+      margin-top: 2px;
+    }
+
+    ul li {
+      font-size: 13.5px;
+      color: oklch(32% 0.01 264);
+      padding: 4px 0 4px 18px;
+      position: relative;
+    }
+
+    ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 5px;
+      height: 5px;
+      background: var(--mint);
+      border-radius: 50%;
+    }
+
+    /* ── UPI block ── */
+    .upi-wrap {
+      margin-top: 12px;
+      display: inline-block;
+    }
+
+    .upi-block {
+      background: oklch(97% 0.015 162);
+      border: 1.5px solid oklch(88% 0.06 162);
+      border-radius: 7px;
+      padding: 10px 18px;
+    }
+
+    .upi-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: oklch(50% 0.08 162);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .upi-id {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Rule ── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 4px 0 30px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 44px;
+      padding-top: 28px;
+      border-top: 1px solid var(--rule);
+    }
+
+    .acceptance-box {
+      background: var(--void);
+      color: #fff;
+      border-radius: 9px;
+      padding: 18px 24px;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .acceptance-box .upi-highlight {
+      color: var(--mint);
+      font-weight: 700;
+    }
+
+    .contact-row {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .contact-item svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { padding: 36px 44px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-lockup">
+      <svg width="36" height="36" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sg-main" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00E5A0"/>
+            <stop offset="100%" stop-color="#6B8AFF"/>
+          </linearGradient>
+        </defs>
+        <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#sg-main)"/>
+        <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#sg-main)"/>
+        <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#sg-main)" opacity="0.6"/>
+      </svg>
+      <span class="wordmark">shoprift</span>
+    </div>
+    <div class="doc-label">Migration Service Agreement</div>
+    <div class="doc-meta">Version 1.1 &nbsp;&middot;&nbsp; June 2026 &nbsp;&middot;&nbsp; shoprift.app</div>
+  </div>
+
+  <!-- Intro -->
+  <div class="intro">
+    You are purchasing a one-time store migration package from Shoprift. By making payment, you confirm you have read and agree to these terms.
+  </div>
+
+  <!-- 01 -->
+  <div class="section">
+    <div class="section-num">01</div>
+    <div class="section-title">The Service</div>
+    <p>Shoprift will access your dm2buy storefront and prepare a migration package containing:</p>
+    <ul>
+      <li>Product data in CSV format (Shopify-compatible)</li>
+      <li>All store images</li>
+      <li>A migration guide</li>
+    </ul>
+    <p style="margin-top:10px;">Delivery via shared Google Drive folder within the agreed timeframe.</p>
+  </div>
+  <hr>
+
+  <!-- 02 -->
+  <div class="section">
+    <div class="section-num">02</div>
+    <div class="section-title">Your Confirmation</div>
+    <p>By paying, you confirm:</p>
+    <ul>
+      <li>You own or operate the store at the URL you provided</li>
+      <li>You authorise Shoprift to access that store on your behalf for the sole purpose of preparing this migration package</li>
+      <li>The store content (products, images, descriptions) belongs to you or you have the rights to migrate it</li>
+    </ul>
+  </div>
+  <hr>
+
+  <!-- 03 -->
+  <div class="section">
+    <div class="section-num">03</div>
+    <div class="section-title">Payment</div>
+    <p>Full payment is due before extraction begins. Non-refundable once extraction has started.</p>
+    <p>If extraction cannot be completed due to a technical issue on Shoprift's side, a full refund will be issued.</p>
+    <div class="upi-wrap">
+      <div class="upi-block">
+        <span class="upi-label">UPI</span>
+        <span class="upi-id">mayankmalikx@axisbank</span>
+      </div>
+    </div>
+  </div>
+  <hr>
+
+  <!-- 04 -->
+  <div class="section">
+    <div class="section-num">04</div>
+    <div class="section-title">What Shoprift Is Not Responsible For</div>
+    <ul>
+      <li>Accuracy of data already on your dm2buy store</li>
+      <li>Compatibility issues after you import to your new platform</li>
+      <li>Any restrictions your current platform places on data export</li>
+    </ul>
+  </div>
+  <hr>
+
+  <!-- 05 -->
+  <div class="section">
+    <div class="section-num">05</div>
+    <div class="section-title">Your Data</div>
+    <ul>
+      <li>Extracted data is used only to prepare your migration package</li>
+      <li>Not shared with any third party</li>
+      <li>Deleted from Shoprift's systems within 30 days of delivery</li>
+    </ul>
+  </div>
+  <hr>
+
+  <!-- 06 -->
+  <div class="section">
+    <div class="section-num">06</div>
+    <div class="section-title">Governing Law</div>
+    <p>These terms are governed by Indian law. Disputes resolved by good-faith discussion first.</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="acceptance-box">
+      Payment to <span class="upi-highlight">mayankmalikx@axisbank</span> constitutes acceptance of these terms.
+    </div>
+    <div class="contact-row">
+      <!-- Email -->
+      <div class="contact-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M2 7l10 7 10-7"/>
+        </svg>
+        support@shoprift.app
+      </div>
+      <!-- Instagram -->
+      <div class="contact-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5"/>
+          <circle cx="12" cy="12" r="4"/>
+          <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+        </svg>
+        @shoprift_
+      </div>
+      <!-- Globe -->
+      <div class="contact-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        shoprift.app
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
