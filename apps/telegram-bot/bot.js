@@ -5,12 +5,17 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { uploadToDrive } from './src/drive-uploader.js';
+import { createClient } from '@supabase/supabase-js';
 
 // __dirname equivalent for ESM — resolves paths relative to this bot.js file
 const BOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const AUTHORIZED_CHAT_ID = Number(process.env.TELEGRAM_AUTHORIZED_CHAT_ID);
+
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+  : null;
 
 if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN not set in .env');
 if (!AUTHORIZED_CHAT_ID) throw new Error('TELEGRAM_AUTHORIZED_CHAT_ID not set in .env');
@@ -88,7 +93,8 @@ const HELP_TEXT =
   `/extract <url>      — full extraction + delivery ZIP\n` +
   `/receipt "Client Name" store-url amount upi-ref — payment receipt\n` +
   `/jobs               — show active jobs\n` +
-  `/cancel <url>       — cancel a running recon or extract job\n\n` +
+  `/cancel <url>       — cancel a running job\n` +
+  `/clearjobs          — kill all jobs + reset stuck Supabase jobs\n\n` +
   `Example:\n` +
   `/recon https://store.dm2buy.com`;
 
@@ -132,6 +138,42 @@ bot.command('cancel', async ctx => {
   }
   activeJobs.delete(jobKey);
   await ctx.reply(`Cancelled: ${job.label} for ${url}`);
+});
+
+// ── /clearjobs ───────────────────────────────────────────────────────────────
+bot.command('clearjobs', async ctx => {
+  // 1. Kill all local child processes and clear the Map
+  let killed = 0;
+  for (const [key, job] of activeJobs.entries()) {
+    job.cancelled = true;
+    try { job.child?.kill('SIGTERM'); } catch {}
+    activeJobs.delete(key);
+    killed++;
+  }
+  pendingExtracts.clear();
+
+  // 2. Mark stuck Supabase jobs as failed
+  let dbCleared = 0;
+  if (supabase) {
+    try {
+      const stuckStatuses = ['recon', 'verifying', 'extracting', 'downloading'];
+      const { data, error } = await supabase
+        .from('import_jobs')
+        .update({ status: 'failed', error: 'Manually cleared via /clearjobs', updated_at: new Date().toISOString() })
+        .in('status', stuckStatuses)
+        .select('id');
+      if (!error) dbCleared = data?.length ?? 0;
+    } catch (e) {
+      console.error(JSON.stringify({ phase: 'clearjobs', error: e.message }));
+    }
+  }
+
+  const parts = [];
+  if (killed > 0)    parts.push(`${killed} local job${killed > 1 ? 's' : ''} killed`);
+  if (dbCleared > 0) parts.push(`${dbCleared} Supabase job${dbCleared > 1 ? 's' : ''} marked failed`);
+  if (!supabase)     parts.push('Supabase not configured — only local jobs cleared');
+
+  await ctx.reply(parts.length ? `Cleared: ${parts.join(', ')}.` : 'No active jobs to clear.');
 });
 
 // ── /recon ───────────────────────────────────────────────────────────────────
@@ -451,8 +493,9 @@ bot.launch()
     { command: 'extract', description: 'Full extraction + delivery ZIP' },
     { command: 'receipt', description: 'Generate payment receipt PDF' },
     { command: 'jobs',    description: 'Show active running jobs' },
-    { command: 'cancel',  description: 'Cancel a running job' },
-    { command: 'help',    description: 'Show all commands' },
+    { command: 'cancel',    description: 'Cancel a running job' },
+    { command: 'clearjobs', description: 'Kill all active jobs + reset stuck Supabase jobs' },
+    { command: 'help',      description: 'Show all commands' },
   ]))
   .catch(err => console.error(JSON.stringify({
     phase: 'startup',
