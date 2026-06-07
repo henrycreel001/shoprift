@@ -125,7 +125,10 @@ bot.command('cancel', async ctx => {
   if (!jobKey) return ctx.reply(`No active job for ${url}`);
 
   const job = activeJobs.get(jobKey);
-  try { job.child?.kill('SIGTERM'); } catch {}
+  job.cancelled = true;                    // set flag BEFORE kill so close handler can check it
+  try { job.child?.kill('SIGTERM'); } catch (e) {
+    console.error(JSON.stringify({ phase: 'cancel', url, error: e.message }));
+  }
   activeJobs.delete(jobKey);
   await ctx.reply(`Cancelled: ${job.label} for ${url}`);
 });
@@ -140,19 +143,24 @@ bot.command('recon', async ctx => {
   const jobKey = `recon:${url}`;
   if (activeJobs.has(jobKey)) return ctx.reply(`Recon already running for ${url}`);
 
+  // Step 1: claim slot synchronously before any await (closes race window)
+  activeJobs.set(jobKey, { startTime: Date.now(), label: 'recon', child: null });
   await ctx.reply(`Recon starting for ${url}...`);
 
+  // Step 2: spawn and patch child reference in-place
   const child = spawn('node', ['scripts/recon_sample.js', url, '--count', '5'], {
     cwd: process.cwd(), env: process.env
   });
-  activeJobs.set(jobKey, { startTime: Date.now(), label: 'recon', child });
+  activeJobs.get(jobKey).child = child;
 
   let stdout = '', stderr = '';
   child.stdout.on('data', d => { stdout += d.toString(); });
   child.stderr.on('data', d => { stderr += d.toString(); });
 
-  child.on('close', async code => {
+  child.on('close', async (code, signal) => {
+    const job = activeJobs.get(jobKey);   // may be undefined if cancelled
     activeJobs.delete(jobKey);
+    if (signal || job?.cancelled) return; // killed or cancelled — suppress output
 
     if (code !== 0) {
       return ctx.reply(`Recon failed:\n${stderr.slice(-500)}`);
@@ -256,8 +264,8 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
     return;
   }
 
-  // Fix 3 — claim slot synchronously before any await (closes double-tap race window)
-  // Slot is claimed by setting activeJobs immediately; child added after spawn (synchronous)
+  // Step 1: claim slot and clear pending token synchronously before any await (closes race window)
+  activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract', child: null });
   pendingExtracts.delete(token);
 
   await ctx.answerCbQuery();
@@ -269,19 +277,22 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
     );
   } catch { /* message already updated or too old to edit */ }
 
+  // Step 2: spawn and patch child reference in-place
   const child = spawn(
     'node',
     ['src/index.js', url, '--zip', '--yes', '--auto-approve'],
     { cwd: process.cwd(), env: process.env }
   );
-  activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract', child });
+  activeJobs.get(jobKey).child = child;
 
   let stdout = '', stderr = '';
   child.stdout.on('data', d => { stdout += d.toString(); });
   child.stderr.on('data', d => { stderr += d.toString(); });
 
-  child.on('close', async code => {
+  child.on('close', async (code, signal) => {
+    const job = activeJobs.get(jobKey);
     activeJobs.delete(jobKey);
+    if (signal || job?.cancelled) return;  // killed or cancelled — suppress output
 
     if (code !== 0) {
       const tail = (stdout + stderr).slice(-800);
