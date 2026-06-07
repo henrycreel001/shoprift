@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "bot": "node bot.js",
     "worker": "node worker.js",
     "dev:server": "node src/dev-server.js",
     "test": "node tests/kiwiishop.test.js",
@@ -25,6 +26,7 @@
     "ioredis": "^5.10.1",
     "papaparse": "^5.5.3",
     "playwright": "^1.40.0",
+    "telegraf": "^4.16.3",
     "zod": "^3.0.0"
   },
   "private": true,

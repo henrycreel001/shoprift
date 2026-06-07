@@ -54,7 +54,8 @@ function parseArgs(argv) {
     client: null,
     format: 'shopify',
     zip: false,
-    autoApprove: false
+    autoApprove: false,
+    yes: false
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -68,6 +69,8 @@ function parseArgs(argv) {
       result.zip = true;
     } else if (arg === '--auto-approve') {
       result.autoApprove = true;
+    } else if (arg === '--yes') {
+      result.yes = true;
     } else if (!arg.startsWith('--')) {
       if (!result.storeUrl) result.storeUrl = arg;
       else if (result.accountId === 'default') result.accountId = arg;
@@ -142,7 +145,7 @@ let browser = null;
 
 async function main() {
   const args = parseArgs(process.argv);
-  const { storeUrl, format: formatArg, zip, autoApprove } = args;
+  const { storeUrl, format: formatArg, zip, autoApprove, yes } = args;
   const startTime = new Date();
 
   ensureRootStructure();
@@ -205,11 +208,13 @@ async function main() {
   }
 
   // --- Confirm import ---
-  const confirmed = await prompt('Continue with import? (y/n): ');
-  if (!confirmed) {
-    console.log('Import cancelled.');
-    if (jobId) await job.failJob(jobId, 'Cancelled by user').catch(() => {});
-    process.exit(0);
+  if (!yes) {
+    const confirmed = await prompt('Continue with import? (y/n): ');
+    if (!confirmed) {
+      console.log('Import cancelled.');
+      if (jobId) await job.failJob(jobId, 'Cancelled by user').catch(() => {});
+      process.exit(0);
+    }
   }
 
   // --- Create job folder (after confirmation to avoid orphaned empty folders) ---

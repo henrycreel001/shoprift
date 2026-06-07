@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shoprift Store Summary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 480px; height: 480px; overflow: hidden; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      width: 480px; height: 480px;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-bar { background: #0a0b0f; padding: 20px 30px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .logo-lockup { display: flex; align-items: center; gap: 9px; }
+    .wordmark { font-size: 18px; font-weight: 900; letter-spacing: -0.045em; color: #fff; }
+    .summary-badge { font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0a0b0f; background: #00E5A0; padding: 4px 10px; border-radius: 4px; }
+    .meta-row { background: #f5f5f7; padding: 20px 30px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid #e8e8ed; flex-shrink: 0; }
+    .meta-left { display: flex; flex-direction: column; gap: 3px; }
+    .store-name { font-size: 18px; font-weight: 900; color: #1a1a1e; letter-spacing: -0.03em; line-height: 1.2; }
+    .store-instagram { font-size: 12px; color: #8a8a8e; font-weight: 500; }
+    .meta-date { font-size: 11px; font-weight: 600; color: #8a8a8e; text-align: right; padding-top: 2px; }
+    .card-body { flex: 1; display: flex; flex-direction: column; }
+    .data-row { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 1px solid #f0f0f2; }
+    .data-row:last-child { border-bottom: none; }
+    .row-label { font-size: 12px; font-weight: 500; color: #8a8a8e; display: flex; align-items: center; gap: 8px; }
+    .row-label svg { color: #c0c0c8; flex-shrink: 0; }
+    .row-value { font-size: 14px; font-weight: 700; color: #1a1a1e; letter-spacing: -0.01em; text-align: right; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row-value.accent { color: #00C48A; }
+    .card-footer { background: #f5f5f7; border-top: 1px solid #e8e8ed; padding: 13px 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .footer-brand { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #c0c0c8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top-bar">
+      <div class="logo-lockup">
+        <svg width="26" height="26" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00E5A0"/>
+              <stop offset="100%" stop-color="#6B8AFF"/>
+            </linearGradient>
+          </defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#sg)"/>
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#sg)"/>
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#sg)" opacity="0.6"/>
+        </svg>
+        <span class="wordmark">shoprift</span>
+      </div>
+      <div class="summary-badge">Store Summary</div>
+    </div>
+
+    <div class="meta-row">
+      <div class="meta-left">
+        <div class="store-name">{{STORE_NAME}}</div>
+        <div class="store-instagram">{{INSTAGRAM}}</div>
+      </div>
+      <div class="meta-date">{{DATE}}</div>
+    </div>
+
+    <div class="card-body">
+      <div class="data-row">
+        <span class="row-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          dm2buy URL
+        </span>
+        <span class="row-value">{{STORE_URL}}</span>
+      </div>
+      <div class="data-row">
+        <span class="row-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          Products
+        </span>
+        <span class="row-value accent">{{PRODUCTS}}</span>
+      </div>
+      <div class="data-row">
+        <span class="row-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18M3 12h18M3 18h18"/>
+          </svg>
+          Collections
+        </span>
+        <span class="row-value accent">{{COLLECTIONS}}</span>
+      </div>
+      <div class="data-row">
+        <span class="row-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+          </svg>
+          Images
+        </span>
+        <span class="row-value accent">{{IMAGES}}</span>
+      </div>
+      <div class="data-row">
+        <span class="row-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Est. Import Time
+        </span>
+        <span class="row-value">{{EST_TIME}}</span>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <span class="footer-brand">shoprift.app</span>
+    </div>
+  </div>
+</body>
+</html>
