@@ -9,7 +9,10 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { chromium } from 'playwright';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const data = JSON.parse(process.argv[2] || '{}');
 const {
@@ -30,7 +33,7 @@ const counts = [
   images      ? `${images} images`           : null,
 ].filter(Boolean).join(' · ') || 'Store Migration';
 
-const templatePath = path.resolve('./docs/legal/receipt-template.html');
+const templatePath = path.resolve(__dirname, '../templates/receipt-template.html');
 let html = fs.readFileSync(templatePath, 'utf8');
 
 html = html

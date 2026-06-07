@@ -3,6 +3,10 @@ import { Telegraf } from 'telegraf';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// __dirname equivalent for ESM — resolves paths relative to this bot.js file
+const BOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const AUTHORIZED_CHAT_ID = Number(process.env.TELEGRAM_AUTHORIZED_CHAT_ID);
@@ -119,7 +123,7 @@ bot.command('recon', async ctx => {
     // Generate summary JPG via Playwright
     const payload = JSON.stringify({ storeName, instagram, storeUrl: url, products, collections, images, estTime, date });
     await new Promise(resolve => {
-      const img = spawn('node', ['scripts/generate_recon_summary.js', payload], {
+      const img = spawn('node', [path.join(BOT_DIR, 'scripts/generate_recon_summary.js'), payload], {
         cwd: process.cwd(), env: process.env
       });
       let imgOut = '';
@@ -250,7 +254,7 @@ bot.command('receipt', async ctx => {
 
   await ctx.reply(`Generating receipt ${receiptNo}...`);
 
-  const child = spawn('node', ['scripts/generate_receipt.js', payload], {
+  const child = spawn('node', [path.join(BOT_DIR, 'scripts/generate_receipt.js'), payload], {
     cwd: process.cwd(), env: process.env
   });
 

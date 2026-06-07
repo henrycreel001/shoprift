@@ -9,7 +9,10 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { chromium } from 'playwright';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const data = JSON.parse(process.argv[2] || '{}');
 const {
@@ -23,7 +26,7 @@ const {
   date        = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
 } = data;
 
-const templatePath = path.resolve('./docs/legal/recon-template.html');
+const templatePath = path.resolve(__dirname, '../templates/recon-template.html');
 let html = fs.readFileSync(templatePath, 'utf8');
 
 html = html
