@@ -22,7 +22,17 @@ export async function uploadToDrive(filePath, fileName, mimeType = 'application/
   if (!raw)      throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set');
   if (!folderId) throw new Error('GOOGLE_DRIVE_FOLDER_ID not set');
 
-  const credentials = JSON.parse(raw);
+  let credentials;
+  try {
+    credentials = JSON.parse(raw.trim());
+  } catch {
+    // fallback: treat value as a file path
+    credentials = JSON.parse(fs.readFileSync(raw.trim(), 'utf8'));
+  }
+  // dotenv converts literal \n sequences in private_key — restore them
+  if (credentials.private_key) {
+    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+  }
 
   const auth = new google.auth.GoogleAuth({
     credentials,
