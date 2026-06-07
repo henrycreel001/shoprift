@@ -16,7 +16,7 @@ if (!AUTHORIZED_CHAT_ID) throw new Error('TELEGRAM_AUTHORIZED_CHAT_ID not set in
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// Active jobs: jobKey → { startTime, label }
+// Active jobs: jobKey → { startTime, label, child }
 const activeJobs = new Map();
 
 // Recon cache: storeUrl → { products, collections, images }
@@ -83,10 +83,11 @@ bot.use(authOnly);
 
 const HELP_TEXT =
   `Shoprift Concierge Bot\n\n` +
-  `/recon <url>   — recon scan + 5-product sample CSV\n` +
-  `/extract <url> — full extraction + delivery ZIP\n` +
+  `/recon <url>        — recon scan + 5-product sample CSV\n` +
+  `/extract <url>      — full extraction + delivery ZIP\n` +
   `/receipt "Client Name" store-url amount upi-ref — payment receipt\n` +
-  `/jobs          — show active jobs\n\n` +
+  `/jobs               — show active jobs\n` +
+  `/cancel <url>       — cancel a running recon or extract job\n\n` +
   `Example:\n` +
   `/recon https://store.dm2buy.com`;
 
@@ -106,6 +107,29 @@ bot.command('jobs', ctx => {
   ctx.reply(lines.join('\n'));
 });
 
+// ── /cancel ──────────────────────────────────────────────────────────────────
+bot.command('cancel', async ctx => {
+  const url = ctx.message.text.split(' ')[1]?.trim();
+
+  if (!url) {
+    if (activeJobs.size === 0) return ctx.reply('No active jobs.');
+    const lines = [...activeJobs.entries()].map(([key, j]) => `• ${j.label} — ${key.split(':').slice(1).join(':')}`);
+    return ctx.reply(`Cancellable jobs:\n${lines.join('\n')}\n\nUsage: /cancel <url>`);
+  }
+
+  // Check both job key prefixes
+  const reconKey   = `recon:${url}`;
+  const extractKey = `extract:${url}`;
+  const jobKey     = activeJobs.has(reconKey) ? reconKey : activeJobs.has(extractKey) ? extractKey : null;
+
+  if (!jobKey) return ctx.reply(`No active job for ${url}`);
+
+  const job = activeJobs.get(jobKey);
+  try { job.child?.kill('SIGTERM'); } catch {}
+  activeJobs.delete(jobKey);
+  await ctx.reply(`Cancelled: ${job.label} for ${url}`);
+});
+
 // ── /recon ───────────────────────────────────────────────────────────────────
 bot.command('recon', async ctx => {
   const url = ctx.message.text.split(' ')[1]?.trim();
@@ -116,12 +140,12 @@ bot.command('recon', async ctx => {
   const jobKey = `recon:${url}`;
   if (activeJobs.has(jobKey)) return ctx.reply(`Recon already running for ${url}`);
 
-  activeJobs.set(jobKey, { startTime: Date.now(), label: 'recon' });
   await ctx.reply(`Recon starting for ${url}...`);
 
   const child = spawn('node', ['scripts/recon_sample.js', url, '--count', '5'], {
     cwd: process.cwd(), env: process.env
   });
+  activeJobs.set(jobKey, { startTime: Date.now(), label: 'recon', child });
 
   let stdout = '', stderr = '';
   child.stdout.on('data', d => { stdout += d.toString(); });
@@ -233,7 +257,7 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
   }
 
   // Fix 3 — claim slot synchronously before any await (closes double-tap race window)
-  activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract' });
+  // Slot is claimed by setting activeJobs immediately; child added after spawn (synchronous)
   pendingExtracts.delete(token);
 
   await ctx.answerCbQuery();
@@ -250,6 +274,7 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
     ['src/index.js', url, '--zip', '--yes', '--auto-approve'],
     { cwd: process.cwd(), env: process.env }
   );
+  activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract', child });
 
   let stdout = '', stderr = '';
   child.stdout.on('data', d => { stdout += d.toString(); });
@@ -394,6 +419,7 @@ bot.launch()
     { command: 'extract', description: 'Full extraction + delivery ZIP' },
     { command: 'receipt', description: 'Generate payment receipt PDF' },
     { command: 'jobs',    description: 'Show active running jobs' },
+    { command: 'cancel',  description: 'Cancel a running job' },
     { command: 'help',    description: 'Show all commands' },
   ]))
   .catch(err => console.error(JSON.stringify({
