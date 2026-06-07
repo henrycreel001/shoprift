@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Telegraf } from 'telegraf';
+import { Telegraf, Markup } from 'telegraf';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -197,8 +197,28 @@ bot.command('extract', async ctx => {
   const jobKey = `extract:${url}`;
   if (activeJobs.has(jobKey)) return ctx.reply(`Extraction already running for ${url}`);
 
+  await ctx.reply(
+    `Start full extraction for ${url}?\nEst. 10–20 min.`,
+    Markup.inlineKeyboard([
+      Markup.button.callback('✅ Yes, extract', `confirm_extract:${url}`),
+      Markup.button.callback('❌ Cancel', `cancel_extract:${url}`),
+    ])
+  );
+});
+
+// ── confirm_extract action ────────────────────────────────────────────────────
+bot.action(/^confirm_extract:(.+)$/, async ctx => {
+  const url = ctx.match[1];
+  await ctx.answerCbQuery();
+
+  const jobKey = `extract:${url}`;
+  if (activeJobs.has(jobKey)) {
+    await ctx.editMessageText(`Extraction already running for ${url}`);
+    return;
+  }
+
   activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract' });
-  await ctx.reply(`Extraction starting for ${url}\nThis takes 10–20 min. Delivery ZIP incoming when done.`);
+  await ctx.editMessageText(`Extraction starting for ${url}\nThis takes 10–20 min. Delivery ZIP incoming when done.`);
 
   const child = spawn(
     'node',
@@ -260,6 +280,12 @@ bot.command('extract', async ctx => {
     await ctx.replyWithDocument({ source: zipPath, filename: path.basename(zipPath) });
     if (clientDir) await ctx.reply(`Also staged → ${clientDir}`);
   });
+});
+
+// ── cancel_extract action ─────────────────────────────────────────────────────
+bot.action(/^cancel_extract:(.+)$/, async ctx => {
+  await ctx.answerCbQuery();
+  await ctx.editMessageText('Extraction cancelled.');
 });
 
 // ── /receipt ──────────────────────────────────────────────────────────────────
