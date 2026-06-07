@@ -9,3 +9,4 @@ web/.next/
 writing_outputs/
 .agents/
 apps/telegram-bot/service-account.json
+apps/telegram-bot/shoprift-bot-*.json
