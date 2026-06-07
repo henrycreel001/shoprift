@@ -78,31 +78,20 @@ function authOnly(ctx, next) {
 
 bot.use(authOnly);
 
+const HELP_TEXT =
+  `Shoprift Concierge Bot\n\n` +
+  `/recon <url>   — recon scan + 5-product sample CSV\n` +
+  `/extract <url> — full extraction + delivery ZIP\n` +
+  `/receipt "Client Name" store-url amount upi-ref — payment receipt\n` +
+  `/jobs          — show active jobs\n\n` +
+  `Example:\n` +
+  `/recon https://store.dm2buy.com`;
+
 // ── /start ──────────────────────────────────────────────────────────────────
-bot.command('start', ctx => {
-  ctx.reply(
-    `Shoprift Concierge Bot\n\n` +
-    `/recon <url>   — recon scan + 5-product sample CSV\n` +
-    `/extract <url> — full extraction + delivery ZIP\n` +
-    `/receipt "Client Name" store-url amount upi-ref — payment receipt\n` +
-    `/jobs          — show active jobs\n\n` +
-    `Example:\n` +
-    `/recon https://store.dm2buy.com`
-  );
-});
+bot.command('start', ctx => ctx.reply(HELP_TEXT));
 
 // ── /help ────────────────────────────────────────────────────────────────────
-bot.command('help', ctx => {
-  ctx.reply(
-    `Shoprift Concierge Bot\n\n` +
-    `/recon <url>   — recon scan + 5-product sample CSV\n` +
-    `/extract <url> — full extraction + delivery ZIP\n` +
-    `/receipt "Client Name" store-url amount upi-ref — payment receipt\n` +
-    `/jobs          — show active jobs\n\n` +
-    `Example:\n` +
-    `/recon https://store.dm2buy.com`
-  );
-});
+bot.command('help',  ctx => ctx.reply(HELP_TEXT));
 
 // ── /jobs ────────────────────────────────────────────────────────────────────
 bot.command('jobs', ctx => {
@@ -337,15 +326,20 @@ bot.on('text', ctx => {
 });
 
 // ── launch ───────────────────────────────────────────────────────────────────
-bot.launch();
-
-bot.telegram.setMyCommands([
-  { command: 'recon',   description: 'Recon scan + 5-product sample CSV' },
-  { command: 'extract', description: 'Full extraction + delivery ZIP' },
-  { command: 'receipt', description: 'Generate payment receipt PDF' },
-  { command: 'jobs',    description: 'Show active running jobs' },
-  { command: 'help',    description: 'Show all commands' },
-]).catch(err => console.error('setMyCommands failed:', err.message));
+bot.launch()
+  .then(() => bot.telegram.setMyCommands([
+    { command: 'recon',   description: 'Recon scan + 5-product sample CSV' },
+    { command: 'extract', description: 'Full extraction + delivery ZIP' },
+    { command: 'receipt', description: 'Generate payment receipt PDF' },
+    { command: 'jobs',    description: 'Show active running jobs' },
+    { command: 'help',    description: 'Show all commands' },
+  ]))
+  .catch(err => console.error(JSON.stringify({
+    phase: 'startup',
+    action: 'setMyCommands',
+    error: err.message,
+    detail: err.response?.description ?? null,
+  })));
 
 console.log(`
 ┌─────────────────────────────────┐
