@@ -22,6 +22,9 @@ const activeJobs = new Map();
 // Recon cache: storeUrl → { products, collections, images }
 const reconCache = new Map();
 
+// Pending extract confirmations: token → url (Fix 2 — 64-byte callback_data limit)
+const pendingExtracts = new Map();
+
 // Receipt counter — persists in bot's own output folder across restarts
 const RECEIPT_COUNTER_PATH = path.join(BOT_DIR, 'output', '.receipt_counter.json');
 
@@ -197,28 +200,50 @@ bot.command('extract', async ctx => {
   const jobKey = `extract:${url}`;
   if (activeJobs.has(jobKey)) return ctx.reply(`Extraction already running for ${url}`);
 
+  // Fix 2 — use short token in callback_data (Telegram hard limit: 64 bytes)
+  const token = Date.now().toString(36);
+  pendingExtracts.set(token, url);
+
   await ctx.reply(
     `Start full extraction for ${url}?\nEst. 10–20 min.`,
     Markup.inlineKeyboard([
-      Markup.button.callback('✅ Yes, extract', `confirm_extract:${url}`),
-      Markup.button.callback('❌ Cancel', `cancel_extract:${url}`),
+      Markup.button.callback('✅ Yes, extract', `confirm_extract:${token}`),
+      Markup.button.callback('❌ Cancel',        `cancel_extract:${token}`),
     ])
   );
 });
 
 // ── confirm_extract action ────────────────────────────────────────────────────
 bot.action(/^confirm_extract:(.+)$/, async ctx => {
-  const url = ctx.match[1];
-  await ctx.answerCbQuery();
-
-  const jobKey = `extract:${url}`;
-  if (activeJobs.has(jobKey)) {
-    await ctx.editMessageText(`Extraction already running for ${url}`);
+  // Fix 2 — resolve token → url
+  const token = ctx.match[1];
+  const url = pendingExtracts.get(token);
+  if (!url) {
+    await ctx.answerCbQuery('Session expired — run /extract again.');
     return;
   }
 
+  const jobKey = `extract:${url}`;
+  if (activeJobs.has(jobKey)) {
+    await ctx.answerCbQuery();
+    try {
+      await ctx.editMessageText(`Extraction already running for ${url}`, { reply_markup: { inline_keyboard: [] } });
+    } catch { /* message already updated or too old to edit */ }
+    return;
+  }
+
+  // Fix 3 — claim slot synchronously before any await (closes double-tap race window)
   activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract' });
-  await ctx.editMessageText(`Extraction starting for ${url}\nThis takes 10–20 min. Delivery ZIP incoming when done.`);
+  pendingExtracts.delete(token);
+
+  await ctx.answerCbQuery();
+  // Fix 1 — clear inline keyboard; Fix 4 — wrap in try/catch
+  try {
+    await ctx.editMessageText(
+      `Extraction starting for ${url}\nThis takes 10–20 min. Delivery ZIP incoming when done.`,
+      { reply_markup: { inline_keyboard: [] } }
+    );
+  } catch { /* message already updated or too old to edit */ }
 
   const child = spawn(
     'node',
@@ -284,8 +309,19 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
 
 // ── cancel_extract action ─────────────────────────────────────────────────────
 bot.action(/^cancel_extract:(.+)$/, async ctx => {
+  // Fix 2 — resolve token → url and clean up
+  const token = ctx.match[1];
+  const url = pendingExtracts.get(token);
+  pendingExtracts.delete(token);
+
   await ctx.answerCbQuery();
-  await ctx.editMessageText('Extraction cancelled.');
+  // Fix 1 — clear inline keyboard; Fix 4 — wrap in try/catch
+  try {
+    await ctx.editMessageText(
+      url ? `Extraction cancelled for ${url}.` : 'Extraction cancelled.',
+      { reply_markup: { inline_keyboard: [] } }
+    );
+  } catch { /* message already updated or too old to edit */ }
 });
 
 // ── /receipt ──────────────────────────────────────────────────────────────────
