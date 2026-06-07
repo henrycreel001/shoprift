@@ -372,7 +372,7 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
     const clientDir = clientOutputDir(url);
     if (clientDir) stageFile(zipPath, clientDir);
 
-    const driveEnabled = process.env.GOOGLE_SERVICE_ACCOUNT_JSON && process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const driveEnabled = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE && process.env.GOOGLE_DRIVE_FOLDER_ID;
 
     if (driveEnabled) {
       await ctx.reply(`Extraction complete — ${sizeMb} MB. Uploading to Google Drive...`);
