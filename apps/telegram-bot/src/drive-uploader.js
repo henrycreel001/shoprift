@@ -1,35 +1,36 @@
 /**
  * drive-uploader.js
  * Uploads a file to Google Drive and returns a public shareable link.
- * Auth: service account via GOOGLE_SERVICE_ACCOUNT_JSON env var (full JSON string).
- * Uploads into folder GOOGLE_DRIVE_FOLDER_ID.
+ * Auth: OAuth2 refresh token (uploads as your Google account, uses your quota).
+ * Required env: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
+ *               GOOGLE_OAUTH_REFRESH_TOKEN, GOOGLE_DRIVE_FOLDER_ID
+ * Run scripts/authorize_drive.js once to get the refresh token.
  */
 
 import { google } from 'googleapis';
 import fs from 'fs';
-import path from 'path';
 
 /**
- * @param {string} filePath  Absolute path to file to upload
- * @param {string} fileName  Display name in Drive
+ * @param {string} filePath   Absolute path to file to upload
+ * @param {string} fileName   Display name in Drive
  * @param {string} [mimeType] MIME type (default: application/octet-stream)
  * @returns {Promise<{ url: string, fileId: string }>}
  */
 export async function uploadToDrive(filePath, fileName, mimeType = 'application/octet-stream') {
-  const keyFile  = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE;
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  const clientId     = process.env.GOOGLE_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
+  const folderId     = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  if (!keyFile)  throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY_FILE not set — point it to your service-account.json file path');
-  if (!folderId) throw new Error('GOOGLE_DRIVE_FOLDER_ID not set');
+  if (!clientId)     throw new Error('GOOGLE_OAUTH_CLIENT_ID not set');
+  if (!clientSecret) throw new Error('GOOGLE_OAUTH_CLIENT_SECRET not set');
+  if (!refreshToken) throw new Error('GOOGLE_OAUTH_REFRESH_TOKEN not set — run scripts/authorize_drive.js once');
+  if (!folderId)     throw new Error('GOOGLE_DRIVE_FOLDER_ID not set');
 
-  const credentials = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
+  const oauth2 = new google.auth.OAuth2(clientId, clientSecret);
+  oauth2.setCredentials({ refresh_token: refreshToken });
 
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
-  });
-
-  const drive = google.drive({ version: 'v3', auth });
+  const drive = google.drive({ version: 'v3', auth: oauth2 });
 
   const res = await drive.files.create({
     requestBody: {
