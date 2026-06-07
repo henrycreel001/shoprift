@@ -16,23 +16,13 @@ import path from 'path';
  * @returns {Promise<{ url: string, fileId: string }>}
  */
 export async function uploadToDrive(filePath, fileName, mimeType = 'application/octet-stream') {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const keyFile  = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE;
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  if (!raw)      throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set');
+  if (!keyFile)  throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY_FILE not set — point it to your service-account.json file path');
   if (!folderId) throw new Error('GOOGLE_DRIVE_FOLDER_ID not set');
 
-  let credentials;
-  try {
-    credentials = JSON.parse(raw.trim());
-  } catch {
-    // fallback: treat value as a file path
-    credentials = JSON.parse(fs.readFileSync(raw.trim(), 'utf8'));
-  }
-  // dotenv converts literal \n sequences in private_key — restore them
-  if (credentials.private_key) {
-    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
-  }
+  const credentials = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
 
   const auth = new google.auth.GoogleAuth({
     credentials,

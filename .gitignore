@@ -8,3 +8,4 @@ web/.env.local
 web/.next/
 writing_outputs/
 .agents/
+apps/telegram-bot/service-account.json
