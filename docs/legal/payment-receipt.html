@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shoprift — Receipt Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #111318;
+      display: flex;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════════════════════════════════
+       EDIT PANEL
+    ════════════════════════════════ */
+    .panel {
+      width: 320px;
+      flex-shrink: 0;
+      background: #0a0b0f;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+      border-right: 1px solid #1e2028;
+    }
+
+    .panel-header {
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid #1e2028;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-wordmark {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -0.045em;
+      color: #fff;
+    }
+
+    .panel-subtitle {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      padding: 12px 24px 0;
+    }
+
+    .panel-body {
+      padding: 8px 24px 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .field-group {
+      margin-top: 20px;
+    }
+
+    .field-group-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1e2028;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 5px;
+      letter-spacing: 0.02em;
+    }
+
+    .field input {
+      width: 100%;
+      background: #161820;
+      border: 1px solid #252830;
+      border-radius: 6px;
+      padding: 8px 11px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus {
+      border-color: #00E5A0;
+    }
+
+    .field input::placeholder {
+      color: rgba(255,255,255,0.2);
+    }
+
+    /* counts row */
+    .counts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .counts-row .field {
+      margin-bottom: 0;
+    }
+
+    .panel-footer {
+      padding: 16px 24px 24px;
+      border-top: 1px solid #1e2028;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-download {
+      width: 100%;
+      background: #00E5A0;
+      color: #0a0b0f;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: -0.01em;
+      transition: opacity 0.15s;
+    }
+
+    .btn-download:hover { opacity: 0.88; }
+    .btn-download:active { opacity: 0.75; }
+
+    .btn-download.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .btn-hint {
+      font-size: 10.5px;
+      color: rgba(255,255,255,0.2);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ════════════════════════════════
+       PREVIEW AREA
+    ════════════════════════════════ */
+    .preview-area {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 32px;
+      overflow-y: auto;
+    }
+
+    /* ════════════════════════════════
+       RECEIPT CARD
+    ════════════════════════════════ */
+    .card {
+      background: #fff;
+      width: 100%;
+      max-width: 460px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #e2e2e7;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12), 0 12px 32px rgba(0,0,0,0.2);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .top-bar {
+      background: #0a0b0f;
+      padding: 22px 28px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo-lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wordmark {
+      font-size: 21px;
+      font-weight: 900;
+      letter-spacing: -0.045em;
+      color: #fff;
+    }
+
+    .paid-badge {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #0a0b0f;
+      background: #00E5A0;
+      padding: 5px 11px;
+      border-radius: 5px;
+    }
+
+    .meta-row {
+      padding: 14px 28px;
+      background: #f5f5f7;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e8e8ed;
+    }
+
+    .meta-item { display: flex; flex-direction: column; gap: 2px; }
+
+    .meta-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #8a8a8e;
+    }
+
+    .meta-value {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #1a1a1e;
+    }
+
+    .body { padding: 24px 28px; }
+
+    .section-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #8a8a8e;
+      margin-bottom: 5px;
+    }
+
+    .client-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1a1a1e;
+      letter-spacing: -0.02em;
+      margin-bottom: 2px;
+    }
+
+    .client-store {
+      font-size: 12px;
+      color: #8a8a8e;
+      margin-bottom: 22px;
+    }
+
+    .service-block {
+      background: #f5f5f7;
+      border-radius: 8px;
+      padding: 13px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .service-desc {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a1e;
+      line-height: 1.4;
+    }
+
+    .service-desc span {
+      display: block;
+      font-size: 11px;
+      color: #8a8a8e;
+      font-weight: 400;
+      margin-top: 3px;
+    }
+
+    .service-amount {
+      font-size: 17px;
+      font-weight: 900;
+      color: #1a1a1e;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    .payment-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-top: 1px solid #e8e8ed;
+    }
+
+    .payment-label { font-size: 12px; color: #8a8a8e; }
+    .payment-value { font-size: 12px; font-weight: 600; color: #1a1a1e; }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0 0;
+      border-top: 1.5px solid #1a1a1e;
+      margin-top: 4px;
+    }
+
+    .total-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #1a1a1e;
+    }
+
+    .total-amount {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1a1a1e;
+      letter-spacing: -0.04em;
+    }
+
+    .card-note {
+      padding: 12px 28px 16px;
+      font-size: 10.5px;
+      color: #aaa;
+      text-align: center;
+    }
+
+    .card-footer {
+      background: #f5f5f7;
+      border-top: 1px solid #e8e8ed;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #8a8a8e;
+    }
+
+    .contact-item svg { flex-shrink: 0; opacity: 0.65; }
+
+    /* print: hide panel, show only card */
+    @media print {
+      body { background: #fff; }
+      .panel { display: none; }
+      .preview-area { padding: 0; background: #fff; }
+      .card { box-shadow: none; border-radius: 0; max-width: 100%; }
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Edit panel ── -->
+<div class="panel">
+  <div class="panel-header">
+    <svg width="26" height="26" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sg-p" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00E5A0"/>
+          <stop offset="100%" stop-color="#6B8AFF"/>
+        </linearGradient>
+      </defs>
+      <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#sg-p)"/>
+      <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#sg-p)"/>
+      <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#sg-p)" opacity="0.6"/>
+    </svg>
+    <span class="panel-wordmark">shoprift</span>
+  </div>
+
+  <div class="panel-body">
+
+    <div class="field-group">
+      <div class="field-group-label">Receipt Details</div>
+      <div class="field">
+        <label>Receipt No.</label>
+        <input type="text" id="f-receipt-no" value="SRFT/2026-27/R001" oninput="update()">
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="text" id="f-date" value="07 Jun 2026" oninput="update()">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-label">Client</div>
+      <div class="field">
+        <label>Client / Store Name</label>
+        <input type="text" id="f-client-name" value="Pookie Scoopee" oninput="update()">
+      </div>
+      <div class="field">
+        <label>Store URL</label>
+        <input type="text" id="f-store-url" value="pookiescoopee.dm2buy.com" oninput="update()">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-label">Service</div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="f-service" value="Store Migration Package" oninput="update()">
+      </div>
+      <div class="counts-row">
+        <div class="field">
+          <label>Products</label>
+          <input type="number" id="f-products" value="103" min="0" oninput="update()">
+        </div>
+        <div class="field">
+          <label>Collections</label>
+          <input type="number" id="f-collections" value="7" min="0" oninput="update()">
+        </div>
+        <div class="field">
+          <label>Images</label>
+          <input type="number" id="f-images" value="247" min="0" oninput="update()">
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-group-label">Payment</div>
+      <div class="field">
+        <label>Amount (₹)</label>
+        <input type="number" id="f-amount" value="800" min="0" oninput="update()">
+      </div>
+      <div class="field">
+        <label>UPI ID</label>
+        <input type="text" id="f-upi" value="mayankmalikx@axisbank" oninput="update()">
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-download" id="dl-btn" onclick="downloadPDF()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download PDF
+    </button>
+    <div class="btn-hint">Saves as shoprift-receipt-R001.pdf</div>
+  </div>
+</div>
+
+<!-- ── Receipt preview ── -->
+<div class="preview-area">
+  <div class="card" id="receipt-card">
+
+    <div class="top-bar">
+      <div class="logo-lockup">
+        <svg width="30" height="30" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sg-c" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00E5A0"/>
+              <stop offset="100%" stop-color="#6B8AFF"/>
+            </linearGradient>
+          </defs>
+          <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#sg-c)"/>
+          <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#sg-c)"/>
+          <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#sg-c)" opacity="0.6"/>
+        </svg>
+        <span class="wordmark">shoprift</span>
+      </div>
+      <div class="paid-badge">Paid</div>
+    </div>
+
+    <div class="meta-row">
+      <div class="meta-item">
+        <span class="meta-label">Receipt No.</span>
+        <span class="meta-value" id="r-receipt-no">SRFT/2026-27/R001</span>
+      </div>
+      <div class="meta-item" style="text-align:right;">
+        <span class="meta-label">Date</span>
+        <span class="meta-value" id="r-date">07 Jun 2026</span>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="section-label">Received from</div>
+      <div class="client-name" id="r-client-name">Pookie Scoopee</div>
+      <div class="client-store" id="r-store-url">pookiescoopee.dm2buy.com</div>
+
+      <div class="service-block">
+        <div class="service-desc">
+          <span id="r-service" style="font-size:13px;font-weight:600;color:#1a1a1e;">Store Migration Package</span>
+          <span id="r-counts">103 products · 7 collections · 247 images</span>
+        </div>
+        <div class="service-amount">₹<span id="r-amount">800</span></div>
+      </div>
+
+      <div class="payment-row">
+        <span class="payment-label">Payment method</span>
+        <span class="payment-value">UPI — <span id="r-upi">mayankmalikx@axisbank</span></span>
+      </div>
+
+      <div class="total-row">
+        <span class="total-label">Total received</span>
+        <span class="total-amount">₹<span id="r-total">800</span></span>
+      </div>
+    </div>
+
+    <div class="card-note">This is an acknowledgment of payment received. Not a tax invoice.</div>
+
+    <div class="card-footer">
+      <div class="contact-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>
+        </svg>
+        support@shoprift.app
+      </div>
+      <div class="contact-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+        </svg>
+        @shoprift_
+      </div>
+      <div class="contact-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        shoprift.app
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function val(id) { return document.getElementById(id).value.trim(); }
+  function set(id, text) { document.getElementById(id).textContent = text; }
+
+  function update() {
+    set('r-receipt-no', val('f-receipt-no'));
+    set('r-date',       val('f-date'));
+    set('r-client-name', val('f-client-name') || 'Client Name');
+    set('r-store-url',  val('f-store-url') || 'store-url.dm2buy.com');
+    set('r-service',    val('f-service') || 'Store Migration Package');
+    set('r-amount',     val('f-amount') || '0');
+    set('r-total',      val('f-amount') || '0');
+    set('r-upi',        val('f-upi'));
+
+    const p = val('f-products')    || '0';
+    const c = val('f-collections') || '0';
+    const i = val('f-images')      || '0';
+    set('r-counts', `${p} products · ${c} collections · ${i} images`);
+
+    // update hint
+    const rno = val('f-receipt-no').split('/').pop() || 'receipt';
+    document.querySelector('.btn-hint').textContent =
+      `Saves as shoprift-receipt-${rno}.pdf`;
+  }
+
+  async function downloadPDF() {
+    const btn = document.getElementById('dl-btn');
+    btn.classList.add('loading');
+    btn.textContent = 'Generating…';
+
+    try {
+      const card = document.getElementById('receipt-card');
+      const canvas = await html2canvas(card, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+
+      // A5 page with 18mm margins on all sides
+      const pageW  = 148;
+      const pageH  = 210;
+      const margin = 18;
+
+      const maxW = pageW - margin * 2;
+      const maxH = pageH - margin * 2;
+
+      // Scale card to fit content area, preserving aspect ratio
+      const aspect = canvas.height / canvas.width;
+      let imgW = maxW;
+      let imgH = maxW * aspect;
+      if (imgH > maxH) { imgH = maxH; imgW = maxH / aspect; }
+
+      // Center on page
+      const x = (pageW - imgW) / 2;
+      const y = (pageH - imgH) / 2;
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+      pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
+
+      const rno = val('f-receipt-no').split('/').pop() || 'receipt';
+      pdf.save(`shoprift-receipt-${rno}.pdf`);
+    } finally {
+      btn.classList.remove('loading');
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF`;
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shoprift — Payment Receipt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void:    oklch(10% 0.01 264);
+      --surface: oklch(96.5% 0.005 264);
+      --rule:    oklch(91% 0.005 264);
+      --muted:   oklch(55% 0.008 264);
+      --ink:     oklch(12% 0.01 264);
+      --mint:    #00E5A0;
+      --mint-bg: oklch(97% 0.018 162);
+      --mint-bd: oklch(87% 0.07 162);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: oklch(94% 0.005 264);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .card {
+      background: #fff;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px oklch(0% 0 0 / 0.04), 0 8px 24px oklch(0% 0 0 / 0.07);
+    }
+
+    /* ── Top bar ── */
+    .top-bar {
+      background: var(--void);
+      padding: 24px 32px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo-lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wordmark {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.045em;
+      color: #fff;
+    }
+
+    .paid-badge {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--void);
+      background: var(--mint);
+      padding: 5px 12px;
+      border-radius: 5px;
+    }
+
+    /* ── Meta row ── */
+    .meta-row {
+      padding: 16px 32px;
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .meta-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .meta-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    /* ── Body ── */
+    .body {
+      padding: 28px 32px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .client-name {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      margin-bottom: 3px;
+    }
+
+    .client-store {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Service row ── */
+    .service-block {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .service-desc {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    .service-desc span {
+      display: block;
+      font-size: 11.5px;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .service-amount {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    /* ── Payment method ── */
+    .payment-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid var(--rule);
+      margin-bottom: 4px;
+    }
+
+    .payment-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .payment-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    /* ── Total ── */
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0 0;
+      border-top: 1.5px solid var(--ink);
+      margin-top: 4px;
+    }
+
+    .total-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+    }
+
+    .total-amount {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--ink);
+      letter-spacing: -0.04em;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--surface);
+      border-top: 1px solid var(--rule);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .contact-item svg {
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+
+    /* ── Note ── */
+    .note {
+      padding: 14px 32px 20px;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+        display: block;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .card {
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo-lockup">
+      <svg width="30" height="30" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sg-r" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00E5A0"/>
+            <stop offset="100%" stop-color="#6B8AFF"/>
+          </linearGradient>
+        </defs>
+        <path d="M 22 27 L 58 27 L 78 47 L 78 55 L 52 55 L 42 45 L 22 45 Z" fill="url(#sg-r)"/>
+        <path d="M 98 93 L 62 93 L 42 73 L 42 65 L 68 65 L 78 75 L 98 75 Z" fill="url(#sg-r)"/>
+        <path d="M 44 58 L 76 58 L 76 62 L 44 62 Z" fill="url(#sg-r)" opacity="0.6"/>
+      </svg>
+      <span class="wordmark">shoprift</span>
+    </div>
+    <div class="paid-badge">Paid</div>
+  </div>
+
+  <!-- Meta row -->
+  <div class="meta-row">
+    <div class="meta-item">
+      <span class="meta-label">Receipt No.</span>
+      <span class="meta-value">SRFT/2026-27/R001</span>
+    </div>
+    <div class="meta-item" style="text-align:right;">
+      <span class="meta-label">Date</span>
+      <span class="meta-value">07 Jun 2026</span>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <div class="section-label">Received from</div>
+    <div class="client-name">Pookie Scoopee</div>
+    <div class="client-store">pookiescoopee.dm2buy.com</div>
+
+    <div class="service-block">
+      <div class="service-desc">
+        Store Migration Package
+        <span>103 products · 7 collections · 247 images</span>
+      </div>
+      <div class="service-amount">₹800</div>
+    </div>
+
+    <div class="payment-row">
+      <span class="payment-label">Payment method</span>
+      <span class="payment-value">UPI — mayankmalikx@axisbank</span>
+    </div>
+
+    <div class="total-row">
+      <span class="total-label">Total received</span>
+      <span class="total-amount">₹800</span>
+    </div>
+
+  </div>
+
+  <!-- Note -->
+  <div class="note">
+    This is an acknowledgment of payment received. Not a tax invoice.
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="contact-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M2 7l10 7 10-7"/>
+      </svg>
+      support@shoprift.app
+    </div>
+    <div class="contact-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+      @shoprift_
+    </div>
+    <div class="contact-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      shoprift.app
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
