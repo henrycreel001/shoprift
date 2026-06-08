@@ -266,7 +266,20 @@ bot.command('queue', async ctx => {
   const first = args[0]?.trim() ?? '';
 
   if (first.toLowerCase() === 'clear') {
-    const q       = readQueue();
+    const posArg = args[1]?.trim();
+    const q      = readQueue();
+
+    if (posArg) {
+      const pos     = parseInt(posArg, 10);
+      const pending = q.filter(j => j.status === 'pending');
+      if (isNaN(pos) || pos < 1) return ctx.reply('Usage: /queue clear <position>\nExample: /queue clear 2');
+      const target = pending[pos - 1];
+      if (!target) return ctx.reply(`No pending job at position ${pos}. Use /queue to see current positions.`);
+      writeQueue(q.filter(j => j !== target));
+      const sub = u => { try { return new URL(u).hostname.split('.')[0]; } catch { return u; } };
+      return ctx.reply(`Removed position ${pos}: ${sub(target.url)}`);
+    }
+
     const removed = q.filter(j => j.status === 'pending').length;
     writeQueue(q.filter(j => j.status !== 'pending'));
     return ctx.reply(`Removed ${removed} pending job${removed !== 1 ? 's' : ''}. Running job (if any) not affected.`);
