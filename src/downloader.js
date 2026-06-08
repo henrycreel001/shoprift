@@ -60,11 +60,28 @@ export async function downloadImage(url, savePath) {
   }
 }
 
+const DOWNLOAD_CONCURRENCY = 10;
+
 /**
- * Downloads all images for all products.
+ * Runs async fns with max `limit` in-flight at once.
+ * @param {number} limit
+ * @param {Array<() => Promise<any>>} fns
+ */
+async function _pool(limit, fns) {
+  const executing = new Set();
+  for (const fn of fns) {
+    const p = fn().finally(() => executing.delete(p));
+    executing.add(p);
+    if (executing.size >= limit) await Promise.race(executing);
+  }
+  await Promise.all(executing);
+}
+
+/**
+ * Downloads all images for all products in parallel (DOWNLOAD_CONCURRENCY at once).
  * Creates /output/images/{product-slug}/ directory per product (human-readable).
  * Falls back to product ID if slug is empty or collides.
- * Updates Supabase job progress after each image.
+ * Updates Supabase job progress after each image completes.
  * @param {object[]} products — array of products per SCHEMA.md (with images_cdn)
  * @param {string | null} jobId
  * @returns {Promise<{ succeeded: Array<{productId,index,path}>, failed: Array<{productId,url,error}> }>}
@@ -85,43 +102,44 @@ export async function downloadAllImages(products, jobId, imageDir = process.env.
     return slug;
   });
 
-  const succeeded = [];
-  const failed = [];
-  let totalImages = 0;
-  let downloadedCount = 0;
-
-  // Count total images upfront for progress tracking
-  for (const p of products) totalImages += p.images_cdn.length;
-
+  // Create all product dirs upfront (before parallel downloads start)
   for (let pi = 0; pi < products.length; pi++) {
-    const product = products[pi];
+    fs.mkdirSync(path.join(imageDir, productSlugs[pi]), { recursive: true });
+  }
+
+  // Flatten all image tasks into one list
+  const tasks = [];
+  for (let pi = 0; pi < products.length; pi++) {
+    const product    = products[pi];
     const productDir = path.join(imageDir, productSlugs[pi]);
-    fs.mkdirSync(productDir, { recursive: true });
-
     for (let i = 0; i < product.images_cdn.length; i++) {
-      const url = product.images_cdn[i];
-      const savePath = path.join(productDir, `${i}.jpg`);
-      downloadedCount++;
-
-      console.log(`⏳ Downloading images... (${downloadedCount}/${totalImages})`);
-
-      if (jobId) {
-        await job.updateProgress(
-          jobId, downloadedCount, totalImages,
-          'downloading',
-          `Downloading images (${downloadedCount}/${totalImages})`
-        ).catch(() => {});
-      }
-
-      const result = await downloadImage(url, savePath);
-
-      if (result.success) {
-        succeeded.push({ productId: product.id, index: i, path: result.path });
-      } else {
-        failed.push({ productId: product.id, url, error: result.error });
-      }
+      tasks.push({ url: product.images_cdn[i], savePath: path.join(productDir, `${i}.jpg`), productId: product.id, index: i });
     }
   }
+
+  const totalImages    = tasks.length;
+  const succeeded      = [];
+  const failed         = [];
+  let   downloadedCount = 0;
+
+  await _pool(DOWNLOAD_CONCURRENCY, tasks.map(task => async () => {
+    const result = await downloadImage(task.url, task.savePath);
+
+    // JS is single-threaded — increment is safe without a lock
+    downloadedCount++;
+    console.log(`⏳ Downloading images... (${downloadedCount}/${totalImages})`);
+
+    if (jobId) {
+      job.updateProgress(jobId, downloadedCount, totalImages, 'downloading',
+        `Downloading images (${downloadedCount}/${totalImages})`).catch(() => {});
+    }
+
+    if (result.success) {
+      succeeded.push({ productId: task.productId, index: task.index, path: result.path });
+    } else {
+      failed.push({ productId: task.productId, url: task.url, error: result.error });
+    }
+  }));
 
   return { succeeded, failed };
 }
