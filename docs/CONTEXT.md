@@ -17,8 +17,8 @@
 ## LAST UPDATED
 
 - **Date:** 2026-06-08
-- **Session topic:** Telegram bot — /quote, /redeliver, /export, /queue + runExtraction refactor.
-- **Branch:** main (last commit: `93a7747` — no uncommitted changes to bot files)
+- **Session topic:** Project folder reorganization — docs/brand, docs/research, bot templates, script rename.
+- **Branch:** main (last commit: `55d0ec2`)
 
 ---
 
@@ -42,11 +42,11 @@
 
 ## LAST 5 ACTIONS (most recent first)
 
-1. **`/queue clear <position>`** — remove specific pending job by position number. `/queue clear 2` removes job 2. `/queue clear` still clears all.
-2. **`/queue` command** — file-backed batch queue (`output/_queue.json`). `/queue <url>` adds, `/queue` shows status, `/queue clear` removes pending. Runs jobs sequentially, auto-starts next on completion. Survives restart.
-3. **`runExtraction` refactor** — extracted all spawn/Drive-upload logic from `confirm_extract` into `runExtraction(url, chatId, opts)`. `confirm_extract` reduced from ~170 lines to 5. Queue uses `{ isQueue: true }`.
-4. **`/quote`, `/redeliver`, `/export`** — `/quote <url>` runs recon + calculates ₹500+₹10/product quote; `/redeliver <receipt-no>` Supabase lookup → resend Drive URL; `/export` all payment_receipts as CSV file. `drive_url` cached after upload + persisted to Supabase on `/receipt`.
-5. **`/redeliver` Supabase schema** — requires `ALTER TABLE payment_receipts ADD COLUMN drive_url TEXT;` in Supabase SQL Editor (if not done yet).
+1. **Folder reorganization** — `docs/brand/` (brand HTML files), `docs/research/shopify/` (Shopify platform reference docs), `docs/research/prototypes/` (all prototype HTMLs from web/public + prototype/). Receipt/recon HTML templates moved to `apps/telegram-bot/templates/`. `scripts/recon_sample.js` renamed to `recon-sample.js`.
+2. **`/queue clear <position>`** — remove specific pending job by position number. `/queue clear 2` removes job 2. `/queue clear` still clears all.
+3. **`/queue` command** — file-backed batch queue (`output/_queue.json`). `/queue <url>` adds, `/queue` shows status, `/queue clear` removes pending. Runs jobs sequentially, auto-starts next on completion. Survives restart.
+4. **`runExtraction` refactor** — extracted all spawn/Drive-upload logic from `confirm_extract` into `runExtraction(url, chatId, opts)`. `confirm_extract` reduced from ~170 lines to 5. Queue uses `{ isQueue: true }`.
+5. **`/quote`, `/redeliver`, `/export`** — `/quote <url>` runs recon + calculates ₹500+₹10/product quote; `/redeliver <receipt-no>` Supabase lookup → resend Drive URL; `/export` all payment_receipts as CSV file.
 
 ---
 
@@ -60,13 +60,7 @@
 
 ## UNCOMMITTED CHANGES
 
-None. All bot work committed through `93a7747`.
-
-Untracked in `docs/legal/` (not yet committed):
-- `concierge-terms-v1.html` / `.md`
-- `payment-receipt-template.html`
-- `payment-receipt.html`
-- `recon-summary.html`
+None after this commit.
 
 ---
 
