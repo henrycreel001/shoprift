@@ -31,6 +31,8 @@ const pendingExtracts = new Map();
 const cancelTokens    = new Map();
 // Retry Drive upload: token → { outputDir, folderName, url }
 const retryUploads    = new Map();
+// Drive URLs cached after upload: storeUrl → driveUrl (used by /receipt to persist to Supabase)
+const driveUrlCache   = new Map();
 
 const RECEIPT_COUNTER_PATH = path.join(BOT_DIR, 'output', '.receipt_counter.json');
 
@@ -101,8 +103,8 @@ const MAIN_KEYBOARD = Markup.keyboard([
   ['🔍 Recon',   '▶️ Extract'],
   ['🧾 Receipt', '📊 Weekly'],
   ['📅 Monthly', '🗂 History'],
-  ['📋 Jobs',    '❓ Help'],
-  ['✖ Close keyboard'],
+  ['📋 Jobs',    '📤 Export'],
+  ['❓ Help',    '✖ Close keyboard'],
 ]).resize().persistent();
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
@@ -121,9 +123,12 @@ const HELP_TEXT =
   `━━━━━━━━━━━━━━━━━━━━\n\n` +
   `<b>Extraction</b>\n` +
   `/recon <code>url</code> — quick store scan\n` +
-  `/extract <code>url</code> — full extraction + Drive delivery\n\n` +
+  `/extract <code>url</code> — full extraction + Drive delivery\n` +
+  `/quote <code>url</code> — price quote for client\n\n` +
   `<b>Billing</b>\n` +
-  `/receipt <code>"Name" url amount upi-ref</code> — payment receipt\n\n` +
+  `/receipt <code>"Name" url amount upi-ref</code> — payment receipt\n` +
+  `/redeliver <code>receipt-no</code> — resend Drive folder link\n` +
+  `/export — payments CSV file\n\n` +
   `<b>Reports</b>\n` +
   `/history — last 10 transactions\n` +
   `/report — this week's revenue\n` +
@@ -335,6 +340,65 @@ bot.command('recon', async ctx => {
   });
 });
 
+// ── /quote ────────────────────────────────────────────────────────────────────
+
+bot.command('quote', async ctx => {
+  const url = ctx.message.text.split(' ')[1]?.trim();
+  if (!url || !url.startsWith('http')) {
+    return ctx.reply('Usage: /quote https://store.dm2buy.com');
+  }
+
+  const jobKey = `recon:${url}`;
+  if (activeJobs.has(jobKey)) return ctx.reply(`Recon already running for ${url}`);
+
+  await ctx.reply(`🔍 Scanning <code>${esc(url)}</code>...`, { parse_mode: 'HTML' });
+
+  activeJobs.set(jobKey, { startTime: Date.now(), label: 'quote-recon', child: null });
+
+  const child = spawn('node', ['scripts/recon_sample.js', url, '--count', '5'], {
+    cwd: process.cwd(), env: process.env
+  });
+  activeJobs.get(jobKey).child = child;
+
+  let stdout = '', stderr = '';
+  child.stdout.on('data', d => { stdout += d.toString(); });
+  child.stderr.on('data', d => { stderr += d.toString(); });
+
+  child.on('close', async (code, signal) => {
+    const job = activeJobs.get(jobKey);
+    activeJobs.delete(jobKey);
+    if (signal || job?.cancelled) return;
+
+    if (code !== 0) return ctx.reply(`Recon failed:\n${stderr.slice(-400)}`);
+
+    const get = pattern => stdout.match(pattern)?.[1]?.trim() ?? '';
+    const storeName   = get(/Store:\s+(.+)/);
+    const products    = parseInt(get(/Products:\s+(\d+)/), 10)    || 0;
+    const collections = parseInt(get(/Collections:\s+(\d+)/), 10) || 0;
+    const images      = parseInt(get(/Images:\s+(\d+)/), 10)      || 0;
+
+    const price    = 500 + products * 10;
+    const subdomain = (() => { try { return new URL(url).hostname.split('.')[0]; } catch { return url; } })();
+
+    await ctx.reply(
+      `<b>💬 Forward to client:</b>\n\n` +
+      `Hi! 👋 Here's your Shoprift migration quote.\n\n` +
+      `🏪 Store: ${subdomain}\n` +
+      `📦 Products: ${products}\n` +
+      `🗂 Collections: ${collections}\n` +
+      `🖼 Images: ${images}\n\n` +
+      `💰 Migration fee: <b>₹${price.toLocaleString('en-IN')}</b>\n\n` +
+      `Includes:\n` +
+      `• All products, variants & images\n` +
+      `• Shopify-ready import file\n` +
+      `• Google Drive delivery\n` +
+      `• Post-import guide (~10 min to import)\n\n` +
+      `Reply YES to confirm and I'll get started 🚀`,
+      { parse_mode: 'HTML' }
+    );
+  });
+});
+
 // ── /extract ──────────────────────────────────────────────────────────────────
 
 bot.command('extract', async ctx => {
@@ -491,6 +555,7 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
 
       try {
         const { url: driveUrl } = await uploadFolderToDrive(outputDir, folderName);
+        driveUrlCache.set(url, driveUrl);
 
         // Final status card
         bot.telegram.editMessageText(chatId, statusMsgId, undefined, '✅ <b>Done</b>', { parse_mode: 'HTML' }).catch(() => {});
@@ -587,6 +652,7 @@ bot.action(/^retry_upload:(.+)$/, async ctx => {
 
   try {
     const { url: driveUrl } = await uploadFolderToDrive(outputDir, folderName);
+    driveUrlCache.set(url, driveUrl);
     const clientName = clientNameFromUrl(url);
 
     await ctx.reply(`📁 <code>${esc(folderName)}</code>\n🔗 ${esc(driveUrl)}`, { parse_mode: 'HTML' });
@@ -654,6 +720,7 @@ bot.command('receipt', async ctx => {
 
     // Write to Supabase payment ledger (fire-and-forget)
     if (supabase) {
+      const driveUrl = driveUrlCache.get(`https://${storeUrl}`) || driveUrlCache.get(storeUrl) || null;
       supabase.from('payment_receipts').insert({
         receipt_no:  receiptNo,
         date,
@@ -664,10 +731,99 @@ bot.command('receipt', async ctx => {
         products:    cached.products    ?? 0,
         collections: cached.collections ?? 0,
         images:      cached.images      ?? 0,
+        drive_url:   driveUrl,
       }).catch(e => console.error(JSON.stringify({ phase: 'receipt_ledger', error: e.message })));
     }
   });
 });
+
+// ── /redeliver ────────────────────────────────────────────────────────────────
+
+bot.command('redeliver', async ctx => {
+  const arg = ctx.message.text.split(' ').slice(1).join(' ').trim();
+  if (!arg) {
+    return ctx.reply('Usage: /redeliver SRFT/2026-27/R001\nFind receipt number in /history.');
+  }
+
+  if (!supabase) return ctx.reply('Supabase not configured.');
+
+  // Normalize: user might type R001 or SRFT/2026-27/R001
+  const receiptNo = arg.includes('/') ? arg : null;
+  if (!receiptNo) {
+    return ctx.reply(`Receipt number must include slashes: e.g. SRFT/2026-27/R001\nYou sent: ${arg}`);
+  }
+
+  const { data, error } = await supabase
+    .from('payment_receipts')
+    .select('*')
+    .eq('receipt_no', receiptNo)
+    .single();
+
+  if (error || !data) {
+    return ctx.reply(`Receipt <code>${esc(receiptNo)}</code> not found.\nCheck spelling or use /history.`, { parse_mode: 'HTML' });
+  }
+
+  if (!data.drive_url) {
+    return ctx.reply(
+      `Receipt found — but Drive URL was not recorded for this job.\n\n` +
+      `<b>Client:</b> ${esc(data.client_name)}\n` +
+      `<b>Store:</b> ${esc(data.store_url)}\n` +
+      `<b>Date:</b> ${esc(data.date)}\n\n` +
+      `Drive URL is only saved for jobs done after the /redeliver feature was added.\n` +
+      `Check your Google Drive manually for folder matching the store name.`,
+      { parse_mode: 'HTML' }
+    );
+  }
+
+  await ctx.reply(
+    `📁 <b>Redelivery — ${esc(data.receipt_no)}</b>\n\n` +
+    `Client: ${esc(data.client_name)}\n` +
+    `Store: ${esc(data.store_url)}\n` +
+    `Date: ${esc(data.date)}\n\n` +
+    `✏️ Edit name, then forward:\n\n` +
+    `Hey ${esc(data.client_name)}, here's your Shoprift delivery link again.\n\n` +
+    `📁 ${esc(data.drive_url)}\n\n` +
+    `Open README.txt first — it walks you through everything. Takes ~10 min to import.`,
+    { parse_mode: 'HTML' }
+  );
+});
+
+// ── /export ───────────────────────────────────────────────────────────────────
+
+async function sendExport(ctx) {
+  if (!supabase) return ctx.reply('Supabase not configured.');
+
+  const { data, error } = await supabase
+    .from('payment_receipts')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) return ctx.reply(`Failed: ${error.message}`);
+  if (!data?.length) return ctx.reply('No transactions yet.');
+
+  const header = ['Receipt No', 'Date', 'Client', 'Store URL', 'Amount (₹)', 'UPI Ref', 'Products', 'Collections', 'Images', 'Drive URL'].join(',');
+  const rows   = data.map(r => [
+    r.receipt_no, r.date, `"${(r.client_name ?? '').replace(/"/g, '""')}"`,
+    r.store_url, r.amount_inr, r.upi_ref, r.products, r.collections, r.images,
+    r.drive_url ?? '',
+  ].join(','));
+
+  const csv      = [header, ...rows].join('\n');
+  const today    = new Date().toISOString().slice(0, 10);
+  const tmpPath  = path.join(BOT_DIR, 'output', `shoprift-payments-${today}.csv`);
+
+  fs.mkdirSync(path.join(BOT_DIR, 'output'), { recursive: true });
+  fs.writeFileSync(tmpPath, csv, 'utf8');
+
+  await ctx.replyWithDocument(
+    { source: tmpPath, filename: `shoprift-payments-${today}.csv` },
+    { caption: `${data.length} transactions · exported ${today}` }
+  );
+
+  fs.unlink(tmpPath, () => {});
+}
+
+bot.command('export', ctx => sendExport(ctx));
 
 // ── Shared report logic (used by commands + keyboard buttons) ─────────────────
 
@@ -775,6 +931,7 @@ bot.hears('📋 Jobs',    ctx => {
   }
   return ctx.reply(lines.join('\n'), { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
 });
+bot.hears('📤 Export',     ctx => sendExport(ctx));
 bot.hears('❓ Help',        ctx => ctx.reply(HELP_TEXT, { parse_mode: 'HTML', ...MAIN_KEYBOARD }));
 bot.hears('✖ Close keyboard', ctx => ctx.reply('Keyboard hidden. Send /start to bring it back.', Markup.removeKeyboard()));
 
@@ -791,7 +948,10 @@ bot.launch()
   .then(() => bot.telegram.setMyCommands([
     { command: 'recon',     description: 'Recon scan + 5-product sample CSV' },
     { command: 'extract',   description: 'Full extraction + Drive delivery' },
+    { command: 'quote',     description: 'Price quote for client (runs recon)' },
     { command: 'receipt',   description: 'Generate payment receipt PDF' },
+    { command: 'redeliver', description: 'Resend Drive folder link by receipt number' },
+    { command: 'export',    description: 'All payments as CSV file' },
     { command: 'history',   description: 'Last 10 transactions' },
     { command: 'report',    description: 'Weekly revenue report (/report month for monthly)' },
     { command: 'jobs',      description: 'Show active jobs with cancel buttons' },
