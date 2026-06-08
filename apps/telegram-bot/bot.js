@@ -103,8 +103,9 @@ const MAIN_KEYBOARD = Markup.keyboard([
   ['🔍 Recon',   '▶️ Extract'],
   ['🧾 Receipt', '📊 Weekly'],
   ['📅 Monthly', '🗂 History'],
-  ['📋 Jobs',    '📤 Export'],
-  ['❓ Help',    '✖ Close keyboard'],
+  ['📋 Jobs',    '🗓 Queue'],
+  ['📤 Export',  '❓ Help'],
+  ['✖ Close keyboard'],
 ]).resize().persistent();
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
@@ -124,7 +125,9 @@ const HELP_TEXT =
   `<b>Extraction</b>\n` +
   `/recon <code>url</code> — quick store scan\n` +
   `/extract <code>url</code> — full extraction + Drive delivery\n` +
-  `/quote <code>url</code> — price quote for client\n\n` +
+  `/quote <code>url</code> — price quote for client\n` +
+  `/queue <code>url</code> — add to batch queue (runs overnight)\n` +
+  `/queue — show queue status · /queue clear — remove pending\n\n` +
   `<b>Billing</b>\n` +
   `/receipt <code>"Name" url amount upi-ref</code> — payment receipt\n` +
   `/redeliver <code>receipt-no</code> — resend Drive folder link\n` +
@@ -254,6 +257,81 @@ bot.command('clearjobs', async ctx => {
   if (!supabase)     parts.push('Supabase not configured — only local jobs cleared');
 
   await ctx.reply(parts.length ? `Cleared: ${parts.join(', ')}.` : 'No active jobs to clear.');
+});
+
+// ── /queue ────────────────────────────────────────────────────────────────────
+
+bot.command('queue', async ctx => {
+  const args  = ctx.message.text.split(' ').slice(1);
+  const first = args[0]?.trim() ?? '';
+
+  if (first.toLowerCase() === 'clear') {
+    const q       = readQueue();
+    const removed = q.filter(j => j.status === 'pending').length;
+    writeQueue(q.filter(j => j.status !== 'pending'));
+    return ctx.reply(`Removed ${removed} pending job${removed !== 1 ? 's' : ''}. Running job (if any) not affected.`);
+  }
+
+  if (first.startsWith('http')) {
+    const url = first;
+    const q   = readQueue();
+    const dup = q.find(j => j.url === url && (j.status === 'pending' || j.status === 'running'));
+    if (dup) return ctx.reply(`Already in queue:\n${url}`);
+
+    q.push({ url, addedAt: new Date().toISOString(), status: 'pending' });
+    writeQueue(q);
+
+    const pending = q.filter(j => j.status === 'pending').length;
+    const running = q.some(j => j.status === 'running');
+
+    await ctx.reply(
+      `✅ <b>Queued</b> — position ${pending}\n<code>${esc(url)}</code>\n\n` +
+      (running ? `▶️ Job running — starts when current finishes.` : `No job running — starting now...`),
+      { parse_mode: 'HTML' }
+    );
+
+    if (!running) processQueue(ctx.chat.id);
+    return;
+  }
+
+  // No args — show queue status
+  const q      = readQueue();
+  const active = q.filter(j => j.status === 'running' || j.status === 'pending');
+  const done   = q.filter(j => j.status === 'done' || j.status === 'failed').slice(-5);
+
+  if (!active.length && !done.length) {
+    return ctx.reply(
+      'Queue is empty.\n\n' +
+      'Add jobs:\n/queue https://store.dm2buy.com\n\n' +
+      'Queue multiple stores — run overnight:\n' +
+      '/queue https://store1.dm2buy.com\n' +
+      '/queue https://store2.dm2buy.com\n\n' +
+      '/queue clear — remove all pending'
+    );
+  }
+
+  const sub = u => { try { return new URL(u).hostname.split('.')[0]; } catch { return u; } };
+  const lines = [];
+
+  active.forEach((j, i) => {
+    const icon = j.status === 'running' ? '▶️' : `${i + 1}.`;
+    lines.push(`${icon} <b>${esc(sub(j.url))}</b> — <i>${j.status}</i>`);
+  });
+
+  if (done.length) {
+    lines.push('\n<i>Recent:</i>');
+    done.slice().reverse().forEach(j => {
+      lines.push(`${j.status === 'done' ? '✅' : '❌'} ${esc(sub(j.url))}`);
+    });
+  }
+
+  const pending = q.filter(j => j.status === 'pending').length;
+  await ctx.reply(
+    `<b>📋 Queue</b> — ${active.length} active · ${pending} pending\n\n` +
+    lines.join('\n') +
+    `\n\n/queue clear — remove pending jobs`,
+    { parse_mode: 'HTML' }
+  );
 });
 
 // ── /recon ────────────────────────────────────────────────────────────────────
@@ -425,40 +503,65 @@ bot.command('extract', async ctx => {
   );
 });
 
-// ── confirm_extract action ────────────────────────────────────────────────────
+// ── Queue persistence ─────────────────────────────────────────────────────────
 
-bot.action(/^confirm_extract:(.+)$/, async ctx => {
-  const token = ctx.match[1];
-  const url   = pendingExtracts.get(token);
-  if (!url) {
-    await ctx.answerCbQuery('Session expired — run /extract again.');
-    return;
-  }
+const QUEUE_PATH = path.join(BOT_DIR, 'output', '_queue.json');
 
-  const jobKey = `extract:${url}`;
-  if (activeJobs.has(jobKey)) {
-    await ctx.answerCbQuery();
-    try { await ctx.editMessageText(`Extraction already running for ${esc(url)}`, { reply_markup: { inline_keyboard: [] } }); } catch {}
-    return;
-  }
-
-  activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract', child: null, cancelled: false });
-  pendingExtracts.delete(token);
-
-  await ctx.answerCbQuery();
+function readQueue() {
   try {
-    await ctx.editMessageText(
-      `Extraction started for <code>${esc(url)}</code>`,
-      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
-    );
-  } catch {}
+    if (!fs.existsSync(QUEUE_PATH)) return [];
+    return JSON.parse(fs.readFileSync(QUEUE_PATH, 'utf8'));
+  } catch { return []; }
+}
 
-  // Live status message — edited in place during extraction
-  const statusMsg    = await ctx.reply('⏳ <b>Starting...</b>', { parse_mode: 'HTML' });
-  const statusMsgId  = statusMsg.message_id;
-  const chatId       = ctx.chat.id;
+function writeQueue(q) {
+  fs.mkdirSync(path.join(BOT_DIR, 'output'), { recursive: true });
+  fs.writeFileSync(QUEUE_PATH, JSON.stringify(q, null, 2), 'utf8');
+}
+
+function _queueJobDone(url, status, chatId) {
+  const q = readQueue();
+  const job = q.find(j => j.url === url && j.status === 'running');
+  if (job) { job.status = status; writeQueue(q); }
+  processQueue(chatId);
+}
+
+async function processQueue(chatId) {
+  const q = readQueue();
+  if (q.some(j => j.status === 'running')) return;
+  const next = q.find(j => j.status === 'pending');
+  if (!next) {
+    const hasHistory = q.some(j => j.status === 'done' || j.status === 'failed');
+    if (hasHistory) bot.telegram.sendMessage(chatId, '✅ Queue complete — all jobs processed.').catch(() => {});
+    return;
+  }
+  next.status = 'running';
+  writeQueue(q);
+  const remaining = q.filter(j => j.status === 'pending').length;
+  bot.telegram.sendMessage(chatId,
+    `▶️ <b>Starting queued job</b>\n<code>${esc(next.url)}</code>\n<i>${remaining} job${remaining !== 1 ? 's' : ''} still pending</i>`,
+    { parse_mode: 'HTML' }
+  ).catch(() => {});
+  runExtraction(next.url, chatId, { isQueue: true });
+}
+
+// ── runExtraction — shared extract logic for /extract + queue ─────────────────
+
+async function runExtraction(url, chatId, opts = {}) {
+  const { isQueue = false } = opts;
+  const jobKey = `extract:${url}`;
+
+  if (activeJobs.has(jobKey)) {
+    bot.telegram.sendMessage(chatId, `Extraction already running for <code>${esc(url)}</code>`, { parse_mode: 'HTML' }).catch(() => {});
+    if (isQueue) _queueJobDone(url, 'failed', chatId);
+    return;
+  }
+
+  activeJobs.set(jobKey, { startTime: Date.now(), label: 'extract', child: null, cancelled: false, chatId });
+
+  const statusMsg   = await bot.telegram.sendMessage(chatId, '⏳ <b>Starting...</b>', { parse_mode: 'HTML' });
+  const statusMsgId = statusMsg.message_id;
   activeJobs.get(jobKey).statusMsgId = statusMsgId;
-  activeJobs.get(jobKey).chatId      = chatId;
 
   const child = spawn(
     'node',
@@ -497,9 +600,7 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
       const now         = Date.now();
 
       if (isMilestone) {
-        // Edit live status card with milestone
-        bot.telegram.editMessageText(chatId, statusMsgId, undefined, trimmed, { parse_mode: 'HTML' })
-          .catch(() => {});
+        bot.telegram.editMessageText(chatId, statusMsgId, undefined, trimmed, { parse_mode: 'HTML' }).catch(() => {});
       } else if (isProgress && now - lastProgressSent > PROGRESS_THROTTLE_MS) {
         lastProgressSent = now;
         const match = trimmed.match(/\((\d+)\/(\d+)\)/);
@@ -507,9 +608,8 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
           const [, cur, tot] = match;
           const phase = trimmed.includes('Extracting') ? 'Extracting' : 'Downloading';
           const bar   = progressBar(parseInt(cur), parseInt(tot));
-          const text  = `⏳ <b>${phase}</b>\n${bar} (${cur}/${tot})`;
-          bot.telegram.editMessageText(chatId, statusMsgId, undefined, text, { parse_mode: 'HTML' })
-            .catch(() => {});
+          bot.telegram.editMessageText(chatId, statusMsgId, undefined,
+            `⏳ <b>${phase}</b>\n${bar} (${cur}/${tot})`, { parse_mode: 'HTML' }).catch(() => {});
         }
       }
     }
@@ -520,15 +620,16 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
   child.on('close', async (code, signal) => {
     const job = activeJobs.get(jobKey);
     activeJobs.delete(jobKey);
+
     if (signal || job?.cancelled) return;
 
     if (code !== 0) {
       const tail = (stdout + stderr).slice(-800);
-      await ctx.reply(`Extraction failed:\n${tail}`);
+      bot.telegram.sendMessage(chatId, `Extraction failed:\n${tail}`).catch(() => {});
+      if (isQueue) _queueJobDone(url, 'failed', chatId);
       return;
     }
 
-    // Find most-recently-modified output subdir
     let outputDir = null;
     if (fs.existsSync('./output')) {
       const subdirs = fs.readdirSync('./output')
@@ -541,52 +642,46 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
     }
 
     if (!outputDir) {
-      await ctx.reply(`Extraction done but output folder not found. Check output/.\n\nLog tail:\n${stdout.slice(-500)}`);
+      bot.telegram.sendMessage(chatId, `Extraction done but output folder not found. Check output/.\n\nLog tail:\n${stdout.slice(-500)}`).catch(() => {});
+      if (isQueue) _queueJobDone(url, 'failed', chatId);
       return;
     }
 
-    const folderName  = path.basename(outputDir);
-    const clientName  = clientNameFromUrl(url);
+    const folderName   = path.basename(outputDir);
+    const clientName   = clientNameFromUrl(url);
     const driveEnabled = process.env.GOOGLE_OAUTH_REFRESH_TOKEN && process.env.GOOGLE_DRIVE_FOLDER_ID;
 
     if (driveEnabled) {
-      // Update status card to uploading
       bot.telegram.editMessageText(chatId, statusMsgId, undefined, '☁️ <b>Uploading to Drive...</b>', { parse_mode: 'HTML' }).catch(() => {});
 
       try {
         const { url: driveUrl } = await uploadFolderToDrive(outputDir, folderName);
         driveUrlCache.set(url, driveUrl);
 
-        // Final status card
         bot.telegram.editMessageText(chatId, statusMsgId, undefined, '✅ <b>Done</b>', { parse_mode: 'HTML' }).catch(() => {});
-
-        await ctx.reply(
-          `📁 <code>${esc(folderName)}</code>\n🔗 ${esc(driveUrl)}`,
-          { parse_mode: 'HTML' }
-        );
-
-        await ctx.reply(
+        bot.telegram.sendMessage(chatId, `📁 <code>${esc(folderName)}</code>\n🔗 ${esc(driveUrl)}`, { parse_mode: 'HTML' }).catch(() => {});
+        bot.telegram.sendMessage(chatId,
           `✏️ Edit name, then forward to client:\n\n` +
           `Hey ${clientName}, your Shoprift delivery is ready.\n\n` +
           `📁 ${driveUrl}\n\n` +
           `Also sharing your payment receipt shortly.\n\n` +
           `Open README.txt first — it walks you through everything. Takes ~10 min to import.`
-        );
-
+        ).catch(() => {});
         const bareUrl = url.replace(/^https?:\/\//, '');
-        await ctx.reply(`🧾 Send receipt when ready:\n\n/receipt "${clientName}" ${bareUrl} <amount> <upi-ref>`);
+        bot.telegram.sendMessage(chatId, `🧾 Send receipt when ready:\n\n/receipt "${clientName}" ${bareUrl} <amount> <upi-ref>`).catch(() => {});
+
+        if (isQueue) _queueJobDone(url, 'done', chatId);
 
       } catch (e) {
         console.error(JSON.stringify({ phase: 'drive_upload', url, error: e.message }));
-
         const retryToken = Date.now().toString(36);
         retryUploads.set(retryToken, { outputDir, folderName, url });
-
         bot.telegram.editMessageText(chatId, statusMsgId, undefined, '❌ <b>Drive upload failed</b>', { parse_mode: 'HTML' }).catch(() => {});
-        await ctx.reply(
+        bot.telegram.sendMessage(chatId,
           `Drive upload failed: ${e.message}\n\nFiles saved locally at:\n${outputDir}`,
           Markup.inlineKeyboard([[Markup.button.callback('🔄 Retry Upload', `retry_upload:${retryToken}`)]])
-        );
+        ).catch(() => {});
+        if (isQueue) _queueJobDone(url, 'failed', chatId);
       }
       return;
     }
@@ -597,24 +692,56 @@ bot.action(/^confirm_extract:(.+)$/, async ctx => {
       .map(f => path.join(outputDir, f))[0] ?? null;
 
     if (!zipPath) {
-      await ctx.reply(`Extraction done. Files at:\n${outputDir}\n\nSet GOOGLE_OAUTH_* env vars for auto-upload.`);
+      bot.telegram.sendMessage(chatId, `Extraction done. Files at:\n${outputDir}\n\nSet GOOGLE_OAUTH_* env vars for auto-upload.`).catch(() => {});
+      if (isQueue) _queueJobDone(url, 'done', chatId);
       return;
     }
 
     const sizeMb = (fs.statSync(zipPath).size / (1024 * 1024)).toFixed(1);
 
     if (parseFloat(sizeMb) > 49) {
-      await ctx.reply(
+      bot.telegram.sendMessage(chatId,
         `Extraction complete — ${sizeMb} MB ZIP\n` +
         `Too large for Telegram. Add GOOGLE_OAUTH_* env vars for auto-upload.\n\n` +
         `File at:\n${zipPath}`
-      );
+      ).catch(() => {});
+      if (isQueue) _queueJobDone(url, 'done', chatId);
       return;
     }
 
-    await ctx.reply(`Extraction complete (${sizeMb} MB). Sending ZIP...`);
-    await ctx.replyWithDocument({ source: zipPath, filename: path.basename(zipPath) });
+    bot.telegram.sendMessage(chatId, `Extraction complete (${sizeMb} MB). Sending ZIP...`).catch(() => {});
+    bot.telegram.sendDocument(chatId, { source: zipPath, filename: path.basename(zipPath) }).catch(() => {});
+    if (isQueue) _queueJobDone(url, 'done', chatId);
   });
+}
+
+// ── confirm_extract action ────────────────────────────────────────────────────
+
+bot.action(/^confirm_extract:(.+)$/, async ctx => {
+  const token = ctx.match[1];
+  const url   = pendingExtracts.get(token);
+  if (!url) {
+    await ctx.answerCbQuery('Session expired — run /extract again.');
+    return;
+  }
+
+  const jobKey = `extract:${url}`;
+  if (activeJobs.has(jobKey)) {
+    await ctx.answerCbQuery();
+    try { await ctx.editMessageText(`Extraction already running for ${esc(url)}`, { reply_markup: { inline_keyboard: [] } }); } catch {}
+    return;
+  }
+
+  pendingExtracts.delete(token);
+  await ctx.answerCbQuery();
+  try {
+    await ctx.editMessageText(
+      `Extraction started for <code>${esc(url)}</code>`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
+    );
+  } catch {}
+
+  runExtraction(url, ctx.chat.id);
 });
 
 // ── cancel_extract action ─────────────────────────────────────────────────────
@@ -931,7 +1058,23 @@ bot.hears('📋 Jobs',    ctx => {
   }
   return ctx.reply(lines.join('\n'), { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
 });
-bot.hears('📤 Export',     ctx => sendExport(ctx));
+bot.hears('📤 Export',  ctx => sendExport(ctx));
+bot.hears('🗓 Queue',   async ctx => {
+  const q      = readQueue();
+  const active = q.filter(j => j.status === 'running' || j.status === 'pending');
+  if (!active.length) return ctx.reply('Queue is empty.\n\nAdd a job:\n/queue https://store.dm2buy.com');
+  const sub   = u => { try { return new URL(u).hostname.split('.')[0]; } catch { return u; } };
+  const lines = active.map((j, i) => {
+    const icon = j.status === 'running' ? '▶️' : `${i + 1}.`;
+    return `${icon} <b>${esc(sub(j.url))}</b> — <i>${j.status}</i>`;
+  });
+  const pending = q.filter(j => j.status === 'pending').length;
+  return ctx.reply(
+    `<b>📋 Queue</b> — ${active.length} active · ${pending} pending\n\n` + lines.join('\n') +
+    `\n\n/queue clear — remove pending`,
+    { parse_mode: 'HTML' }
+  );
+});
 bot.hears('❓ Help',        ctx => ctx.reply(HELP_TEXT, { parse_mode: 'HTML', ...MAIN_KEYBOARD }));
 bot.hears('✖ Close keyboard', ctx => ctx.reply('Keyboard hidden. Send /start to bring it back.', Markup.removeKeyboard()));
 
@@ -949,6 +1092,7 @@ bot.launch()
     { command: 'recon',     description: 'Recon scan + 5-product sample CSV' },
     { command: 'extract',   description: 'Full extraction + Drive delivery' },
     { command: 'quote',     description: 'Price quote for client (runs recon)' },
+    { command: 'queue',     description: 'Add to batch queue or show queue status' },
     { command: 'receipt',   description: 'Generate payment receipt PDF' },
     { command: 'redeliver', description: 'Resend Drive folder link by receipt number' },
     { command: 'export',    description: 'All payments as CSV file' },
